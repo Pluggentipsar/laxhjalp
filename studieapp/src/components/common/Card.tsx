@@ -1,10 +1,10 @@
-import { HTMLAttributes, forwardRef } from 'react';
-import { motion } from 'framer-motion';
+import { forwardRef } from 'react';
+import { motion, type HTMLMotionProps } from 'framer-motion';
 
-interface CardProps extends HTMLAttributes<HTMLDivElement> {
+type CardProps = Omit<HTMLMotionProps<'div'>, 'ref'> & {
   hover?: boolean;
   padding?: 'none' | 'sm' | 'md' | 'lg';
-}
+};
 
 export const Card = forwardRef<HTMLDivElement, CardProps>(
   (
@@ -20,24 +20,16 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
 
     const baseStyles = `card ${paddingStyles[padding]} ${className}`;
 
-    if (hover) {
-      return (
-        <motion.div
-          ref={ref}
-          whileHover={{ scale: 1.02, y: -2 }}
-          whileTap={{ scale: 0.98 }}
-          className={baseStyles}
-          {...props}
-        >
-          {children}
-        </motion.div>
-      );
-    }
-
     return (
-      <div ref={ref} className={baseStyles} {...props}>
+      <motion.div
+        ref={ref}
+        className={baseStyles}
+        whileHover={hover ? { scale: 1.02, y: -2 } : undefined}
+        whileTap={hover ? { scale: 0.98 } : undefined}
+        {...props}
+      >
         {children}
-      </div>
+      </motion.div>
     );
   }
 );

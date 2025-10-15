@@ -1,18 +1,13 @@
 import { useAppStore } from '../store/appStore';
 import { MainLayout } from '../components/layout/MainLayout';
 import { Card } from '../components/common/Card';
-import { Button } from '../components/common/Button';
 import {
-  User,
   Trophy,
-  Flame,
   Target,
   Settings,
   Volume2,
-  Moon,
   Sun,
   Bell,
-  Download,
 } from 'lucide-react';
 
 export function ProfilePage() {

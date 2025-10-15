@@ -6,8 +6,6 @@ import { MainLayout } from '../components/layout/MainLayout';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import {
-  BookOpen,
-  Zap,
   Target,
   Flame,
   GraduationCap,
@@ -59,7 +57,7 @@ export function HomePage() {
       icon: GraduationCap,
       label: 'Flashcards',
       gradient: 'bg-gradient-to-br from-indigo-500 to-purple-600',
-      path: '/study/flashcards',
+      path: '/study',
       emoji: '🎴',
       info: dueCards > 0 ? `${dueCards} att öva` : 'Repetera kort',
     },
@@ -67,7 +65,7 @@ export function HomePage() {
       icon: MessageSquare,
       label: 'Chattförhör',
       gradient: 'bg-gradient-to-br from-purple-500 to-pink-500',
-      path: '/study/chat',
+      path: '/study',
       emoji: '💬',
       info: 'AI-förhör',
     },
@@ -75,7 +73,7 @@ export function HomePage() {
       icon: TrendingUp,
       label: 'Quiz',
       gradient: 'bg-gradient-to-br from-emerald-400 to-green-600',
-      path: '/study/quiz',
+      path: '/study',
       emoji: '📝',
       info: 'Testa dig',
     },
@@ -310,7 +308,7 @@ export function HomePage() {
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                 Fortsätt Plugga
               </h2>
-              <Link to="/material">
+              <Link to="/study">
                 <Button variant="ghost" size="sm">
                   Visa allt →
                 </Button>
@@ -326,7 +324,7 @@ export function HomePage() {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 1 + index * 0.1 }}
                   >
-                    <Link to={`/material/${material.id}`}>
+                    <Link to={`/study/material/${material.id}`}>
                       <Card hover className="p-4">
                         <div className="flex items-center gap-4">
                           <div className="w-14 h-14 bg-gradient-primary rounded-xl flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
@@ -358,7 +356,7 @@ export function HomePage() {
                 <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-sm mx-auto">
                   Lägg till ditt första studiematerial och börja lära dig!
                 </p>
-                <Link to="/material">
+                <Link to="/study">
                   <Button className="bg-gradient-primary shadow-glow">
                     <Plus size={20} className="mr-2" />
                     Lägg Till Material

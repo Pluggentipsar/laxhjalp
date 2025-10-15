@@ -8,6 +8,8 @@ import type {
   OnboardingState,
   Subject,
   Grade,
+  ChatSession,
+  ChatMessage,
 } from '../types';
 import { db, dbHelpers } from '../lib/db';
 
@@ -45,6 +47,15 @@ interface AppStore {
   startSession: (materialId: string, mode: StudySession['mode']) => void;
   endSession: (xpEarned: number, stats?: any) => Promise<void>;
 
+  // Chat
+  chatSessions: Record<string, ChatSession>;
+  loadChatSession: (materialId: string) => Promise<ChatSession | null>;
+  appendChatMessage: (
+    materialId: string,
+    message: ChatMessage
+  ) => Promise<ChatSession | null>;
+  setChatSession: (materialId: string, session: ChatSession) => Promise<void>;
+
   // XP & Streak
   addXP: (amount: number) => Promise<void>;
   updateStreak: () => Promise<void>;
@@ -68,6 +79,7 @@ export const useAppStore = create<AppStore>()(
       materials: [],
       folders: [],
       currentSession: null,
+      chatSessions: {},
       isLoading: false,
       error: null,
 
@@ -252,6 +264,90 @@ export const useAppStore = create<AppStore>()(
         });
 
         set({ currentSession: null });
+      },
+
+      // Chat Sessions
+      loadChatSession: async (materialId) => {
+        let session = await db.chatSessions
+          .where('materialId')
+          .equals(materialId)
+          .first();
+
+        if (!session) {
+          session = {
+            id: crypto.randomUUID(),
+            materialId,
+            messages: [],
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
+          await db.chatSessions.add(session);
+        } else {
+          session = {
+            ...session,
+            messages: session.messages.map((message) => ({
+              ...message,
+              timestamp: new Date(message.timestamp),
+            })),
+            createdAt: new Date(session.createdAt),
+            updatedAt: session.updatedAt ? new Date(session.updatedAt) : new Date(),
+          };
+        }
+
+        set((state) => ({
+          chatSessions: {
+            ...state.chatSessions,
+            [materialId]: session!,
+          },
+        }));
+
+        return session;
+      },
+
+      appendChatMessage: async (materialId, message) => {
+        const state = get();
+        const existing = state.chatSessions[materialId];
+
+        if (!existing) {
+          await state.loadChatSession(materialId);
+        }
+
+        const session = get().chatSessions[materialId];
+        if (!session) return null;
+
+        const updatedSession: ChatSession = {
+          ...session,
+          messages: [...session.messages, message],
+          updatedAt: new Date(),
+        };
+
+        await db.chatSessions.update(session.id, {
+          messages: updatedSession.messages,
+          updatedAt: updatedSession.updatedAt,
+        });
+
+        set((prevState) => ({
+          chatSessions: {
+            ...prevState.chatSessions,
+            [materialId]: updatedSession,
+          },
+        }));
+
+        return updatedSession;
+      },
+
+      setChatSession: async (materialId, session) => {
+        await db.chatSessions.put({
+          ...session,
+          updatedAt: new Date(),
+        });
+
+        set((state) => ({
+          chatSessions: {
+            ...state.chatSessions,
+            [materialId]: { ...session, updatedAt: new Date() },
+          },
+        }));
       },
 
       // XP & Leveling

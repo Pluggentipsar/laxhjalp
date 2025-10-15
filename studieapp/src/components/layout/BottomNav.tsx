@@ -1,10 +1,9 @@
-import { Home, BookOpen, GraduationCap, Gamepad2, User } from 'lucide-react';
+import { Home, GraduationCap, Gamepad2, User } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
 
 const navItems = [
   { icon: Home, label: 'Hem', path: '/' },
-  { icon: BookOpen, label: 'Material', path: '/material' },
   { icon: GraduationCap, label: 'Studera', path: '/study' },
   { icon: Gamepad2, label: 'Spel', path: '/games' },
   { icon: User, label: 'Profil', path: '/profile' },
@@ -18,7 +17,11 @@ export function BottomNav() {
       <div className="flex justify-around items-center h-16 max-w-screen-lg mx-auto">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = location.pathname === item.path;
+          const isRoot = item.path === '/';
+          const isActive = isRoot
+            ? location.pathname === '/'
+            : location.pathname === item.path ||
+              location.pathname.startsWith(`${item.path}/`);
 
           return (
             <Link

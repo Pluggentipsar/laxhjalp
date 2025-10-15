@@ -19,6 +19,23 @@ export type StudyMode = 'flashcards' | 'quiz' | 'chat' | 'mindmap' | 'read';
 
 export type GameType = 'snake' | 'memory' | 'whack' | 'timeatack' | 'boss';
 
+export interface GenerationLogEntry {
+  id: string;
+  type: 'flashcards' | 'quiz' | 'concepts';
+  count: number;
+  difficulty?: Difficulty;
+  createdAt: Date;
+  notes?: string;
+}
+
+export interface GlossaryEntry {
+  id: string;
+  term: string;
+  definition: string;
+  example?: string;
+  addedAt: Date;
+}
+
 // Material & Organisation
 export interface Material {
   id: string;
@@ -34,10 +51,14 @@ export interface Material {
   flashcards: Flashcard[];
   questions: Question[];
   concepts: Concept[];
+  glossary?: GlossaryEntry[];
+  simplifiedContent?: string;
+  advancedContent?: string;
   createdAt: Date;
   updatedAt: Date;
   lastStudied?: Date;
   difficulty?: Difficulty;
+  generationHistory?: GenerationLogEntry[];
 }
 
 export interface Folder {
@@ -262,6 +283,7 @@ export interface ChatSession {
   materialId: string;
   messages: ChatMessage[];
   createdAt: Date;
+  updatedAt?: Date;
 }
 
 // OCR & Import

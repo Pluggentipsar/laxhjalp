@@ -3,8 +3,13 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAppStore } from './store/appStore';
 import { OnboardingFlow } from './components/onboarding/OnboardingFlow';
 import { HomePage } from './pages/HomePage';
-import { MaterialPage } from './pages/MaterialPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { StudyDashboardPage } from './pages/StudyDashboardPage';
+import { MaterialDetailPage } from './pages/MaterialDetailPage';
+import { FlashcardStudyPage } from './pages/study/FlashcardStudyPage';
+import { QuizStudyPage } from './pages/study/QuizStudyPage';
+import { ChatStudyPage } from './pages/study/ChatStudyPage';
+import { ConceptExplorerPage } from './pages/study/ConceptExplorerPage';
 
 function App() {
   const user = useAppStore((state) => state.user);
@@ -39,16 +44,28 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<HomePage />} />
-        <Route path="/material" element={<MaterialPage />} />
         <Route path="/profile" element={<ProfilePage />} />
-
-        {/* Placeholder routes - kommer byggas senare */}
-        <Route path="/study" element={<Navigate to="/" replace />} />
-        <Route path="/study/flashcards" element={<Navigate to="/" replace />} />
-        <Route path="/study/quiz" element={<Navigate to="/" replace />} />
-        <Route path="/study/chat" element={<Navigate to="/" replace />} />
+        <Route path="/study" element={<StudyDashboardPage />} />
+        <Route path="/study/material/:materialId" element={<MaterialDetailPage />} />
+        <Route
+          path="/study/flashcards/:materialId"
+          element={<FlashcardStudyPage />}
+        />
+        <Route
+          path="/study/quiz/:materialId"
+          element={<QuizStudyPage />}
+        />
+        <Route
+          path="/study/material/:materialId/chat"
+          element={<ChatStudyPage />}
+        />
+        <Route
+          path="/study/concepts/:materialId"
+          element={<ConceptExplorerPage />}
+        />
         <Route path="/games" element={<Navigate to="/" replace />} />
-        <Route path="/import/*" element={<Navigate to="/material" replace />} />
+        <Route path="/material" element={<Navigate to="/study" replace />} />
+        <Route path="/import/*" element={<Navigate to="/study" replace />} />
 
         {/* Catch all */}
         <Route path="*" element={<Navigate to="/" replace />} />

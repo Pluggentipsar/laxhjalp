@@ -6,7 +6,12 @@
       "Bash(npm install:*)",
       "Bash(npx tailwindcss init:*)",
       "Bash(npm run dev)",
-      "Bash(npm uninstall:*)"
+      "Bash(npm uninstall:*)",
+      "Bash(timeout 5 npm run dev)",
+      "Bash(curl:*)",
+      "Bash(node index.js)",
+      "Bash(timeout 8 npm run dev)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []
