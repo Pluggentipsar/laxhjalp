@@ -8,6 +8,7 @@ import {
   BookOpen,
   Sparkles,
   MessageSquare,
+  Gamepad2,
 } from 'lucide-react';
 import { MainLayout } from '../components/layout/MainLayout';
 import { Card } from '../components/common/Card';
@@ -348,6 +349,14 @@ export function StudyDashboardPage() {
                       >
                         <MessageSquare size={16} className="mr-1" />
                         Chatt
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => navigate(`/study/material/${material.id}/game/snake`)}
+                      >
+                        <Gamepad2 size={16} className="mr-1" />
+                        Snake
                       </Button>
                     </div>
                   </Card>

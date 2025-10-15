@@ -10,6 +10,7 @@ import { FlashcardStudyPage } from './pages/study/FlashcardStudyPage';
 import { QuizStudyPage } from './pages/study/QuizStudyPage';
 import { ChatStudyPage } from './pages/study/ChatStudyPage';
 import { ConceptExplorerPage } from './pages/study/ConceptExplorerPage';
+import { SnakeGamePage } from './pages/study/SnakeGamePage';
 
 function App() {
   const user = useAppStore((state) => state.user);
@@ -62,6 +63,10 @@ function App() {
         <Route
           path="/study/concepts/:materialId"
           element={<ConceptExplorerPage />}
+        />
+        <Route
+          path="/study/material/:materialId/game/snake"
+          element={<SnakeGamePage />}
         />
         <Route path="/games" element={<Navigate to="/" replace />} />
         <Route path="/material" element={<Navigate to="/study" replace />} />

@@ -10,6 +10,8 @@ import type {
   Grade,
   ChatSession,
   ChatMessage,
+  LanguageCode,
+  MistakeEntry,
 } from '../types';
 import { db, dbHelpers } from '../lib/db';
 
@@ -56,6 +58,14 @@ interface AppStore {
   ) => Promise<ChatSession | null>;
   setChatSession: (materialId: string, session: ChatSession) => Promise<void>;
 
+  // Games & Felbank
+  mistakeBank: Record<string, Record<string, MistakeEntry>>;
+  registerMistake: (
+    materialId: string,
+    entry: { term: string; definition?: string; language?: LanguageCode }
+  ) => void;
+  clearMistakesForMaterial: (materialId: string) => void;
+
   // XP & Streak
   addXP: (amount: number) => Promise<void>;
   updateStreak: () => Promise<void>;
@@ -80,6 +90,7 @@ export const useAppStore = create<AppStore>()(
       folders: [],
       currentSession: null,
       chatSessions: {},
+      mistakeBank: {},
       isLoading: false,
       error: null,
 
@@ -350,6 +361,69 @@ export const useAppStore = create<AppStore>()(
         }));
       },
 
+      registerMistake: (materialId, entry) => {
+        const normalizedMaterialId = materialId.trim();
+        const rawTerm = entry.term?.trim();
+
+        if (!normalizedMaterialId || !rawTerm) {
+          return;
+        }
+
+        const normalizedTermKey = rawTerm.toLowerCase();
+        const timestamp = new Date().toISOString();
+        const language: LanguageCode = entry.language ?? 'sv';
+
+        set((state) => {
+          const existingMaterialBank = state.mistakeBank[normalizedMaterialId] ?? {};
+          const existingEntry = existingMaterialBank[normalizedTermKey];
+
+          const updatedEntry: MistakeEntry = existingEntry
+            ? {
+                ...existingEntry,
+                missCount: existingEntry.missCount + 1,
+                lastMissedAt: timestamp,
+                definition: entry.definition?.trim() || existingEntry.definition,
+              }
+            : {
+                id: crypto.randomUUID(),
+                materialId: normalizedMaterialId,
+                term: rawTerm,
+                definition: entry.definition?.trim() || '',
+                language,
+                missCount: 1,
+                lastMissedAt: timestamp,
+              };
+
+          return {
+            mistakeBank: {
+              ...state.mistakeBank,
+              [normalizedMaterialId]: {
+                ...existingMaterialBank,
+                [normalizedTermKey]: updatedEntry,
+              },
+            },
+          };
+        });
+      },
+
+      clearMistakesForMaterial: (materialId) => {
+        const normalizedMaterialId = materialId.trim();
+        if (!normalizedMaterialId) return;
+
+        set((state) => {
+          if (!state.mistakeBank[normalizedMaterialId]) {
+            return {};
+          }
+
+          const updatedBank = { ...state.mistakeBank };
+          delete updatedBank[normalizedMaterialId];
+
+          return {
+            mistakeBank: updatedBank,
+          };
+        });
+      },
+
       // XP & Leveling
       addXP: async (amount) => {
         const result = await dbHelpers.addXP(amount);
@@ -387,6 +461,7 @@ export const useAppStore = create<AppStore>()(
       name: 'studieapp-storage',
       partialize: (state) => ({
         onboarding: state.onboarding,
+        mistakeBank: state.mistakeBank,
       }),
     }
   )

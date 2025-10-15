@@ -120,7 +120,7 @@ export function QuizStudyPage() {
     if (!sessionFinished && sessionQuestions.length > 0) {
       await finishSession();
     }
-    navigate('/study');
+    navigate(`/study/material/${materialId}`);
   };
 
   if (!material) {
@@ -130,7 +130,7 @@ export function QuizStudyPage() {
           <p className="text-gray-600 dark:text-gray-400 mb-4">
             Vi kunde inte hitta det här materialet.
           </p>
-          <Button onClick={() => navigate('/study')}>Tillbaka</Button>
+          <Button onClick={() => navigate(`/study/material/${materialId}`)}>Tillbaka till materialet</Button>
         </div>
       </MainLayout>
     );
@@ -145,7 +145,7 @@ export function QuizStudyPage() {
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-5 max-w-sm">
             Gå tillbaka till Studera-sidan och generera frågor först.
           </p>
-          <Button onClick={() => navigate('/study')}>Tillbaka</Button>
+          <Button onClick={() => navigate(`/study/material/${materialId}`)}>Tillbaka till materialet</Button>
         </div>
       </MainLayout>
     );
@@ -193,7 +193,7 @@ export function QuizStudyPage() {
                 </span>
               </div>
             </div>
-            <Button onClick={() => navigate('/study')}>Tillbaka till översikten</Button>
+            <Button onClick={() => navigate(`/study/material/${materialId}`)}>Tillbaka till materialet</Button>
           </Card>
         </div>
       </MainLayout>

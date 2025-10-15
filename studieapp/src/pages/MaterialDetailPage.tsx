@@ -1,6 +1,7 @@
 ﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import * as Tabs from '@radix-ui/react-tabs';
+import * as Collapsible from '@radix-ui/react-collapsible';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
@@ -10,6 +11,10 @@ import {
   Brain,
   ArrowLeft,
   History,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
+  CheckCircle2,
 } from 'lucide-react';
 import { MainLayout } from '../components/layout/MainLayout';
 import { Card } from '../components/common/Card';
@@ -95,6 +100,14 @@ export function MaterialDetailPage() {
   const [isExplaining, setIsExplaining] = useState(false);
   const [explainResult, setExplainResult] = useState<ExplainSelectionResponse | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
+  const flashcardsRef = useRef<HTMLDivElement | null>(null);
+  const quizRef = useRef<HTMLDivElement | null>(null);
+  const conceptsRef = useRef<HTMLDivElement | null>(null);
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    flashcards: false,
+    quiz: false,
+    concepts: false,
+  });
 
   useEffect(() => {
     if (!materials.length) {
@@ -161,6 +174,13 @@ export function MaterialDetailPage() {
     updateMaterial(material.id, { generationHistory: history });
   };
 
+  const scrollToSection = (ref: React.RefObject<HTMLDivElement | null>, sectionKey: string) => {
+    if (ref.current) {
+      ref.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setOpenSections(prev => ({ ...prev, [sectionKey]: true }));
+    }
+  };
+
   const handleGenerateFlashcards = async () => {
     if (!material) return;
     await withGeneration('flashcards', async () => {
@@ -186,6 +206,9 @@ export function MaterialDetailPage() {
         difficulty,
         createdAt: new Date(),
       });
+
+      // Öppna och scrolla till sektionen efter generering
+      setTimeout(() => scrollToSection(flashcardsRef, 'flashcards'), 300);
     });
   };
 
@@ -214,6 +237,9 @@ export function MaterialDetailPage() {
         difficulty,
         createdAt: new Date(),
       });
+
+      // Öppna och scrolla till sektionen efter generering
+      setTimeout(() => scrollToSection(quizRef, 'quiz'), 300);
     });
   };
 
@@ -236,6 +262,9 @@ export function MaterialDetailPage() {
         count: concepts.length,
         createdAt: new Date(),
       });
+
+      // Öppna och scrolla till sektionen efter generering
+      setTimeout(() => scrollToSection(conceptsRef, 'concepts'), 300);
     });
   };
 
@@ -622,61 +651,101 @@ export function MaterialDetailPage() {
                     <label className="text-sm font-medium text-gray-600 dark:text-gray-300">
                       Flashcards ({cardCount})
                     </label>
-                    <input
-                      type="range"
-                      min={4}
-                      max={20}
-                      step={2}
-                      value={cardCount}
-                      onChange={(event) => setCardCount(Number(event.target.value))}
-                      className="mt-1 w-full"
-                    />
-                    <Button
-                      className="mt-2 w-full"
-                      size="sm"
-                      onClick={handleGenerateFlashcards}
-                      isLoading={isGenerating.flashcards}
-                    >
-                      <Sparkles className="mr-2 h-4 w-4" />
-                      Skapa kort
-                    </Button>
+                    {material.flashcards.length === 0 && (
+                      <input
+                        type="range"
+                        min={4}
+                        max={20}
+                        step={2}
+                        value={cardCount}
+                        onChange={(event) => setCardCount(Number(event.target.value))}
+                        className="mt-1 w-full"
+                      />
+                    )}
+                    {material.flashcards.length === 0 ? (
+                      <Button
+                        className="mt-2 w-full"
+                        size="sm"
+                        onClick={handleGenerateFlashcards}
+                        isLoading={isGenerating.flashcards}
+                      >
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        Skapa kort
+                      </Button>
+                    ) : (
+                      <Button
+                        className="mt-2 w-full"
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => scrollToSection(flashcardsRef, 'flashcards')}
+                      >
+                        <CheckCircle2 className="mr-2 h-4 w-4" />
+                        Visa kort ({material.flashcards.length})
+                      </Button>
+                    )}
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-600 dark:text-gray-300">
                       Quizfrågor ({quizCount})
                     </label>
-                    <input
-                      type="range"
-                      min={3}
-                      max={10}
-                      step={1}
-                      value={quizCount}
-                      onChange={(event) => setQuizCount(Number(event.target.value))}
-                      className="mt-1 w-full"
-                    />
-                    <Button
-                      className="mt-2 w-full"
-                      size="sm"
-                      variant="secondary"
-                      onClick={handleGenerateQuiz}
-                      isLoading={isGenerating.quiz}
-                    >
-                      <MessageSquare className="mr-2 h-4 w-4" />
-                      Skapa quiz
-                    </Button>
+                    {material.questions.length === 0 && (
+                      <input
+                        type="range"
+                        min={3}
+                        max={10}
+                        step={1}
+                        value={quizCount}
+                        onChange={(event) => setQuizCount(Number(event.target.value))}
+                        className="mt-1 w-full"
+                      />
+                    )}
+                    {material.questions.length === 0 ? (
+                      <Button
+                        className="mt-2 w-full"
+                        size="sm"
+                        variant="secondary"
+                        onClick={handleGenerateQuiz}
+                        isLoading={isGenerating.quiz}
+                      >
+                        <MessageSquare className="mr-2 h-4 w-4" />
+                        Skapa quiz
+                      </Button>
+                    ) : (
+                      <Button
+                        className="mt-2 w-full"
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => scrollToSection(quizRef, 'quiz')}
+                      >
+                        <CheckCircle2 className="mr-2 h-4 w-4" />
+                        Visa quiz ({material.questions.length})
+                      </Button>
+                    )}
                   </div>
                 </div>
 
-                <Button
-                  className="w-full"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleGenerateConcepts}
-                  isLoading={isGenerating.concepts}
-                >
-                  <Brain className="mr-2 h-4 w-4" />
-                  Identifiera nyckelbegrepp
-                </Button>
+                {material.concepts.length === 0 ? (
+                  <Button
+                    className="w-full"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleGenerateConcepts}
+                    isLoading={isGenerating.concepts}
+                  >
+                    <Brain className="mr-2 h-4 w-4" />
+                    Identifiera nyckelbegrepp
+                  </Button>
+                ) : (
+                  <Button
+                    className="w-full"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => scrollToSection(conceptsRef, 'concepts')}
+                  >
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                    Visa begrepp ({material.concepts.length})
+                  </Button>
+                )}
 
                 <Link
                   to={`/study/material/${material.id}/chat`}
@@ -790,6 +859,239 @@ export function MaterialDetailPage() {
               </p>
             )}
           </Card>
+        )}
+
+        {/* Genererat innehåll - Flashcards */}
+        {material.flashcards.length > 0 && (
+          <div ref={flashcardsRef} className="scroll-mt-6">
+            <Collapsible.Root
+              open={openSections.flashcards}
+              onOpenChange={(open) => setOpenSections(prev => ({ ...prev, flashcards: open }))}
+            >
+              <Card className="space-y-4">
+                <Collapsible.Trigger className="flex w-full items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-full bg-primary-100 dark:bg-primary-900/40 p-2">
+                      <Sparkles className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+                    </div>
+                    <div className="text-left">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                        Flashcards
+                      </h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {material.flashcards.length} kort genererade
+                      </p>
+                    </div>
+                  </div>
+                  {openSections.flashcards ? (
+                    <ChevronUp className="h-5 w-5 text-gray-400" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-gray-400" />
+                  )}
+                </Collapsible.Trigger>
+
+                <Collapsible.Content>
+                  <div className="space-y-3 pt-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {material.flashcards.slice(0, 6).map((card) => (
+                        <div
+                          key={card.id}
+                          className="rounded-xl bg-gray-50 dark:bg-gray-800 p-4 space-y-2"
+                        >
+                          <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                            {card.front}
+                          </div>
+                          <div className="text-sm text-gray-600 dark:text-gray-300">
+                            {card.back}
+                          </div>
+                          <div className="flex items-center gap-2 pt-2">
+                            <span className={`text-xs px-2 py-1 rounded-full ${
+                              card.difficulty === 'easy'
+                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                                : card.difficulty === 'medium'
+                                ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'
+                                : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                            }`}>
+                              {card.difficulty === 'easy' ? 'Lätt' : card.difficulty === 'medium' ? 'Lagom' : 'Utmanande'}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {material.flashcards.length > 6 && (
+                      <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
+                        ...och {material.flashcards.length - 6} kort till
+                      </p>
+                    )}
+                    <Link to={`/study/flashcards/${material.id}`}>
+                      <Button className="w-full" size="sm">
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        Öppna alla flashcards ({material.flashcards.length})
+                      </Button>
+                    </Link>
+                  </div>
+                </Collapsible.Content>
+              </Card>
+            </Collapsible.Root>
+          </div>
+        )}
+
+        {/* Genererat innehåll - Quiz */}
+        {material.questions.length > 0 && (
+          <div ref={quizRef} className="scroll-mt-6">
+            <Collapsible.Root
+              open={openSections.quiz}
+              onOpenChange={(open) => setOpenSections(prev => ({ ...prev, quiz: open }))}
+            >
+              <Card className="space-y-4">
+                <Collapsible.Trigger className="flex w-full items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-full bg-purple-100 dark:bg-purple-900/40 p-2">
+                      <MessageSquare className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                    </div>
+                    <div className="text-left">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                        Quizfrågor
+                      </h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {material.questions.length} frågor genererade
+                      </p>
+                    </div>
+                  </div>
+                  {openSections.quiz ? (
+                    <ChevronUp className="h-5 w-5 text-gray-400" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-gray-400" />
+                  )}
+                </Collapsible.Trigger>
+
+                <Collapsible.Content>
+                  <div className="space-y-3 pt-2">
+                    <div className="space-y-3">
+                      {material.questions.slice(0, 3).map((question, index) => (
+                        <div
+                          key={question.id}
+                          className="rounded-xl bg-gray-50 dark:bg-gray-800 p-4 space-y-2"
+                        >
+                          <div className="flex items-start gap-2">
+                            <span className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400 text-xs font-bold">
+                              {index + 1}
+                            </span>
+                            <div className="flex-1">
+                              <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                                {question.question}
+                              </div>
+                              <div className="mt-2 text-sm text-green-600 dark:text-green-400">
+                                ✓ {question.correctAnswer}
+                              </div>
+                              <div className="flex items-center gap-2 pt-2">
+                                <span className={`text-xs px-2 py-1 rounded-full ${
+                                  question.difficulty === 'easy'
+                                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                                    : question.difficulty === 'medium'
+                                    ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'
+                                    : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                                }`}>
+                                  {question.difficulty === 'easy' ? 'Lätt' : question.difficulty === 'medium' ? 'Lagom' : 'Utmanande'}
+                                </span>
+                                <span className="text-xs px-2 py-1 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                                  {question.type === 'multiple-choice' ? 'Flerval' :
+                                   question.type === 'true-false' ? 'Sant/Falskt' :
+                                   question.type === 'fill-blank' ? 'Fyll i' : 'Matcha par'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {material.questions.length > 3 && (
+                      <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
+                        ...och {material.questions.length - 3} frågor till
+                      </p>
+                    )}
+                    <Link to={`/study/quiz/${material.id}`}>
+                      <Button className="w-full" size="sm" variant="secondary">
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        Starta quiz ({material.questions.length} frågor)
+                      </Button>
+                    </Link>
+                  </div>
+                </Collapsible.Content>
+              </Card>
+            </Collapsible.Root>
+          </div>
+        )}
+
+        {/* Genererat innehåll - Nyckelbegrepp */}
+        {material.concepts.length > 0 && (
+          <div ref={conceptsRef} className="scroll-mt-6">
+            <Collapsible.Root
+              open={openSections.concepts}
+              onOpenChange={(open) => setOpenSections(prev => ({ ...prev, concepts: open }))}
+            >
+              <Card className="space-y-4">
+                <Collapsible.Trigger className="flex w-full items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-full bg-indigo-100 dark:bg-indigo-900/40 p-2">
+                      <Brain className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                    </div>
+                    <div className="text-left">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                        Nyckelbegrepp
+                      </h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {material.concepts.length} begrepp identifierade
+                      </p>
+                    </div>
+                  </div>
+                  {openSections.concepts ? (
+                    <ChevronUp className="h-5 w-5 text-gray-400" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-gray-400" />
+                  )}
+                </Collapsible.Trigger>
+
+                <Collapsible.Content>
+                  <div className="space-y-3 pt-2">
+                    <div className="grid grid-cols-1 gap-3">
+                      {material.concepts.map((concept) => (
+                        <div
+                          key={concept.id}
+                          className="rounded-xl bg-gray-50 dark:bg-gray-800 p-4 space-y-2"
+                        >
+                          <div className="text-base font-semibold text-gray-900 dark:text-white">
+                            {concept.term}
+                          </div>
+                          <div className="text-sm text-gray-600 dark:text-gray-300">
+                            {concept.definition}
+                          </div>
+                          {concept.examples && concept.examples.length > 0 && (
+                            <div className="pt-2 space-y-1">
+                              <div className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                                Exempel:
+                              </div>
+                              <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-300 space-y-1">
+                                {concept.examples.map((example, idx) => (
+                                  <li key={idx}>{example}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <Link to={`/study/concepts/${material.id}`}>
+                      <Button className="w-full" size="sm" variant="outline">
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        Utforska alla begrepp
+                      </Button>
+                    </Link>
+                  </div>
+                </Collapsible.Content>
+              </Card>
+            </Collapsible.Root>
+          </div>
         )}
       </div>
 

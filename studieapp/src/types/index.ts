@@ -19,6 +19,39 @@ export type StudyMode = 'flashcards' | 'quiz' | 'chat' | 'mindmap' | 'read';
 
 export type GameType = 'snake' | 'memory' | 'whack' | 'timeatack' | 'boss';
 
+export type LanguageCode = 'sv' | 'en' | 'es';
+
+export interface GameTermBase {
+  id: string;
+  materialId: string;
+  term: string;
+  definition: string;
+  examples?: string[];
+  source: 'flashcard' | 'concept' | 'glossary' | 'generated';
+  language: LanguageCode;
+}
+
+export interface SnakeGameTerm extends GameTermBase {
+  distractors: string[];
+}
+
+export interface GameContentPreparation {
+  terms: SnakeGameTerm[];
+  language: LanguageCode;
+  source: 'existing' | 'generated' | 'mixed';
+  needsReview: boolean;
+}
+
+export interface MistakeEntry {
+  id: string;
+  materialId: string;
+  term: string;
+  definition: string;
+  language: LanguageCode;
+  missCount: number;
+  lastMissedAt: string;
+}
+
 export interface GenerationLogEntry {
   id: string;
   type: 'flashcards' | 'quiz' | 'concepts';
