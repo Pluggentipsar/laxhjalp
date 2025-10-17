@@ -34,10 +34,43 @@ const fromFirestoreTimestamp = (timestamp: Timestamp): Date => {
 };
 
 /**
+ * Ta bort alla undefined-värden från ett objekt (rekursivt)
+ * Firestore tillåter inte undefined, bara null
+ */
+const removeUndefinedFields = (obj: any): any => {
+  if (obj === null || obj === undefined) {
+    return null;
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map(removeUndefinedFields);
+  }
+
+  if (obj instanceof Timestamp || obj instanceof Date) {
+    return obj;
+  }
+
+  if (typeof obj === 'object') {
+    const cleaned: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+      if (value !== undefined) {
+        cleaned[key] = removeUndefinedFields(value);
+      }
+    }
+    return cleaned;
+  }
+
+  return obj;
+};
+
+/**
  * Synka ett enskilt material till Firestore
  */
 export async function syncMaterialToFirestore(userId: string, material: Material): Promise<void> {
   try {
+    console.log(`[Firestore] 🔄 Starting sync for material: ${material.title}`);
+    console.log(`[Firestore] 📍 Path: users/${userId}/materials/${material.id}`);
+
     const materialRef = doc(firestore, 'users', userId, 'materials', material.id);
 
     // Konvertera alla dates till Firestore Timestamps
@@ -63,10 +96,14 @@ export async function syncMaterialToFirestore(userId: string, material: Material
       })),
     };
 
-    await setDoc(materialRef, firestoreData, { merge: true });
-    console.log(`[Firestore] Synced material: ${material.title}`);
+    // Ta bort alla undefined-värden (Firestore tillåter inte undefined)
+    const cleanedData = removeUndefinedFields(firestoreData);
+
+    console.log('[Firestore] 💾 Writing to Firestore...');
+    await setDoc(materialRef, cleanedData, { merge: true });
+    console.log(`[Firestore] ✅ Successfully synced material: ${material.title}`);
   } catch (error) {
-    console.error('[Firestore] Error syncing material:', error);
+    console.error(`[Firestore] ❌ Error syncing material "${material.title}":`, error);
     throw error;
   }
 }
@@ -168,7 +205,8 @@ export async function syncFolderToFirestore(userId: string, folder: Folder): Pro
       ...folder,
       createdAt: toFirestoreTimestamp(folder.createdAt),
     };
-    await setDoc(folderRef, firestoreData, { merge: true });
+    const cleanedData = removeUndefinedFields(firestoreData);
+    await setDoc(folderRef, cleanedData, { merge: true });
     console.log(`[Firestore] Synced folder: ${folder.name}`);
   } catch (error) {
     console.error('[Firestore] Error syncing folder:', error);
@@ -223,7 +261,8 @@ export async function syncStudySessionToFirestore(userId: string, session: Study
       startedAt: toFirestoreTimestamp(session.startedAt),
       endedAt: session.endedAt ? toFirestoreTimestamp(session.endedAt) : null,
     };
-    await setDoc(sessionRef, firestoreData, { merge: true });
+    const cleanedData = removeUndefinedFields(firestoreData);
+    await setDoc(sessionRef, cleanedData, { merge: true });
     console.log(`[Firestore] Synced study session: ${session.id}`);
   } catch (error) {
     console.error('[Firestore] Error syncing study session:', error);

@@ -52,7 +52,11 @@ function AppContent() {
         });
       }
 
-      loadMaterials();
+      // Vänta en frame innan vi laddar materials för att säkerställa att state är uppdaterad
+      requestAnimationFrame(() => {
+        console.log('[App] Now loading materials after state sync');
+        loadMaterials();
+      });
     }
   }, [userProfile, loadMaterials]);
 

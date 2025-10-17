@@ -9,6 +9,7 @@ import {
   Sparkles,
   MessageSquare,
   Gamepad2,
+  Trash2,
 } from 'lucide-react';
 import { MainLayout } from '../components/layout/MainLayout';
 import { Card } from '../components/common/Card';
@@ -34,6 +35,7 @@ export function StudyDashboardPage() {
   const navigate = useNavigate();
   const materials = useAppStore((state) => state.materials);
   const addMaterial = useAppStore((state) => state.addMaterial);
+  const deleteMaterial = useAppStore((state) => state.deleteMaterial);
   const loadMaterials = useAppStore((state) => state.loadMaterials);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -334,29 +336,43 @@ export function StudyDashboardPage() {
                       </div>
                     )}
 
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => navigate(`/study/material/${material.id}`)}
-                      >
-                        <BookOpen size={16} className="mr-1" />
-                        Detaljer
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => navigate(`/study/material/${material.id}/chat`)}
-                      >
-                        <MessageSquare size={16} className="mr-1" />
-                        Chatt
-                      </Button>
+                    <div className="flex flex-wrap gap-2 justify-between">
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => navigate(`/study/material/${material.id}`)}
+                        >
+                          <BookOpen size={16} className="mr-1" />
+                          Detaljer
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => navigate(`/study/material/${material.id}/chat`)}
+                        >
+                          <MessageSquare size={16} className="mr-1" />
+                          Chatt
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => navigate(`/study/material/${material.id}/game/snake`)}
+                        >
+                          <Gamepad2 size={16} className="mr-1" />
+                          Snake
+                        </Button>
+                      </div>
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => navigate(`/study/material/${material.id}/game/snake`)}
+                        onClick={async () => {
+                          if (confirm(`Är du säker på att du vill ta bort "${material.title}"?`)) {
+                            await deleteMaterial(material.id);
+                          }
+                        }}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
                       >
-                        <Gamepad2 size={16} className="mr-1" />
-                        Snake
+                        <Trash2 size={16} />
                       </Button>
                     </div>
                   </Card>

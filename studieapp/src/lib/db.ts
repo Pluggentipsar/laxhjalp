@@ -42,7 +42,8 @@ export const db = new StudieAppDatabase();
 export const dbHelpers = {
   // Material
   async getAllMaterials() {
-    return await db.materials.orderBy('updatedAt').reverse().toArray();
+    // Sortera på createdAt (finns i index), inte updatedAt
+    return await db.materials.orderBy('createdAt').reverse().toArray();
   },
 
   async getMaterialsBySubject(subject: string) {

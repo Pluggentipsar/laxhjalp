@@ -178,30 +178,38 @@ export const useAppStore = create<AppStore>()(
 
       // Materials
       loadMaterials: async () => {
+        console.log('[AppStore] 📥 loadMaterials called');
         set({ isLoading: true });
         try {
           // Försök först ladda från IndexedDB (snabbt)
           const localMaterials = await dbHelpers.getAllMaterials();
           const localFolders = await db.folders.toArray();
+          console.log(`[AppStore] 💾 Loaded from IndexedDB: ${localMaterials.length} materials, ${localFolders.length} folders`);
           set({ materials: localMaterials, folders: localFolders });
 
           // Om användare är inloggad, synka från Firestore i bakgrunden
           const user = get().user;
+          console.log('[AppStore] 👤 Current user in loadMaterials:', { id: user?.id, email: user?.email });
+
           if (user?.id) {
-            console.log('[AppStore] Syncing from Firestore for user:', user.id);
+            console.log('[AppStore] 🔄 Syncing from Firestore for user:', user.id);
             try {
               await initFullSyncFromFirestore(user.id);
               // Ladda om från IndexedDB efter sync
               const syncedMaterials = await dbHelpers.getAllMaterials();
               const syncedFolders = await db.folders.toArray();
+              console.log(`[AppStore] ✅ Synced from Firestore: ${syncedMaterials.length} materials, ${syncedFolders.length} folders`);
               set({ materials: syncedMaterials, folders: syncedFolders });
             } catch (syncError) {
-              console.warn('[AppStore] Firestore sync failed, using local data:', syncError);
+              console.error('[AppStore] ❌ Firestore sync failed:', syncError);
             }
+          } else {
+            console.warn('[AppStore] ⚠️ No user ID found - skipping Firestore sync');
           }
 
           set({ isLoading: false });
         } catch (error) {
+          console.error('[AppStore] ❌ Error in loadMaterials:', error);
           set({
             error: error instanceof Error ? error.message : 'Fel vid laddning',
             isLoading: false,
@@ -210,17 +218,24 @@ export const useAppStore = create<AppStore>()(
       },
 
       addMaterial: async (material) => {
+        console.log('[AppStore] ➕ addMaterial called:', material.title);
         await db.materials.add(material);
         set((state) => ({ materials: [...state.materials, material] }));
 
         // Synka till Firestore om användaren är inloggad
         const user = get().user;
+        console.log('[AppStore] 👤 Current user:', { id: user?.id, email: user?.email, name: user?.name });
+
         if (user?.id) {
+          console.log('[AppStore] 🔄 Attempting to sync material to Firestore for user:', user.id);
           try {
             await syncMaterialToFirestore(user.id, material);
+            console.log('[AppStore] ✅ Material synced to Firestore successfully!');
           } catch (error) {
-            console.warn('[AppStore] Failed to sync material to Firestore:', error);
+            console.error('[AppStore] ❌ Failed to sync material to Firestore:', error);
           }
+        } else {
+          console.warn('[AppStore] ⚠️ No user logged in - material NOT synced to Firestore!');
         }
       },
 
