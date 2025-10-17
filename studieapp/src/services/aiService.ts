@@ -265,6 +265,152 @@ export async function explainSelection(
   }
 }
 
+export interface PersonalizedExplanationResponse {
+  explanation: string;
+  examples: string[];
+  analogy?: string;
+}
+
+export interface PersonalizedExamplesResponse {
+  examples: Array<{
+    title: string;
+    description: string;
+    context: string;
+  }>;
+}
+
+export interface SummaryResponse {
+  summary: string;
+  keyPoints: string[];
+  mainIdeas: string[];
+}
+
+/**
+ * Generera personaliserad förklaring baserat på användarens intressen
+ */
+export async function generatePersonalizedExplanation(
+  materialContent: string,
+  selection: string,
+  interests: string[],
+  customContext?: string,
+  grade: number = 7
+): Promise<PersonalizedExplanationResponse> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/generate/personalized-explain`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        materialContent,
+        selection,
+        interests,
+        customContext,
+        grade,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Personalized Explain API-fel: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return {
+      explanation: data.explanation,
+      examples: data.examples || [],
+      analogy: data.analogy,
+    };
+  } catch (error) {
+    console.error('Personaliserad förklaring fel:', error);
+    // Fallback till mock-svar vid fel
+    return mockPersonalizedExplanation(selection, interests);
+  }
+}
+
+/**
+ * Generera personaliserade exempel baserat på användarens intressen
+ */
+export async function generatePersonalizedExamples(
+  materialContent: string,
+  interests: string[],
+  customContext?: string,
+  grade: number = 7,
+  count: number = 3
+): Promise<PersonalizedExamplesResponse> {
+  console.log('[aiService] generatePersonalizedExamples called with:', { interests, customContext, count });
+  try {
+    const response = await fetch(`${API_BASE_URL}/generate/personalized-examples`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        materialContent,
+        interests,
+        customContext,
+        grade,
+        count,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Personalized Examples API-fel: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log('[aiService] API response:', data);
+    return {
+      examples: data.examples || [],
+    };
+  } catch (error) {
+    console.error('[aiService] Personaliserade exempel fel, using mock data:', error);
+    // Fallback till mock-svar vid fel
+    const mockData = mockPersonalizedExamples(materialContent, interests, count);
+    console.log('[aiService] Mock data:', mockData);
+    return mockData;
+  }
+}
+
+/**
+ * Generera sammanfattning av materialet
+ */
+export async function generateSummary(
+  materialContent: string,
+  grade: number = 7
+): Promise<SummaryResponse> {
+  console.log('[aiService] generateSummary called');
+  try {
+    const response = await fetch(`${API_BASE_URL}/generate/summary`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        content: materialContent,
+        grade,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Summary API-fel: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log('[aiService] API response:', data);
+    return {
+      summary: data.summary,
+      keyPoints: data.keyPoints || [],
+      mainIdeas: data.mainIdeas || [],
+    };
+  } catch (error) {
+    console.error('[aiService] Sammanfattning fel, using mock data:', error);
+    // Fallback till mock-svar vid fel
+    const mockData = mockSummary(materialContent);
+    console.log('[aiService] Mock data:', mockData);
+    return mockData;
+  }
+}
+
 /**
  * OCR - Extrahera text från bild
  */
@@ -432,4 +578,51 @@ function mockChatResponse(_userMessage: string): string {
   ];
 
   return responses[Math.floor(Math.random() * responses.length)];
+}
+
+function mockPersonalizedExplanation(
+  selection: string,
+  interests: string[]
+): PersonalizedExplanationResponse {
+  const interest = interests[0] || 'ditt intresse';
+
+  return {
+    explanation: `Låt mig förklara "${selection}" på ett sätt som du kanske kan relatera till bättre!`,
+    examples: [
+      `Tänk på det som när du ${interest.toLowerCase()} - det fungerar på liknande sätt.`,
+      `I ${interest} kan du se samma princip när...`,
+    ],
+    analogy: `Det är ungefär som i ${interest} när...`,
+  };
+}
+
+function mockPersonalizedExamples(
+  _materialContent: string,
+  interests: string[],
+  count: number
+): PersonalizedExamplesResponse {
+  const interest = interests[0] || 'något du gillar';
+
+  return {
+    examples: Array.from({ length: count }, (_, i) => ({
+      title: `Exempel ${i + 1} med ${interest}`,
+      description: `Här är ett exempel som kopplar till ${interest.toLowerCase()}. Det visar hur konceptet fungerar i en kontext du känner igen.`,
+      context: `I ${interest} kan du se detta när...`,
+    })),
+  };
+}
+
+function mockSummary(_materialContent: string): SummaryResponse {
+  return {
+    summary: 'Detta är en sammanfattning av materialet. Den ger en överblick av huvudinnehållet och de viktigaste koncepten.',
+    keyPoints: [
+      'Viktig punkt nummer 1',
+      'Viktig punkt nummer 2',
+      'Viktig punkt nummer 3',
+    ],
+    mainIdeas: [
+      'Huvudidé 1: Detta är den första huvudidén',
+      'Huvudidé 2: Detta är den andra huvudidén',
+    ],
+  };
 }

@@ -117,6 +117,7 @@ export const useAppStore = create<AppStore>()(
           name: 'Elev',
           grade,
           subjects,
+          interests: [],
           createdAt: new Date(),
           dailyGoalMinutes: dailyGoal,
           weeklyGoalDays: weeklyGoal,

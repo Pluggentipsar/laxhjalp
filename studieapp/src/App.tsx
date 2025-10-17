@@ -1,7 +1,10 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { useAppStore } from './store/appStore';
 import { OnboardingFlow } from './components/onboarding/OnboardingFlow';
+import { LoginPage } from './pages/auth/LoginPage';
+import { SignupPage } from './pages/auth/SignupPage';
 import { HomePage } from './pages/HomePage';
 import { ProfilePage } from './pages/ProfilePage';
 import { StudyDashboardPage } from './pages/StudyDashboardPage';
@@ -12,69 +15,90 @@ import { ChatStudyPage } from './pages/study/ChatStudyPage';
 import { ConceptExplorerPage } from './pages/study/ConceptExplorerPage';
 import { SnakeGamePage } from './pages/study/SnakeGamePage';
 
-function App() {
+function AppContent() {
+  const { userProfile } = useAuth();
   const user = useAppStore((state) => state.user);
   const onboarding = useAppStore((state) => state.onboarding);
   const loadMaterials = useAppStore((state) => state.loadMaterials);
 
   useEffect(() => {
-    // Load user profile and materials on mount
-    const initApp = async () => {
-      const { dbHelpers } = await import('./lib/db');
-      const profile = await dbHelpers.getUserProfile();
+    // Sync Firebase user with local store
+    if (userProfile) {
+      console.log('[App] Syncing Firebase user to local store:', userProfile);
+      useAppStore.setState({ user: userProfile });
+      loadMaterials();
+    }
+  }, [userProfile, loadMaterials]);
 
-      if (profile) {
-        useAppStore.setState({ user: profile });
-        loadMaterials();
-      }
-    };
+  console.log('[App] Rendering with state:', {
+    hasUserProfile: !!userProfile,
+    hasLocalUser: !!user,
+    onboardingCompleted: onboarding.completed
+  });
 
-    initApp();
-  }, []);
-
-  // Show onboarding if not completed
-  if (!user || !onboarding.completed) {
+  // No user logged in - show auth
+  if (!userProfile) {
+    console.log('[App] No userProfile - showing auth routes');
     return (
-      <BrowserRouter>
-        <OnboardingFlow />
-      </BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
     );
   }
 
+  // User logged in but needs onboarding
+  if (!user || !onboarding.completed) {
+    console.log('[App] User needs onboarding - showing OnboardingFlow');
+    return <OnboardingFlow />;
+  }
+
+  console.log('[App] User authenticated and onboarded - showing main app');
+
+  // User logged in and onboarded
+  return (
+    <Routes>
+      <Route path="/" element={<HomePage />} />
+      <Route path="/profile" element={<ProfilePage />} />
+      <Route path="/study" element={<StudyDashboardPage />} />
+      <Route path="/study/material/:materialId" element={<MaterialDetailPage />} />
+      <Route
+        path="/study/flashcards/:materialId"
+        element={<FlashcardStudyPage />}
+      />
+      <Route
+        path="/study/quiz/:materialId"
+        element={<QuizStudyPage />}
+      />
+      <Route
+        path="/study/material/:materialId/chat"
+        element={<ChatStudyPage />}
+      />
+      <Route
+        path="/study/concepts/:materialId"
+        element={<ConceptExplorerPage />}
+      />
+      <Route
+        path="/study/material/:materialId/game/snake"
+        element={<SnakeGamePage />}
+      />
+      <Route path="/games" element={<Navigate to="/" replace />} />
+      <Route path="/material" element={<Navigate to="/study" replace />} />
+      <Route path="/import/*" element={<Navigate to="/study" replace />} />
+
+      {/* Catch all */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
+
+function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/study" element={<StudyDashboardPage />} />
-        <Route path="/study/material/:materialId" element={<MaterialDetailPage />} />
-        <Route
-          path="/study/flashcards/:materialId"
-          element={<FlashcardStudyPage />}
-        />
-        <Route
-          path="/study/quiz/:materialId"
-          element={<QuizStudyPage />}
-        />
-        <Route
-          path="/study/material/:materialId/chat"
-          element={<ChatStudyPage />}
-        />
-        <Route
-          path="/study/concepts/:materialId"
-          element={<ConceptExplorerPage />}
-        />
-        <Route
-          path="/study/material/:materialId/game/snake"
-          element={<SnakeGamePage />}
-        />
-        <Route path="/games" element={<Navigate to="/" replace />} />
-        <Route path="/material" element={<Navigate to="/study" replace />} />
-        <Route path="/import/*" element={<Navigate to="/study" replace />} />
-
-        {/* Catch all */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </BrowserRouter>
   );
 }

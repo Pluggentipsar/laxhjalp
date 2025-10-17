@@ -16,10 +16,15 @@ import {
   ChevronUp,
   ExternalLink,
   CheckCircle2,
+  Heart,
+  Lightbulb,
+  FileText,
 } from 'lucide-react';
 import { MainLayout } from '../components/layout/MainLayout';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
+import { PersonalizedExplanationModal } from '../components/common/PersonalizedExplanationModal';
+import { PersonalizedExamplesModal } from '../components/common/PersonalizedExamplesModal';
 import { useAppStore } from '../store/appStore';
 import {
   generateFlashcards,
@@ -28,7 +33,13 @@ import {
   simplifyText,
   deepenText,
   explainSelection,
+  generatePersonalizedExplanation,
+  generatePersonalizedExamples,
+  generateSummary,
   type ExplainSelectionResponse,
+  type PersonalizedExplanationResponse,
+  type PersonalizedExamplesResponse,
+  type SummaryResponse,
 } from '../services/aiService';
 import type { Difficulty, GenerationLogEntry, GlossaryEntry, Material } from '../types';
 
@@ -43,7 +54,7 @@ const subjectLabels: Record<string, string> = {
 };
 
 type GenerationMode = 'flashcards' | 'quiz' | 'concepts';
-type ContentView = 'original' | 'simplified' | 'advanced';
+type ContentView = 'original' | 'simplified' | 'advanced' | 'personalized-examples' | 'summary';
 
 type SelectionMenuState = {
   text: string;
@@ -146,6 +157,13 @@ export function MaterialDetailPage() {
   const [selectionMenu, setSelectionMenu] = useState<SelectionMenuState | null>(null);
   const [isExplaining, setIsExplaining] = useState(false);
   const [explainResult, setExplainResult] = useState<ExplainSelectionResponse | null>(null);
+  const [isPersonalizedModalOpen, setIsPersonalizedModalOpen] = useState(false);
+  const [personalizedResult, setPersonalizedResult] = useState<PersonalizedExplanationResponse | null>(null);
+  const [isPersonalizedExamplesModalOpen, setIsPersonalizedExamplesModalOpen] = useState(false);
+  const [personalizedExamples, setPersonalizedExamples] = useState<PersonalizedExamplesResponse | null>(null);
+  const [isGeneratingExamples, setIsGeneratingExamples] = useState(false);
+  const [summary, setSummary] = useState<SummaryResponse | null>(null);
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const contentRef = useRef<HTMLDivElement | null>(null);
   const flashcardsRef = useRef<HTMLDivElement | null>(null);
   const quizRef = useRef<HTMLDivElement | null>(null);
@@ -198,6 +216,18 @@ export function MaterialDetailPage() {
     setSelectionMenu(null);
     setExplainResult(null);
     window.getSelection()?.removeAllRanges();
+  }, [contentView]);
+
+  useEffect(() => {
+    console.log('[MaterialDetailPage] personalizedExamples state changed:', personalizedExamples);
+  }, [personalizedExamples]);
+
+  useEffect(() => {
+    console.log('[MaterialDetailPage] summary state changed:', summary);
+  }, [summary]);
+
+  useEffect(() => {
+    console.log('[MaterialDetailPage] contentView changed to:', contentView);
   }, [contentView]);
 
   const withGeneration = async (
@@ -421,6 +451,85 @@ export function MaterialDetailPage() {
     }
   };
 
+  const handleOpenPersonalizedModal = () => {
+    setIsPersonalizedModalOpen(true);
+  };
+
+  const handleGeneratePersonalizedExplanation = async (
+    selectedInterests: string[],
+    customContext?: string
+  ) => {
+    if (!material || !selectionMenu) return;
+
+    try {
+      const result = await generatePersonalizedExplanation(
+        material.content,
+        selectionMenu.text,
+        selectedInterests,
+        customContext,
+        grade
+      );
+      setPersonalizedResult(result);
+      setSelectionMenu(null);
+      window.getSelection()?.removeAllRanges();
+    } catch (error) {
+      console.error('Personalized explanation error', error);
+      setError('Kunde inte generera personaliserad förklaring.');
+      throw error;
+    }
+  };
+
+  const handleGeneratePersonalizedExamples = async (
+    selectedInterests: string[],
+    customContext?: string
+  ) => {
+    if (!material) return;
+
+    console.log('Generating personalized examples with interests:', selectedInterests, 'context:', customContext);
+    setIsGeneratingExamples(true);
+    try {
+      const result = await generatePersonalizedExamples(
+        material.content,
+        selectedInterests,
+        customContext,
+        grade,
+        3
+      );
+      console.log('Generated examples:', result);
+      setPersonalizedExamples(result);
+      console.log('State updated, personalizedExamples should now be:', result);
+      // Switch to the tab AFTER data is set
+      setTimeout(() => {
+        console.log('Now switching to personalized-examples view');
+        setContentView('personalized-examples');
+      }, 100);
+    } catch (error) {
+      console.error('Personalized examples error', error);
+      setError('Kunde inte generera personaliserade exempel.');
+      // Don't throw - just continue
+    } finally {
+      setIsGeneratingExamples(false);
+    }
+  };
+
+  const handleGenerateSummary = async () => {
+    if (!material) return;
+
+    console.log('Generating summary for material:', material.title);
+    setIsGeneratingSummary(true);
+    try {
+      const result = await generateSummary(material.content, grade);
+      console.log('Generated summary:', result);
+      setSummary(result);
+      setContentView('summary');
+    } catch (error) {
+      console.error('Summary error', error);
+      setError('Kunde inte generera sammanfattning.');
+    } finally {
+      setIsGeneratingSummary(false);
+    }
+  };
+
   const simplifiedAvailable = Boolean(material?.simplifiedContent);
   const advancedAvailable = Boolean(material?.advancedContent);
 
@@ -572,7 +681,7 @@ export function MaterialDetailPage() {
               value={contentView}
               onValueChange={(value) => setContentView(value as ContentView)}
             >
-              <Tabs.List className="inline-flex items-center rounded-2xl bg-gray-100 dark:bg-gray-800 p-1">
+              <Tabs.List className="inline-flex items-center rounded-2xl bg-gray-100 dark:bg-gray-800 p-1 flex-wrap gap-1">
                 <Tabs.Trigger
                   value="original"
                   className="px-4 py-2 text-sm font-medium rounded-2xl data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow data-[state=active]:text-primary-600 transition-colors"
@@ -595,6 +704,24 @@ export function MaterialDetailPage() {
                   Fördjupad
                   {!advancedAvailable && !isDeepening && (
                     <span className="ml-2 inline-flex h-2 w-2 rounded-full bg-primary-500" />
+                  )}
+                </Tabs.Trigger>
+                <Tabs.Trigger
+                  value="personalized-examples"
+                  className="px-4 py-2 text-sm font-medium rounded-2xl data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow data-[state=active]:text-primary-600 transition-colors"
+                >
+                  Personaliserade Exempel
+                  {!personalizedExamples && !isGeneratingExamples && (
+                    <span className="ml-2 inline-flex h-2 w-2 rounded-full bg-orange-500" />
+                  )}
+                </Tabs.Trigger>
+                <Tabs.Trigger
+                  value="summary"
+                  className="px-4 py-2 text-sm font-medium rounded-2xl data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow data-[state=active]:text-primary-600 transition-colors"
+                >
+                  Sammanfattning
+                  {!summary && !isGeneratingSummary && (
+                    <span className="ml-2 inline-flex h-2 w-2 rounded-full bg-blue-500" />
                   )}
                 </Tabs.Trigger>
               </Tabs.List>
@@ -665,6 +792,145 @@ export function MaterialDetailPage() {
                         >
                           <Brain className="mr-2 h-4 w-4" />
                           Fördjupa texten
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </Tabs.Content>
+
+                <Tabs.Content value="personalized-examples">
+                  <div key={personalizedExamples ? 'with-data' : 'without-data'} className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-6 shadow-inner min-h-[320px]">
+                    {personalizedExamples ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2 mb-4">
+                          <Lightbulb className="h-5 w-5 text-orange-500" />
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                            Exempel anpassade för dig
+                          </h3>
+                        </div>
+                        {personalizedExamples.examples.map((example, idx) => (
+                          <div
+                            key={idx}
+                            className="rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200 dark:border-amber-800 p-4 space-y-2"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-orange-500 text-white text-xs font-bold">
+                                {idx + 1}
+                              </span>
+                              <h4 className="text-base font-semibold text-gray-900 dark:text-white">
+                                {example.title}
+                              </h4>
+                            </div>
+                            <p className="text-sm text-gray-700 dark:text-gray-300">
+                              {example.description}
+                            </p>
+                            <div className="bg-white dark:bg-gray-800 rounded-lg p-3 mt-2">
+                              <p className="text-sm text-gray-600 dark:text-gray-400 italic">
+                                {example.context}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center gap-4 text-center text-gray-500 dark:text-gray-400">
+                        <Lightbulb className="h-10 w-10 text-orange-500" />
+                        <div>
+                          <h3 className="text-base font-medium text-gray-900 dark:text-white">
+                            Inga personaliserade exempel ännu
+                          </h3>
+                          <p className="text-sm">
+                            Skapa exempel baserade på dina intressen för att lättare förstå materialet.
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => setIsPersonalizedExamplesModalOpen(true)}
+                          isLoading={isGeneratingExamples}
+                          className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white"
+                        >
+                          <Lightbulb className="mr-2 h-4 w-4" />
+                          Skapa personaliserade exempel
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </Tabs.Content>
+
+                <Tabs.Content value="summary">
+                  <div key={summary ? 'with-summary' : 'without-summary'} className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-6 shadow-inner min-h-[320px]">
+                    {summary ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2 mb-4">
+                          <FileText className="h-5 w-5 text-blue-500" />
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                            Sammanfattning
+                          </h3>
+                        </div>
+                        <div className="rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 p-4">
+                          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                            {summary.summary}
+                          </p>
+                        </div>
+                        {summary.keyPoints && summary.keyPoints.length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                              <span className="w-1 h-4 bg-blue-500 rounded-full" />
+                              Viktiga punkter:
+                            </h4>
+                            <ul className="space-y-2">
+                              {summary.keyPoints.map((point, idx) => (
+                                <li
+                                  key={idx}
+                                  className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300"
+                                >
+                                  <span className="flex-shrink-0 flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 text-xs font-bold mt-0.5">
+                                    {idx + 1}
+                                  </span>
+                                  {point}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        {summary.mainIdeas && summary.mainIdeas.length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                              <span className="w-1 h-4 bg-indigo-500 rounded-full" />
+                              Huvudidéer:
+                            </h4>
+                            <div className="space-y-2">
+                              {summary.mainIdeas.map((idea, idx) => (
+                                <div
+                                  key={idx}
+                                  className="rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3"
+                                >
+                                  <p className="text-sm text-gray-700 dark:text-gray-300">{idea}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center gap-4 text-center text-gray-500 dark:text-gray-400">
+                        <FileText className="h-10 w-10 text-blue-500" />
+                        <div>
+                          <h3 className="text-base font-medium text-gray-900 dark:text-white">
+                            Ingen sammanfattning ännu
+                          </h3>
+                          <p className="text-sm">
+                            Skapa en sammanfattning med viktiga punkter och huvudidéer.
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={handleGenerateSummary}
+                          isLoading={isGeneratingSummary}
+                          className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white"
+                        >
+                          <FileText className="mr-2 h-4 w-4" />
+                          Skapa sammanfattning
                         </Button>
                       </div>
                     )}
@@ -1264,8 +1530,58 @@ export function MaterialDetailPage() {
               <GraduationCap className="mr-2 h-4 w-4" />
               Lägg till i ordlista
             </Button>
+            <Button size="sm" variant="ghost" onClick={handleOpenPersonalizedModal} className="bg-gradient-to-r from-pink-50 to-purple-50 hover:from-pink-100 hover:to-purple-100 dark:from-pink-900/20 dark:to-purple-900/20">
+              <Heart className="mr-2 h-4 w-4 text-pink-500" />
+              Personlig förklaring
+            </Button>
           </Card>
         </div>
+      )}
+
+      {/* Personalized Explanation Modal */}
+      <PersonalizedExplanationModal
+        isOpen={isPersonalizedModalOpen}
+        onClose={() => setIsPersonalizedModalOpen(false)}
+        onGenerate={handleGeneratePersonalizedExplanation}
+        userInterests={user?.interests || []}
+        selectedText={selectionMenu?.text || ''}
+      />
+
+      {/* Personalized Examples Modal */}
+      <PersonalizedExamplesModal
+        isOpen={isPersonalizedExamplesModalOpen}
+        onClose={() => setIsPersonalizedExamplesModalOpen(false)}
+        onGenerate={handleGeneratePersonalizedExamples}
+        userInterests={user?.interests || []}
+      />
+
+      {/* Personalized Explanation Result */}
+      {personalizedResult && (
+        <Card className="space-y-3 border-l-4 border-pink-500 bg-gradient-to-r from-pink-50 to-purple-50 dark:from-pink-900/10 dark:to-purple-900/10">
+          <div className="flex items-center gap-2">
+            <Heart className="h-5 w-5 text-pink-500" />
+            <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+              Personlig Förklaring
+            </h3>
+          </div>
+          <p className="text-sm text-gray-700 dark:text-gray-300">{personalizedResult.explanation}</p>
+          {personalizedResult.analogy && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-3">
+              <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">Jämförelse:</p>
+              <p className="text-sm text-gray-700 dark:text-gray-300 italic">{personalizedResult.analogy}</p>
+            </div>
+          )}
+          {personalizedResult.examples && personalizedResult.examples.length > 0 && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-3">
+              <p className="text-sm font-medium text-gray-900 dark:text-white mb-2">Exempel:</p>
+              <ul className="list-disc list-inside space-y-1">
+                {personalizedResult.examples.map((example, idx) => (
+                  <li key={idx} className="text-sm text-gray-700 dark:text-gray-300">{example}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </Card>
       )}
     </MainLayout>
   );

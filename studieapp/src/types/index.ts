@@ -199,9 +199,12 @@ export interface GameSession {
 export interface UserProfile {
   id: string;
   name: string;
+  email?: string;
   avatar?: string;
+  photoURL?: string;
   grade: Grade;
   subjects: Subject[];
+  interests: string[]; // För personaliserade exempel: ["Fotboll", "K-pop", "Fortnite"]
   createdAt: Date;
 
   // Mål
@@ -338,4 +341,33 @@ export interface ImportResult {
   suggestedFlashcards: Flashcard[];
   suggestedQuestions: Question[];
   suggestedConcepts: Concept[];
+}
+
+// Personalized Explanations
+export interface PersonalizedExplanation {
+  id: string;
+  userId: string;
+  materialId: string;
+  selectedText?: string;
+  concepts: string[];
+  interests: string[];
+  customContext?: string;
+  explanation: string;
+  createdAt: Date;
+}
+
+export interface PersonalizedExplanationRequest {
+  materialId: string;
+  content: string;
+  selectedText?: string;
+  concepts?: string[];
+  interests: string[];
+  customContext?: string;
+}
+
+export interface ExplainSelectionResponse {
+  term: string;
+  definition: string;
+  explanation: string;
+  example?: string;
 }
