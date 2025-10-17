@@ -12,7 +12,14 @@
       "Bash(node index.js)",
       "Bash(timeout 8 npm run dev)",
       "Bash(cat:*)",
-      "Bash(npm run build)"
+      "Bash(npm run build)",
+      "Bash(npm start)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)",
+      "Bash(git checkout:*)",
+      "Bash(tasklist:*)",
+      "Bash(powershell:*)"
     ],
     "deny": [],
     "ask": []

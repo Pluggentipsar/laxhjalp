@@ -25,7 +25,33 @@ function AppContent() {
     // Sync Firebase user with local store
     if (userProfile) {
       console.log('[App] Syncing Firebase user to local store:', userProfile);
+
+      // Spara till både appStore och IndexedDB
       useAppStore.setState({ user: userProfile });
+
+      // Spara till IndexedDB så den finns tillgänglig offline
+      import('./lib/db').then(({ db }) => {
+        db.userProfile.put(userProfile).catch(err => {
+          console.error('[App] Failed to save user profile to IndexedDB:', err);
+        });
+      });
+
+      // Uppdatera onboarding-status baserat på user profile
+      // Om användaren har subjects betyder det att onboarding är klar
+      if (userProfile.subjects && userProfile.subjects.length > 0) {
+        console.log('[App] User has completed onboarding (has subjects)');
+        useAppStore.setState({
+          onboarding: {
+            completed: true,
+            currentStep: 0,
+            selectedGrade: userProfile.grade,
+            selectedSubjects: userProfile.subjects,
+            dailyGoal: userProfile.dailyGoalMinutes,
+            weeklyGoal: userProfile.weeklyGoalDays,
+          },
+        });
+      }
+
       loadMaterials();
     }
   }, [userProfile, loadMaterials]);

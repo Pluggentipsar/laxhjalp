@@ -8,14 +8,17 @@ import {
 import {
   simplifyMaterial,
   deepenMaterial,
-  explainSelection
+  explainSelection,
+  generatePersonalizedExplanation,
+  generatePersonalizedExamples,
+  generateSummary
 } from '../services/textService.js';
 
 const router = express.Router();
 
 /**
  * POST /api/generate/flashcards
- * Generera flashcards från text
+ * Generera flashcards frï¿½n text
  */
 router.post('/flashcards', async (req, res, next) => {
   try {
@@ -23,7 +26,7 @@ router.post('/flashcards', async (req, res, next) => {
 
     if (!content || content.trim().length < 50) {
       return res.status(400).json({
-        error: 'Innehållet är för kort. Behöver minst 50 tecken.'
+        error: 'Innehï¿½llet ï¿½r fï¿½r kort. Behï¿½ver minst 50 tecken.'
       });
     }
 
@@ -45,7 +48,7 @@ router.post('/flashcards', async (req, res, next) => {
 
 /**
  * POST /api/generate/quiz
- * Generera quiz-frågor från text
+ * Generera quiz-frï¿½gor frï¿½n text
  */
 router.post('/quiz', async (req, res, next) => {
   try {
@@ -53,7 +56,7 @@ router.post('/quiz', async (req, res, next) => {
 
     if (!content || content.trim().length < 50) {
       return res.status(400).json({
-        error: 'Innehållet är för kort. Behöver minst 50 tecken.'
+        error: 'Innehï¿½llet ï¿½r fï¿½r kort. Behï¿½ver minst 50 tecken.'
       });
     }
 
@@ -76,7 +79,7 @@ router.post('/quiz', async (req, res, next) => {
 
 /**
  * POST /api/generate/concepts
- * Generera nyckelbegrepp och definitioner från text
+ * Generera nyckelbegrepp och definitioner frï¿½n text
  */
 router.post('/concepts', async (req, res, next) => {
   try {
@@ -84,7 +87,7 @@ router.post('/concepts', async (req, res, next) => {
 
     if (!content || content.trim().length < 50) {
       return res.status(400).json({
-        error: 'Innehållet är för kort. Behöver minst 50 tecken.'
+        error: 'Innehï¿½llet ï¿½r fï¿½r kort. Behï¿½ver minst 50 tecken.'
       });
     }
 
@@ -105,7 +108,7 @@ router.post('/concepts', async (req, res, next) => {
 
 /**
  * POST /api/generate/mindmap
- * Generera mindmap-struktur från text
+ * Generera mindmap-struktur frï¿½n text
  */
 router.post('/mindmap', async (req, res, next) => {
   try {
@@ -113,7 +116,7 @@ router.post('/mindmap', async (req, res, next) => {
 
     if (!content || content.trim().length < 50) {
       return res.status(400).json({
-        error: 'Innehållet är för kort. Behöver minst 50 tecken.'
+        error: 'Innehï¿½llet ï¿½r fï¿½r kort. Behï¿½ver minst 50 tecken.'
       });
     }
 
@@ -133,7 +136,7 @@ router.post('/mindmap', async (req, res, next) => {
 
 /**
  * POST /api/generate/simplify
- * Förenkla text för yngre läsare
+ * Fï¿½renkla text fï¿½r yngre lï¿½sare
  */
 router.post('/simplify', async (req, res, next) => {
   try {
@@ -141,7 +144,7 @@ router.post('/simplify', async (req, res, next) => {
 
     if (!content || content.trim().length < 10) {
       return res.status(400).json({
-        error: 'Innehållet är för kort.'
+        error: 'Innehï¿½llet ï¿½r fï¿½r kort.'
       });
     }
 
@@ -158,7 +161,7 @@ router.post('/simplify', async (req, res, next) => {
 
 /**
  * POST /api/generate/deepen
- * Fördjupa text för elever som vill veta mer
+ * Fï¿½rdjupa text fï¿½r elever som vill veta mer
  */
 router.post('/deepen', async (req, res, next) => {
   try {
@@ -166,7 +169,7 @@ router.post('/deepen', async (req, res, next) => {
 
     if (!content || content.trim().length < 10) {
       return res.status(400).json({
-        error: 'Innehållet är för kort.'
+        error: 'Innehï¿½llet ï¿½r fï¿½r kort.'
       });
     }
 
@@ -183,7 +186,7 @@ router.post('/deepen', async (req, res, next) => {
 
 /**
  * POST /api/generate/explain
- * Förklara markerad text
+ * Fï¿½rklara markerad text
  */
 router.post('/explain', async (req, res, next) => {
   try {
@@ -191,7 +194,7 @@ router.post('/explain', async (req, res, next) => {
 
     if (!selection || selection.trim().length === 0) {
       return res.status(400).json({
-        error: 'Ingen text markerad att förklara.'
+        error: 'Ingen text markerad att fï¿½rklara.'
       });
     }
 
@@ -204,6 +207,86 @@ router.post('/explain', async (req, res, next) => {
       explanation: result.explanation,
       definition: result.definition,
       example: result.example,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+
+/**
+ * POST /api/generate/personalized-explain
+ */
+router.post('/personalized-explain', async (req, res, next) => {
+  try {
+    const { materialContent = '', selection, interests = [], customContext, grade = 7 } = req.body;
+
+    if (!selection || selection.trim().length === 0) {
+      return res.status(400).json({ error: 'Ingen text markerad.' });
+    }
+
+    if (interests.length === 0 && !customContext) {
+      return res.status(400).json({ error: 'Inga intressen angivna.' });
+    }
+
+    const result = await generatePersonalizedExplanation(
+      materialContent, selection, interests, customContext, { grade }
+    );
+
+    res.json({
+      success: true,
+      explanation: result.explanation,
+      examples: result.examples || [],
+      analogy: result.analogy,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/generate/personalized-examples
+ */
+router.post('/personalized-examples', async (req, res, next) => {
+  try {
+    const { materialContent, interests = [], customContext, grade = 7, count = 3 } = req.body;
+
+    if (!materialContent || materialContent.trim().length < 50) {
+      return res.status(400).json({ error: 'InnehÃ¥llet Ã¤r fÃ¶r kort.' });
+    }
+
+    if (interests.length === 0 && !customContext) {
+      return res.status(400).json({ error: 'Inga intressen angivna.' });
+    }
+
+    const result = await generatePersonalizedExamples(
+      materialContent, interests, customContext, { grade, count }
+    );
+
+    res.json({ success: true, examples: result.examples || [] });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/generate/summary
+ */
+router.post('/summary', async (req, res, next) => {
+  try {
+    const { content, grade = 7 } = req.body;
+
+    if (!content || content.trim().length < 50) {
+      return res.status(400).json({ error: 'InnehÃ¥llet Ã¤r fÃ¶r kort.' });
+    }
+
+    const result = await generateSummary(content, { grade });
+
+    res.json({
+      success: true,
+      summary: result.summary,
+      keyPoints: result.keyPoints || [],
+      mainIdeas: result.mainIdeas || [],
     });
   } catch (error) {
     next(error);
