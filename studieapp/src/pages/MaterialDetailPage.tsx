@@ -645,36 +645,13 @@ export function MaterialDetailPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6">
           <Card className="relative space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Läs materialet
-                </h2>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Växla mellan original, förenklad och fördjupad version. Markera ord eller meningar för att få en förklaring eller lägga till i ordlistan.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  size="sm"
-                  onClick={handleSimplify}
-                  isLoading={isSimplifying}
-                  disabled={isSimplifying}
-                >
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  Förenkla texten
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleDeepen}
-                  isLoading={isDeepening}
-                  disabled={isDeepening}
-                >
-                  <Brain className="mr-2 h-4 w-4" />
-                  Fördjupa texten
-                </Button>
-              </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Läs materialet
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Växla mellan original, förenklad och fördjupad version. Markera ord eller meningar för att få en förklaring eller lägga till i ordlistan.
+              </p>
             </div>
 
             <Tabs.Root
@@ -1029,20 +1006,20 @@ export function MaterialDetailPage() {
                     {material.flashcards.length === 0 ? (
                       <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                         <Button
-                          className="mt-2 w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-lg"
+                          className="mt-2 w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-lg"
                           size="sm"
                           onClick={handleGenerateFlashcards}
                           isLoading={isGenerating.flashcards}
                         >
                           <Sparkles className="mr-2 h-4 w-4" />
-                          Skapa kort av texten
+                          Flashcards
                         </Button>
                       </motion.div>
                     ) : (
                       <div className="flex gap-2 mt-2">
                         <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1">
                           <Button
-                            className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-lg"
+                            className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-lg"
                             size="sm"
                             onClick={() => scrollToSection(flashcardsRef, 'flashcards')}
                           >
@@ -1052,7 +1029,7 @@ export function MaterialDetailPage() {
                         </motion.div>
                         <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                           <Button
-                            className="bg-gradient-to-r from-indigo-400 to-purple-500 hover:from-indigo-500 hover:to-purple-600 text-white shadow"
+                            className="bg-gradient-to-r from-orange-400 to-amber-400 hover:from-orange-500 hover:to-amber-500 text-white shadow"
                             size="sm"
                             variant="outline"
                             onClick={handleGenerateFlashcards}

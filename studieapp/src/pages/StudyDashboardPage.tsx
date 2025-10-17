@@ -146,7 +146,7 @@ export function StudyDashboardPage() {
             <div>
               <Button
                 size="lg"
-                className="bg-white text-primary-600 hover:bg-white/90"
+                className="bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white shadow-lg hover:shadow-xl transition-all"
                 onClick={() => setShowImportMenu(true)}
               >
                 <Plus size={20} className="mr-2" />
@@ -194,24 +194,26 @@ export function StudyDashboardPage() {
                       <Button
                         size="sm"
                         onClick={() => navigate(`/study/material/${material.id}`)}
+                        className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white"
                       >
+                        <BookOpen size={16} className="mr-1" />
                         Öppna
                       </Button>
                       <Button
                         size="sm"
-                        variant="outline"
                         onClick={() => navigate(`/study/material/${material.id}/chat`)}
+                        className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
                       >
                         <MessageSquare size={16} className="mr-1" />
                         Chatt
                       </Button>
                       <Button
                         size="sm"
-                        variant="ghost"
                         onClick={() =>
                           navigate(`/study/flashcards/${material.id}`)
                         }
                         disabled={material.flashcards.length === 0}
+                        className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <Sparkles size={16} className="mr-1" />
                         Flashcards
@@ -336,30 +338,32 @@ export function StudyDashboardPage() {
                       </div>
                     )}
 
-                    <div className="flex flex-wrap gap-2 justify-between">
-                      <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2 justify-between items-center">
+                      <div className="flex gap-2 flex-wrap">
                         <Button
                           size="sm"
                           onClick={() => navigate(`/study/material/${material.id}`)}
+                          className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white"
                         >
                           <BookOpen size={16} className="mr-1" />
-                          Detaljer
+                          Öppna
                         </Button>
                         <Button
                           size="sm"
-                          variant="outline"
                           onClick={() => navigate(`/study/material/${material.id}/chat`)}
+                          className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
                         >
                           <MessageSquare size={16} className="mr-1" />
                           Chatt
                         </Button>
                         <Button
                           size="sm"
-                          variant="ghost"
-                          onClick={() => navigate(`/study/material/${material.id}/game/snake`)}
+                          onClick={() => navigate(`/study/flashcards/${material.id}`)}
+                          disabled={material.flashcards.length === 0}
+                          className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          <Gamepad2 size={16} className="mr-1" />
-                          Snake
+                          <Sparkles size={16} className="mr-1" />
+                          Flashcards
                         </Button>
                       </div>
                       <Button
