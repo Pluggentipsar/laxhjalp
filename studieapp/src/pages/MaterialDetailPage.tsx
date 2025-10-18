@@ -19,12 +19,22 @@ import {
   Heart,
   Lightbulb,
   FileText,
+  BookOpen,
+  X,
+  ZoomIn,
+  ZoomOut,
+  Minus,
+  Type,
+  Contrast,
+  AlignLeft,
 } from 'lucide-react';
 import { MainLayout } from '../components/layout/MainLayout';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { PersonalizedExplanationModal } from '../components/common/PersonalizedExplanationModal';
 import { PersonalizedExamplesModal } from '../components/common/PersonalizedExamplesModal';
+import { ReadingModeToolbar } from '../components/reading/ReadingModeToolbar';
+import { ReadingRuler } from '../components/reading/ReadingRuler';
 import { useAppStore } from '../store/appStore';
 import {
   generateFlashcards,
@@ -60,6 +70,18 @@ type SelectionMenuState = {
   text: string;
   top: number;
   left: number;
+};
+
+type ReadingModeSettings = {
+  active: boolean;
+  fontSize: number;
+  lineHeight: number;
+  fontFamily: 'default' | 'dyslexic';
+  rulerEnabled: boolean;
+  rulerColor: 'yellow' | 'blue' | 'pink';
+  contrast: 'white' | 'black' | 'sepia';
+  letterSpacing: number;
+  wordSpacing: number;
 };
 
 function MarkdownContent({
@@ -173,6 +195,18 @@ export function MaterialDetailPage() {
     quiz: false,
     concepts: false,
   });
+  const [readingMode, setReadingMode] = useState<ReadingModeSettings>({
+    active: false,
+    fontSize: 18,
+    lineHeight: 1.8,
+    fontFamily: 'default',
+    rulerEnabled: false,
+    rulerColor: 'yellow',
+    contrast: 'white',
+    letterSpacing: 0.05,
+    wordSpacing: 0.16,
+  });
+  const [rulerPosition, setRulerPosition] = useState(0);
 
   useEffect(() => {
     if (!materials.length) {
@@ -229,6 +263,51 @@ export function MaterialDetailPage() {
   useEffect(() => {
     console.log('[MaterialDetailPage] contentView changed to:', contentView);
   }, [contentView]);
+
+  // Load reading mode preferences from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('readingModePrefs');
+    if (saved) {
+      try {
+        const prefs = JSON.parse(saved);
+        setReadingMode(prev => ({ ...prev, ...prefs, active: false })); // Never auto-activate
+      } catch (e) {
+        console.error('Failed to parse reading mode prefs:', e);
+      }
+    }
+  }, []);
+
+  // Save reading mode preferences to localStorage
+  useEffect(() => {
+    const { active, ...prefs } = readingMode;
+    localStorage.setItem('readingModePrefs', JSON.stringify(prefs));
+  }, [readingMode]);
+
+  // Handle reading ruler mouse move
+  useEffect(() => {
+    if (!readingMode.active || !readingMode.rulerEnabled) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      setRulerPosition(e.clientY);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, [readingMode.active, readingMode.rulerEnabled]);
+
+  // Handle ESC key to close reading mode
+  useEffect(() => {
+    if (!readingMode.active) return;
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setReadingMode({ ...readingMode, active: false });
+      }
+    };
+
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [readingMode]);
 
   const withGeneration = async (
     mode: GenerationMode,
@@ -658,13 +737,14 @@ export function MaterialDetailPage() {
               value={contentView}
               onValueChange={(value) => setContentView(value as ContentView)}
             >
-              <Tabs.List className="inline-flex items-center rounded-2xl bg-gray-100 dark:bg-gray-800 p-1 flex-wrap gap-1">
-                <Tabs.Trigger
-                  value="original"
-                  className="px-4 py-2 text-sm font-medium rounded-2xl data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow data-[state=active]:text-primary-600 transition-colors"
-                >
-                  Original
-                </Tabs.Trigger>
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <Tabs.List className="inline-flex items-center rounded-2xl bg-gray-100 dark:bg-gray-800 p-1 flex-wrap gap-1">
+                  <Tabs.Trigger
+                    value="original"
+                    className="px-4 py-2 text-sm font-medium rounded-2xl data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow data-[state=active]:text-primary-600 transition-colors"
+                  >
+                    Original
+                  </Tabs.Trigger>
                 <Tabs.Trigger
                   value="simplified"
                   className="px-4 py-2 text-sm font-medium rounded-2xl data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow data-[state=active]:text-primary-600 transition-colors"
@@ -702,6 +782,18 @@ export function MaterialDetailPage() {
                   )}
                 </Tabs.Trigger>
               </Tabs.List>
+
+              {/* Läsläge-knapp */}
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setReadingMode({ ...readingMode, active: true })}
+                className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                title="Läsläge - Ta bort distraktioner"
+              >
+                <BookOpen className="h-4 w-4" />
+              </Button>
+            </div>
 
               <div className="mt-4">
                 <Tabs.Content value="original">
@@ -1559,6 +1651,53 @@ export function MaterialDetailPage() {
             </div>
           )}
         </Card>
+      )}
+
+      {/* Reading Mode Overlay */}
+      {readingMode.active && (
+        <div
+          className="fixed inset-0 z-[100] overflow-auto"
+          style={{
+            backgroundColor:
+              readingMode.contrast === 'white'
+                ? '#ffffff'
+                : readingMode.contrast === 'black'
+                ? '#1a1a1a'
+                : '#f5f5dc', // sepia
+          }}
+        >
+          <ReadingModeToolbar
+            settings={readingMode}
+            onSettingsChange={setReadingMode}
+            onClose={() => setReadingMode({ ...readingMode, active: false })}
+          />
+
+          <div className="pt-20 pb-16 px-4">
+            <div
+              className="max-w-4xl mx-auto"
+              style={{
+                fontSize: `${readingMode.fontSize}px`,
+                lineHeight: readingMode.lineHeight,
+                fontFamily:
+                  readingMode.fontFamily === 'dyslexic'
+                    ? 'OpenDyslexic, Arial, sans-serif'
+                    : 'inherit',
+                letterSpacing: `${readingMode.letterSpacing}em`,
+                wordSpacing: `${readingMode.wordSpacing}em`,
+                color: readingMode.contrast === 'black' ? '#ffffff' : '#000000',
+              }}
+            >
+              <h1 className="text-2xl font-bold mb-6">{material.title}</h1>
+              <MarkdownContent value={displayedContent} />
+            </div>
+          </div>
+
+          <ReadingRuler
+            enabled={readingMode.rulerEnabled}
+            color={readingMode.rulerColor}
+            position={rulerPosition}
+          />
+        </div>
       )}
     </MainLayout>
   );
