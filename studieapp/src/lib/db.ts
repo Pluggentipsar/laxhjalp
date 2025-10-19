@@ -8,6 +8,7 @@ import type {
   DailyProgress,
   Mindmap,
   ChatSession,
+  TextEmbedding,
 } from '../types';
 
 export class StudieAppDatabase extends Dexie {
@@ -19,10 +20,12 @@ export class StudieAppDatabase extends Dexie {
   dailyProgress!: Dexie.Table<DailyProgress, string>;
   mindmaps!: Dexie.Table<Mindmap, string>;
   chatSessions!: Dexie.Table<ChatSession, string>;
+  textEmbeddings!: Dexie.Table<TextEmbedding, string>;
 
   constructor() {
     super('StudieAppDB');
 
+    // Version 1 - original schema
     this.version(1).stores({
       materials: 'id, subject, folderId, *tags, createdAt, lastStudied',
       folders: 'id, subject, createdAt',
@@ -32,6 +35,26 @@ export class StudieAppDatabase extends Dexie {
       dailyProgress: 'date',
       mindmaps: 'id, materialId, createdAt',
       chatSessions: 'id, materialId, createdAt',
+    });
+
+    // Version 2 - added textEmbeddings and mode to chatSessions
+    this.version(2).stores({
+      materials: 'id, subject, folderId, *tags, createdAt, lastStudied',
+      folders: 'id, subject, createdAt',
+      userProfile: 'id',
+      studySessions: 'id, materialId, mode, startedAt',
+      gameSessions: 'id, materialId, gameType, completedAt',
+      dailyProgress: 'date',
+      mindmaps: 'id, materialId, createdAt',
+      chatSessions: 'id, materialId, mode, createdAt',
+      textEmbeddings: 'id, materialId, chunkIndex, createdAt',
+    }).upgrade(async (trans) => {
+      // Upgrade existing chatSessions to have default mode
+      await trans.table('chatSessions').toCollection().modify((session: any) => {
+        if (!session.mode) {
+          session.mode = 'free';
+        }
+      });
     });
   }
 }

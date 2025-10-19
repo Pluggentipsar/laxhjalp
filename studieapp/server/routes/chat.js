@@ -9,7 +9,7 @@ const router = express.Router();
  */
 router.post('/', async (req, res, next) => {
   try {
-    const { materialContent, messages, userMessage, grade } = req.body;
+    const { materialContent, messages, userMessage, grade, mode } = req.body;
 
     if (!materialContent || !userMessage) {
       return res.status(400).json({
@@ -18,7 +18,8 @@ router.post('/', async (req, res, next) => {
     }
 
     const response = await chatWithMaterial(materialContent, messages || [], userMessage, {
-      grade
+      grade,
+      mode: mode || 'free'
     });
 
     res.json({

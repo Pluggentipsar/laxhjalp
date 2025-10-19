@@ -11,6 +11,7 @@ import { StudyDashboardPage } from './pages/StudyDashboardPage';
 import { MaterialDetailPage } from './pages/MaterialDetailPage';
 import { FlashcardStudyPage } from './pages/study/FlashcardStudyPage';
 import { QuizStudyPage } from './pages/study/QuizStudyPage';
+import { ChatModeHub } from './pages/study/ChatModeHub';
 import { ChatStudyPage } from './pages/study/ChatStudyPage';
 import { ConceptExplorerPage } from './pages/study/ConceptExplorerPage';
 import { SnakeGamePage } from './pages/study/SnakeGamePage';
@@ -103,6 +104,10 @@ function AppContent() {
       />
       <Route
         path="/study/material/:materialId/chat"
+        element={<ChatModeHub />}
+      />
+      <Route
+        path="/study/material/:materialId/chat/:mode"
         element={<ChatStudyPage />}
       />
       <Route

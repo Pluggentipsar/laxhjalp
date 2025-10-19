@@ -10,6 +10,7 @@ import type {
   Grade,
   ChatSession,
   ChatMessage,
+  ChatMode,
   LanguageCode,
   MistakeEntry,
 } from '../types';
@@ -65,6 +66,7 @@ interface AppStore {
     message: ChatMessage
   ) => Promise<ChatSession | null>;
   setChatSession: (materialId: string, session: ChatSession) => Promise<void>;
+  updateChatMode: (materialId: string, mode: ChatMode) => Promise<void>;
 
   // Games & Felbank
   mistakeBank: Record<string, Record<string, MistakeEntry>>;
@@ -426,6 +428,7 @@ export const useAppStore = create<AppStore>()(
           session = {
             id: crypto.randomUUID(),
             materialId,
+            mode: 'free', // Default mode
             messages: [],
             createdAt: new Date(),
             updatedAt: new Date(),
@@ -434,6 +437,7 @@ export const useAppStore = create<AppStore>()(
         } else {
           session = {
             ...session,
+            mode: session.mode || 'free', // Ensure mode exists
             messages: session.messages.map((message) => ({
               ...message,
               timestamp: new Date(message.timestamp),
@@ -495,6 +499,34 @@ export const useAppStore = create<AppStore>()(
           chatSessions: {
             ...state.chatSessions,
             [materialId]: { ...session, updatedAt: new Date() },
+          },
+        }));
+      },
+
+      updateChatMode: async (materialId, mode) => {
+        const state = get();
+        const session = state.chatSessions[materialId];
+
+        if (!session) {
+          console.error('No session found for material', materialId);
+          return;
+        }
+
+        const updatedSession: ChatSession = {
+          ...session,
+          mode,
+          updatedAt: new Date(),
+        };
+
+        await db.chatSessions.update(session.id, {
+          mode,
+          updatedAt: new Date(),
+        });
+
+        set((state) => ({
+          chatSessions: {
+            ...state.chatSessions,
+            [materialId]: updatedSession,
           },
         }));
       },

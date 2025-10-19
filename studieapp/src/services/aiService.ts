@@ -130,7 +130,8 @@ export async function sendChatMessage(
   materialContent: string,
   messages: ChatMessage[],
   userMessage: string,
-  grade: number = 5
+  grade: number = 5,
+  mode: string = 'free'
 ): Promise<ChatResponse> {
   try {
     const response = await fetch(`${API_BASE_URL}/chat`, {
@@ -142,7 +143,8 @@ export async function sendChatMessage(
         materialContent,
         messages,
         userMessage,
-        grade
+        grade,
+        mode
       }),
     });
 

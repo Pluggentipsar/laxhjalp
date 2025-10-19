@@ -326,6 +326,14 @@ export interface AIGenerationResponse {
   simplifiedText?: string;
 }
 
+export type ChatMode =
+  | 'socratic'        // Förhör mig (sokratisk metod)
+  | 'adventure'       // Textäventyr
+  | 'free'            // Fråga vad du vill
+  | 'active-learning' // Lär mig aktivt
+  | 'quiz'            // Quiz-mästaren
+  | 'discussion';     // Diskussionspartner
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
@@ -336,9 +344,25 @@ export interface ChatMessage {
 export interface ChatSession {
   id: string;
   materialId: string;
+  mode: ChatMode;
   messages: ChatMessage[];
   createdAt: Date;
   updatedAt?: Date;
+  metadata?: {
+    progress?: number;        // För progressspårning i vissa modes
+    conceptsCovered?: string[]; // Begrepp som täckts
+    adventureState?: any;     // State för textäventyr
+  };
+}
+
+// Text embeddings för RAG
+export interface TextEmbedding {
+  id: string;
+  materialId: string;
+  chunkIndex: number;
+  text: string;
+  embedding: number[];
+  createdAt: Date;
 }
 
 // OCR & Import
