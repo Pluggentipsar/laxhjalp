@@ -263,7 +263,21 @@ export function MaterialDetailPage() {
 
   // Global mouseup handler for text selection - works on ALL tabs
   useEffect(() => {
+    let selectionTimeout: number | null = null;
+    let mouseDownInContent = false;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      mouseDownInContent = !!target.closest('[data-content-area]');
+    };
+
     const handleGlobalMouseUp = (e: MouseEvent) => {
+      // Clear any pending timeout
+      if (selectionTimeout) {
+        clearTimeout(selectionTimeout);
+        selectionTimeout = null;
+      }
+
       const target = e.target as HTMLElement;
 
       // Don't interfere if clicking on buttons or interactive elements
@@ -271,45 +285,76 @@ export function MaterialDetailPage() {
         return;
       }
 
-      // Only handle if target is within content area
-      if (!target.closest('[data-content-area]')) {
+      // Only handle if we started selection in content area
+      if (!mouseDownInContent) {
         // Clear menu if clicking outside content area
         setSelectionMenu(null);
         return;
       }
 
-      // Small delay to ensure selection is stable
-      setTimeout(() => {
+      // Give browser time to finalize selection (longer delay for more stability)
+      selectionTimeout = setTimeout(() => {
         const selection = window.getSelection();
-        if (!selection) {
+
+        // Check if selection still exists and is valid
+        if (!selection || selection.rangeCount === 0) {
           setSelectionMenu(null);
           return;
         }
+
         const text = selection.toString().trim();
-        if (!text || text.length > 600) {
+
+        // Check for valid text length
+        if (!text || text.length === 0 || text.length > 600) {
           setSelectionMenu(null);
           return;
         }
-        const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
-        if (!range) {
+
+        // Get the range and verify it's not collapsed
+        const range = selection.getRangeAt(0);
+        if (!range || range.collapsed) {
           setSelectionMenu(null);
           return;
         }
+
+        // Get bounding rect and verify it's valid
         const rect = range.getBoundingClientRect();
         if (!rect || (rect.width === 0 && rect.height === 0)) {
           setSelectionMenu(null);
           return;
         }
+
+        // Calculate position (above the selection)
+        const menuTop = rect.top + window.scrollY - 60;
+        const menuLeft = rect.left + window.scrollX + rect.width / 2;
+
+        console.log('[Selection] Valid selection detected:', {
+          text: text.substring(0, 30) + '...',
+          length: text.length,
+          position: { top: menuTop, left: menuLeft }
+        });
+
+        // All checks passed - show the menu
         setSelectionMenu({
           text,
-          top: rect.top + window.scrollY,
-          left: rect.left + window.scrollX + rect.width / 2,
+          top: menuTop,
+          left: menuLeft,
         });
-      }, 10);
+      }, 100); // Increased to 100ms for even more stability
+
+      mouseDownInContent = false;
     };
 
+    document.addEventListener('mousedown', handleMouseDown);
     document.addEventListener('mouseup', handleGlobalMouseUp);
-    return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
+
+    return () => {
+      document.removeEventListener('mousedown', handleMouseDown);
+      document.removeEventListener('mouseup', handleGlobalMouseUp);
+      if (selectionTimeout) {
+        clearTimeout(selectionTimeout);
+      }
+    };
   }, []);
 
   // Clear selection menu and results when changing content view
@@ -1827,9 +1872,12 @@ export function MaterialDetailPage() {
       {selectionMenu && (
         <div
           className="fixed z-50 transform -translate-x-1/2"
-          style={{ top: selectionMenu.top - 12, left: selectionMenu.left }}
+          style={{
+            top: `${selectionMenu.top}px`,
+            left: `${selectionMenu.left}px`
+          }}
         >
-          <Card className="flex items-center gap-2 px-3 py-2 shadow-xl" padding="none">
+          <Card className="flex items-center gap-2 px-3 py-2 shadow-xl border-2 border-primary-500" padding="none">
             <Button size="sm" variant="ghost" onClick={handleExplainSelection} isLoading={isExplaining}>
               <MessageSquare className="mr-2 h-4 w-4" />
               Förklara
