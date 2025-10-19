@@ -79,6 +79,14 @@ export interface GlossaryEntry {
   addedAt: Date;
 }
 
+export interface Note {
+  id: string;
+  content: string;
+  createdAt: Date;
+  updatedAt: Date;
+  linkedText?: string; // Optional: Text that this note refers to
+}
+
 // Material & Organisation
 export interface Material {
   id: string;
@@ -95,6 +103,7 @@ export interface Material {
   questions: Question[];
   concepts: Concept[];
   glossary?: GlossaryEntry[];
+  notes?: Note[];
   simplifiedContent?: string;
   advancedContent?: string;
   createdAt: Date;

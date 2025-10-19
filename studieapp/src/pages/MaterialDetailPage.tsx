@@ -14,6 +14,8 @@ import {
   History,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   ExternalLink,
   CheckCircle2,
   Heart,
@@ -21,12 +23,7 @@ import {
   FileText,
   BookOpen,
   X,
-  ZoomIn,
-  ZoomOut,
-  Minus,
-  Type,
-  Contrast,
-  AlignLeft,
+  StickyNote,
 } from 'lucide-react';
 import { MainLayout } from '../components/layout/MainLayout';
 import { Card } from '../components/common/Card';
@@ -35,6 +32,7 @@ import { PersonalizedExplanationModal } from '../components/common/PersonalizedE
 import { PersonalizedExamplesModal } from '../components/common/PersonalizedExamplesModal';
 import { ReadingModeToolbar } from '../components/reading/ReadingModeToolbar';
 import { ReadingRuler } from '../components/reading/ReadingRuler';
+import { NotesSection } from '../components/material/NotesSection';
 import { useAppStore } from '../store/appStore';
 import {
   generateFlashcards,
@@ -51,7 +49,7 @@ import {
   type PersonalizedExamplesResponse,
   type SummaryResponse,
 } from '../services/aiService';
-import type { Difficulty, GenerationLogEntry, GlossaryEntry, Material } from '../types';
+import type { Difficulty, GenerationLogEntry, GlossaryEntry, Material, Note } from '../types';
 
 const subjectLabels: Record<string, string> = {
   svenska: 'Svenska',
@@ -206,7 +204,17 @@ export function MaterialDetailPage() {
     letterSpacing: 0.05,
     wordSpacing: 0.16,
   });
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [explanationHistory, setExplanationHistory] = useState<Array<{
+    id: string;
+    text: string;
+    explanation: string;
+    definition?: string;
+    example?: string;
+    timestamp: Date;
+  }>>([]);
   const [rulerPosition, setRulerPosition] = useState(0);
+  const [noteLinkedText, setNoteLinkedText] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (!materials.length) {
@@ -241,15 +249,75 @@ export function MaterialDetailPage() {
   }, [material]);
 
   useEffect(() => {
-    const handleScroll = () => setSelectionMenu(null);
+    let lastScrollY = window.scrollY;
+    const handleScroll = () => {
+      // Only clear menu if scroll is significant (more than 50px)
+      if (Math.abs(window.scrollY - lastScrollY) > 50) {
+        setSelectionMenu(null);
+        lastScrollY = window.scrollY;
+      }
+    };
     window.addEventListener('scroll', handleScroll, true);
     return () => window.removeEventListener('scroll', handleScroll, true);
   }, []);
 
+  // Global mouseup handler for text selection - works on ALL tabs
+  useEffect(() => {
+    const handleGlobalMouseUp = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+
+      // Don't interfere if clicking on buttons or interactive elements
+      if (target.closest('button') || target.closest('a') || target.closest('[role="button"]')) {
+        return;
+      }
+
+      // Only handle if target is within content area
+      if (!target.closest('[data-content-area]')) {
+        // Clear menu if clicking outside content area
+        setSelectionMenu(null);
+        return;
+      }
+
+      // Small delay to ensure selection is stable
+      setTimeout(() => {
+        const selection = window.getSelection();
+        if (!selection) {
+          setSelectionMenu(null);
+          return;
+        }
+        const text = selection.toString().trim();
+        if (!text || text.length > 600) {
+          setSelectionMenu(null);
+          return;
+        }
+        const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+        if (!range) {
+          setSelectionMenu(null);
+          return;
+        }
+        const rect = range.getBoundingClientRect();
+        if (!rect || (rect.width === 0 && rect.height === 0)) {
+          setSelectionMenu(null);
+          return;
+        }
+        setSelectionMenu({
+          text,
+          top: rect.top + window.scrollY,
+          left: rect.left + window.scrollX + rect.width / 2,
+        });
+      }, 10);
+    };
+
+    document.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
+  }, []);
+
+  // Clear selection menu and results when changing content view
+  // (but keep the ability to select text in the new view)
   useEffect(() => {
     setSelectionMenu(null);
     setExplainResult(null);
-    window.getSelection()?.removeAllRanges();
+    // Don't clear the actual browser selection - let user keep their highlight
   }, [contentView]);
 
   useEffect(() => {
@@ -462,30 +530,7 @@ export function MaterialDetailPage() {
     }
   };
 
-  const handleTextMouseUp = () => {
-    const selection = window.getSelection();
-    if (!selection) {
-      setSelectionMenu(null);
-      return;
-    }
-    const text = selection.toString().trim();
-    if (!text || text.length > 600) {
-      setSelectionMenu(null);
-      return;
-    }
-    const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
-    if (!range) return;
-    const rect = range.getBoundingClientRect();
-    if (!rect || (rect.width === 0 && rect.height === 0)) {
-      setSelectionMenu(null);
-      return;
-    }
-    setSelectionMenu({
-      text,
-      top: rect.top + window.scrollY,
-      left: rect.left + window.scrollX + rect.width / 2,
-    });
-  };
+  // handleTextMouseUp removed - now using global event listener instead
 
   const handleExplainSelection = async () => {
     if (!material || !selectionMenu) return;
@@ -493,6 +538,17 @@ export function MaterialDetailPage() {
     try {
       const result = await explainSelection(material.content, selectionMenu.text, grade);
       setExplainResult(result);
+
+      // Add to explanation history
+      setExplanationHistory(prev => [{
+        id: crypto.randomUUID(),
+        text: selectionMenu.text,
+        explanation: result.explanation,
+        definition: result.definition,
+        example: result.example,
+        timestamp: new Date(),
+      }, ...prev]);
+
       setSelectionMenu(null);
       window.getSelection()?.removeAllRanges();
     } catch (error) {
@@ -515,10 +571,14 @@ export function MaterialDetailPage() {
         example: result.example && result.example.trim() ? result.example : undefined,
         addedAt: new Date(),
       };
+
+      // Use material.glossary directly to get the latest state
+      const currentGlossary = material.glossary ?? [];
       await updateMaterial(material.id, {
-        glossary: [...glossaryEntries, newEntry],
+        glossary: [...currentGlossary, newEntry],
         updatedAt: new Date(),
       });
+
       setExplainResult(result);
       setSelectionMenu(null);
       window.getSelection()?.removeAllRanges();
@@ -607,6 +667,57 @@ export function MaterialDetailPage() {
     } finally {
       setIsGeneratingSummary(false);
     }
+  };
+
+  const handleAddNote = async (content: string, linkedText?: string) => {
+    if (!material) return;
+    const newNote: Note = {
+      id: crypto.randomUUID(),
+      content,
+      linkedText,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const currentNotes = material.notes ?? [];
+    await updateMaterial(material.id, {
+      notes: [...currentNotes, newNote],
+      updatedAt: new Date(),
+    });
+    // Clear the noteLinkedText after adding
+    setNoteLinkedText(undefined);
+  };
+
+  const handleUpdateNote = async (noteId: string, content: string) => {
+    if (!material) return;
+    const currentNotes = material.notes ?? [];
+    const updatedNotes = currentNotes.map(note =>
+      note.id === noteId
+        ? { ...note, content, updatedAt: new Date() }
+        : note
+    );
+    await updateMaterial(material.id, {
+      notes: updatedNotes,
+      updatedAt: new Date(),
+    });
+  };
+
+  const handleDeleteNote = async (noteId: string) => {
+    if (!material) return;
+    const currentNotes = material.notes ?? [];
+    const updatedNotes = currentNotes.filter(note => note.id !== noteId);
+    await updateMaterial(material.id, {
+      notes: updatedNotes,
+      updatedAt: new Date(),
+    });
+  };
+
+  const handleCreateNoteFromSelection = () => {
+    if (!selectionMenu) return;
+    // Store the selected text for the note
+    setNoteLinkedText(selectionMenu.text);
+    // Clear the selection menu
+    setSelectionMenu(null);
+    window.getSelection()?.removeAllRanges();
   };
 
   const simplifiedAvailable = Boolean(material?.simplifiedContent);
@@ -722,7 +833,9 @@ export function MaterialDetailPage() {
           </div>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6">
+        <div className="flex gap-6 relative">
+          {/* Main Content Area */}
+          <div className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'lg:mr-0' : ''}`}>
           <Card className="relative space-y-4">
             <div>
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -799,7 +912,7 @@ export function MaterialDetailPage() {
                 <Tabs.Content value="original">
                   <div
                     ref={contentRef}
-                    onMouseUp={handleTextMouseUp}
+                    data-content-area
                     className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-6 shadow-inner min-h-[320px]"
                   >
                     <MarkdownContent value={material.content} />
@@ -809,7 +922,7 @@ export function MaterialDetailPage() {
                 <Tabs.Content value="simplified">
                   <div
                     ref={contentRef}
-                    onMouseUp={handleTextMouseUp}
+                    data-content-area
                     className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-6 shadow-inner min-h-[320px]"
                   >
                     {simplifiedAvailable ? (
@@ -837,7 +950,7 @@ export function MaterialDetailPage() {
                 <Tabs.Content value="advanced">
                   <div
                     ref={contentRef}
-                    onMouseUp={handleTextMouseUp}
+                    data-content-area
                     className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-6 shadow-inner min-h-[320px]"
                   >
                     {advancedAvailable ? (
@@ -868,7 +981,7 @@ export function MaterialDetailPage() {
                 </Tabs.Content>
 
                 <Tabs.Content value="personalized-examples">
-                  <div key={personalizedExamples ? 'with-data' : 'without-data'} className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-6 shadow-inner min-h-[320px]">
+                  <div data-content-area className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-6 shadow-inner min-h-[320px]">
                     {personalizedExamples ? (
                       <div className="space-y-4">
                         <div className="flex items-center gap-2 mb-4">
@@ -927,7 +1040,7 @@ export function MaterialDetailPage() {
                 </Tabs.Content>
 
                 <Tabs.Content value="summary">
-                  <div key={summary ? 'with-summary' : 'without-summary'} className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-6 shadow-inner min-h-[320px]">
+                  <div data-content-area className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-6 shadow-inner min-h-[320px]">
                     {summary ? (
                       <div className="space-y-4">
                         <div className="flex items-center gap-2 mb-4">
@@ -1008,13 +1121,140 @@ export function MaterialDetailPage() {
               </div>
             </Tabs.Root>
           </Card>
+          </div>
 
-          <div className="space-y-4">
+          {/* Collapsible Sidebar */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{
+              opacity: 1,
+              x: 0,
+              width: isSidebarOpen ? '400px' : '0px'
+            }}
+            transition={{ duration: 0.3 }}
+            className={`hidden lg:block sticky top-6 h-fit ${isSidebarOpen ? '' : 'overflow-hidden'}`}
+          >
+            {isSidebarOpen && (
+              <>
+                {/* Toggle Button - Stäng */}
+                <button
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="absolute -left-4 top-4 z-10 w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 text-white rounded-full shadow-lg hover:shadow-xl transition-all flex items-center justify-center"
+                  aria-label="Stäng sidopanel"
+                  title="Stäng sidopanel"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+
+                <div className="space-y-4">
+                {/* Explanations Section */}
+                <Card className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                      <Lightbulb className="h-5 w-5 text-amber-500" />
+                      Förklaringar
+                    </h3>
+                    {explanationHistory.length > 0 && (
+                      <span className="text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-2 py-1 rounded-full">
+                        {explanationHistory.length}
+                      </span>
+                    )}
+                  </div>
+                  {explanationHistory.length > 0 ? (
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                      {explanationHistory.map((item) => (
+                        <div
+                          key={item.id}
+                          className="rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200 dark:border-amber-800 p-3 space-y-2"
+                        >
+                          <div className="font-semibold text-sm text-gray-900 dark:text-white">
+                            &quot;{item.text}&quot;
+                          </div>
+                          <p className="text-xs text-gray-700 dark:text-gray-300">
+                            {item.explanation}
+                          </p>
+                          {item.definition && (
+                            <p className="text-xs text-gray-600 dark:text-gray-400">
+                              <span className="font-medium">Definition:</span> {item.definition}
+                            </p>
+                          )}
+                          {item.example && (
+                            <p className="text-xs text-gray-500 dark:text-gray-500 italic">
+                              Exempel: {item.example}
+                            </p>
+                          )}
+                          <p className="text-xs text-gray-400 dark:text-gray-600">
+                            {new Date(item.timestamp).toLocaleTimeString('sv-SE', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Markera text och välj &quot;Förklara&quot; för att få förklaringar här.
+                    </p>
+                  )}
+                </Card>
+
+                {/* Glossary Section */}
+                <Card className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                      <GraduationCap className="h-5 w-5 text-primary-500" />
+                      Ordlista
+                    </h3>
+                    {glossaryEntries.length > 0 && (
+                      <span className="text-xs bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 px-2 py-1 rounded-full">
+                        {glossaryEntries.length}
+                      </span>
+                    )}
+                  </div>
+                  {glossaryEntries.length > 0 ? (
+                    <dl className="space-y-3 max-h-96 overflow-y-auto">
+                      {glossaryEntries.map((entry) => (
+                        <div key={entry.id} className="rounded-xl bg-gray-100 dark:bg-gray-800 px-3 py-2">
+                          <dt className="text-sm font-semibold text-gray-900 dark:text-white">
+                            {entry.term}
+                          </dt>
+                          <dd className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                            {entry.definition}
+                            {entry.example && (
+                              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 italic">
+                                Exempel: {entry.example}
+                              </p>
+                            )}
+                          </dd>
+                        </div>
+                      ))}
+                    </dl>
+                  ) : (
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Markera text och välj &quot;Lägg till i ordlistan&quot; för att spara ord här.
+                    </p>
+                  )}
+                </Card>
+
+                {/* Notes Section */}
+                <Card className="space-y-3">
+                  <NotesSection
+                    notes={material.notes ?? []}
+                    onAddNote={handleAddNote}
+                    onUpdateNote={handleUpdateNote}
+                    onDeleteNote={handleDeleteNote}
+                    selectedText={noteLinkedText}
+                  />
+                </Card>
+
+                {/* Old AI Section - keeping for now */}
+                <div className="space-y-4">
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
-              className="sticky top-6 space-y-4"
+              className="space-y-4"
             >
               <Card className="space-y-4 relative overflow-hidden">
                 {/* Decorative gradient background */}
@@ -1266,45 +1506,44 @@ export function MaterialDetailPage() {
                   </ul>
                 </Card>
               )}
-
-              <Card className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-                    Ordlista
-                  </h3>
-                  <GraduationCap className="h-5 w-5 text-primary-500" />
-                </div>
-                {glossaryEntries.length > 0 ? (
-                  <dl className="space-y-3">
-                    {glossaryEntries.map((entry) => (
-                      <div key={entry.id} className="rounded-xl bg-gray-100 dark:bg-gray-800 px-3 py-2">
-                        <dt className="text-sm font-semibold text-gray-900 dark:text-white">
-                          {entry.term}
-                        </dt>
-                        <dd className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-                          {entry.definition}
-                          {entry.example && (
-                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 italic">
-                              Exempel: {entry.example}
-                            </p>
-                          )}
-                        </dd>
-                      </div>
-                    ))}
-                  </dl>
-                ) : (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Markera ett ord i texten och välj "Lägg till i ordlistan" för att samla viktiga begrepp.
-                  </p>
-                )}
-              </Card>
             </motion.div>
-          </div>
+                </div>
+              </div>
+              </>
+            )}
+          </motion.div>
+
+          {/* Floating Toggle Button - Öppna (when sidebar is closed) */}
+          {!isSidebarOpen && (
+            <motion.button
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, delay: 0.2 }}
+              onClick={() => setIsSidebarOpen(true)}
+              className="hidden lg:flex fixed right-6 top-24 z-50 w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 text-white rounded-full shadow-xl hover:shadow-2xl hover:scale-110 transition-all items-center justify-center group"
+              aria-label="Öppna sidopanel"
+              title="Visa förklaringar, ordlista och anteckningar"
+            >
+              <ChevronLeft className="h-5 w-5" />
+              {/* Pulsing indicator */}
+              <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-pink-500"></span>
+              </span>
+            </motion.button>
+          )}
         </div>
 
         {explainResult && (
-          <Card className="space-y-2 border-l-4 border-primary-500 bg-primary-50 dark:bg-primary-900/10">
-            <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+          <Card className="space-y-2 border-l-4 border-primary-500 bg-primary-50 dark:bg-primary-900/10 relative">
+            <button
+              onClick={() => setExplainResult(null)}
+              className="absolute top-2 right-2 p-1 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              aria-label="Stäng förklaring"
+            >
+              <X className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+            </button>
+            <h3 className="text-base font-semibold text-gray-900 dark:text-white pr-8">
               Förklaring av din markering
             </h3>
             {explainResult.explanation && (
@@ -1598,6 +1837,10 @@ export function MaterialDetailPage() {
             <Button size="sm" variant="ghost" onClick={handleAddToGlossary} isLoading={isExplaining}>
               <GraduationCap className="mr-2 h-4 w-4" />
               Lägg till i ordlista
+            </Button>
+            <Button size="sm" variant="ghost" onClick={handleCreateNoteFromSelection} className="bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20">
+              <StickyNote className="mr-2 h-4 w-4 text-blue-500" />
+              Anteckna om detta
             </Button>
             <Button size="sm" variant="ghost" onClick={handleOpenPersonalizedModal} className="bg-gradient-to-r from-pink-50 to-purple-50 hover:from-pink-100 hover:to-purple-100 dark:from-pink-900/20 dark:to-purple-900/20">
               <Heart className="mr-2 h-4 w-4 text-pink-500" />
