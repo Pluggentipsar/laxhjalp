@@ -16,30 +16,85 @@ import {
   ChevronLeft,
 } from 'lucide-react';
 
+const subjectLabels: Record<Subject, string> = {
+  bild: 'Bild',
+  biologi: 'Biologi',
+  engelska: 'Engelska',
+  fysik: 'Fysik',
+  geografi: 'Geografi',
+  'hem-och-konsumentkunskap': 'Hem- och konsumentkunskap',
+  historia: 'Historia',
+  idrott: 'Idrott och hälsa',
+  kemi: 'Kemi',
+  matematik: 'Matematik',
+  'moderna-sprak': 'Moderna språk',
+  musik: 'Musik',
+  religionskunskap: 'Religionskunskap',
+  samhallskunskap: 'Samhällskunskap',
+  slojd: 'Slöjd',
+  svenska: 'Svenska',
+  annat: 'Annat',
+};
+
 const subjectIcons: Record<Subject, any> = {
-  svenska: Languages,
+  bild: BookOpen,
+  biologi: Activity,
   engelska: Globe,
-  matte: Calculator,
-  no: Activity,
-  so: Landmark,
+  fysik: Activity,
+  geografi: Globe,
+  'hem-och-konsumentkunskap': BookOpen,
+  historia: Landmark,
   idrott: Activity,
+  kemi: Activity,
+  matematik: Calculator,
+  'moderna-sprak': Languages,
+  musik: BookOpen,
+  religionskunskap: Landmark,
+  samhallskunskap: Landmark,
+  slojd: BookOpen,
+  svenska: Languages,
   annat: BookOpen,
 };
 
 const subjectColors: Record<Subject, string> = {
-  svenska: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
-  engelska:
-    'bg-teal-100 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400',
-  matte: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
-  no: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400',
-  so: 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400',
-  idrott:
-    'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400',
+  bild: 'bg-pink-100 text-pink-600 dark:bg-pink-900/30 dark:text-pink-400',
+  biologi: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400',
+  engelska: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
+  fysik: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400',
+  geografi: 'bg-teal-100 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400',
+  'hem-och-konsumentkunskap': 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400',
+  historia: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400',
+  idrott: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
+  kemi: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400',
+  matematik: 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400',
+  'moderna-sprak': 'bg-cyan-100 text-cyan-600 dark:bg-cyan-900/30 dark:text-cyan-400',
+  musik: 'bg-fuchsia-100 text-fuchsia-600 dark:bg-fuchsia-900/30 dark:text-fuchsia-400',
+  religionskunskap: 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400',
+  samhallskunskap: 'bg-lime-100 text-lime-600 dark:bg-lime-900/30 dark:text-lime-400',
+  slojd: 'bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400',
+  svenska: 'bg-sky-100 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400',
   annat: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
 };
 
 const grades: Grade[] = [2, 3, 4, 5, 6, 7, 8, 9];
-const subjects: Subject[] = ['svenska', 'engelska', 'matte', 'no', 'so'];
+const subjects: Subject[] = [
+  'bild',
+  'biologi',
+  'engelska',
+  'fysik',
+  'geografi',
+  'hem-och-konsumentkunskap',
+  'historia',
+  'idrott',
+  'kemi',
+  'matematik',
+  'moderna-sprak',
+  'musik',
+  'religionskunskap',
+  'samhallskunskap',
+  'slojd',
+  'svenska',
+];
 
 export function OnboardingFlow() {
   const navigate = useNavigate();
@@ -191,7 +246,7 @@ export function OnboardingFlow() {
                       } ${subjectColors[subject]}`}
                     >
                       <Icon size={32} className="mb-2" />
-                      <div className="font-semibold capitalize">{subject}</div>
+                      <div className="font-semibold text-sm">{subjectLabels[subject]}</div>
                     </motion.button>
                   );
                 })}

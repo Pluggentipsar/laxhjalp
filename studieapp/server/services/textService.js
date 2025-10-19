@@ -279,3 +279,63 @@ Svara på svenska. Var tydlig och pedagogisk.`;
 
   return JSON.parse(completion.choices[0].message.content);
 }
+
+export async function generateMaterial(topic, { grade = 5 } = {}) {
+  const client = getClient();
+
+  const prompt = `Skapa ett studiematerial om "${topic}" för en elev i årskurs ${grade}.
+
+VIKTIGT: Skriv materialet DIREKT till eleven, inte som ett lärarmaterial. Använd "du" och "vi", inte "elever ska" eller "pedagogiskt syfte".
+
+Materialet ska:
+- Vara skrivet som en engagerande text direkt till eleven
+- Börja direkt med ämnet, INGEN "Pedagogiskt syfte" eller "Mål"-sektion
+- Förklara koncept på ett vardagligt och begripligt sätt
+- Vara 300-500 ord långt
+- Använda konkreta exempel från elevens vardag
+- Vara strukturerat med rubriker, stycken och punktlistor
+- Väcka nyfikenhet och intresse
+- Passa årskurs ${grade} utan att kännas nedlåtande
+
+Stil:
+- Använd "du" genomgående ("Du kommer att lära dig...", "Har du någonsin undrat...")
+- Skriv naturligt och vänligt, som en intressant artikel
+- Inkludera relatable exempel
+- Avsluta gärna med något att tänka på eller undersöka
+
+Returnera ett JSON-objekt med:
+{
+  "title": "En kort, catchy titel (utan 'årskurs' eller 'pedagogiskt')",
+  "content": "Själva texten i markdown-format, skriven DIREKT till eleven",
+  "subject": "bild" | "biologi" | "engelska" | "fysik" | "geografi" | "hem-och-konsumentkunskap" | "historia" | "idrott" | "kemi" | "matematik" | "moderna-sprak" | "musik" | "religionskunskap" | "samhallskunskap" | "slojd" | "svenska" | "annat",
+  "suggestedTags": ["tag1", "tag2", "tag3"]
+}
+
+Exempel på BRA början:
+"# Vikingarna
+Har du någonsin undrat hur vikingarna egentligen levde? De var mycket mer än bara krigare med horn på hjälmarna (som de faktiskt aldrig hade!)..."
+
+Exempel på DÅLIG början (undvik detta):
+"# Vikingarna
+Pedagogiskt syfte: Att ge elever förståelse för...
+Målgrupp: Elever i årskurs 5..."
+
+Svara på svenska. Skriv engagerande och direkt till eleven!`;
+
+  const completion = await client.chat.completions.create({
+    model: getModelName(),
+    messages: [
+      {
+        role: 'system',
+        content:
+          'Du är en pedagogisk AI som skapar studiematerial för elever. Du är expert på att anpassa innehåll efter ålder och skapa engagerande lärmaterial. Du returnerar JSON.',
+      },
+      { role: 'user', content: prompt },
+    ],
+    response_format: { type: 'json_object' },
+    ...temperatureOptions(0.7),
+    ...maxTokenOptions(2500),
+  });
+
+  return JSON.parse(completion.choices[0].message.content);
+}

@@ -43,7 +43,7 @@ interface AppStore {
   materials: Material[];
   folders: Folder[];
   loadMaterials: () => Promise<void>;
-  addMaterial: (material: Material) => Promise<void>;
+  addMaterial: (material: Material) => Promise<Material>;
   updateMaterial: (id: string, updates: Partial<Material>) => Promise<void>;
   deleteMaterial: (id: string) => Promise<void>;
 
@@ -237,6 +237,8 @@ export const useAppStore = create<AppStore>()(
         } else {
           console.warn('[AppStore] ⚠️ No user logged in - material NOT synced to Firestore!');
         }
+
+        return material;
       },
 
       updateMaterial: async (id, updates) => {

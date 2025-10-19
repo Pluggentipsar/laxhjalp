@@ -16,18 +16,46 @@ import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { ImportMenu } from '../components/material/ImportMenu';
 import { CreateMaterialModal } from '../components/material/CreateMaterialModal';
+import GenerateMaterialPanel from '../components/material/GenerateMaterialPanel';
 import { useAppStore } from '../store/appStore';
 import type { Material, Subject } from '../types';
 
-const SUBJECT_FILTERS: Subject[] = ['svenska', 'engelska', 'matte', 'no', 'so'];
+const SUBJECT_FILTERS: Subject[] = [
+  'bild',
+  'biologi',
+  'engelska',
+  'fysik',
+  'geografi',
+  'hem-och-konsumentkunskap',
+  'historia',
+  'idrott',
+  'kemi',
+  'matematik',
+  'moderna-sprak',
+  'musik',
+  'religionskunskap',
+  'samhallskunskap',
+  'slojd',
+  'svenska',
+];
 
 const subjectLabels: Record<Subject, string> = {
-  svenska: 'Svenska',
+  bild: 'Bild',
+  biologi: 'Biologi',
   engelska: 'Engelska',
-  matte: 'Matematik',
-  no: 'NO',
-  so: 'SO',
-  idrott: 'Idrott',
+  fysik: 'Fysik',
+  geografi: 'Geografi',
+  'hem-och-konsumentkunskap': 'Hem- och konsumentkunskap',
+  historia: 'Historia',
+  idrott: 'Idrott och hälsa',
+  kemi: 'Kemi',
+  matematik: 'Matematik',
+  'moderna-sprak': 'Moderna språk',
+  musik: 'Musik',
+  religionskunskap: 'Religionskunskap',
+  samhallskunskap: 'Samhällskunskap',
+  slojd: 'Slöjd',
+  svenska: 'Svenska',
   annat: 'Annat',
 };
 
@@ -155,6 +183,9 @@ export function StudyDashboardPage() {
             </div>
           </div>
         </section>
+
+        {/* AI Material Generation Panel */}
+        <GenerateMaterialPanel />
 
         {materials.length > 0 && (
           <section>

@@ -1,12 +1,22 @@
 // Core types för Studieappen
 
 export type Subject =
-  | 'svenska'
+  | 'bild'
+  | 'biologi'
   | 'engelska'
-  | 'matte'
-  | 'no'
-  | 'so'
+  | 'fysik'
+  | 'geografi'
+  | 'hem-och-konsumentkunskap'
+  | 'historia'
   | 'idrott'
+  | 'kemi'
+  | 'matematik'
+  | 'moderna-sprak'
+  | 'musik'
+  | 'religionskunskap'
+  | 'samhallskunskap'
+  | 'slojd'
+  | 'svenska'
   | 'annat';
 
 export type Grade = 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;

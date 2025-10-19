@@ -285,6 +285,13 @@ export interface SummaryResponse {
   mainIdeas: string[];
 }
 
+export interface GenerateMaterialResponse {
+  title: string;
+  content: string;
+  subject: 'bild' | 'biologi' | 'engelska' | 'fysik' | 'geografi' | 'hem-och-konsumentkunskap' | 'historia' | 'idrott' | 'kemi' | 'matematik' | 'moderna-sprak' | 'musik' | 'religionskunskap' | 'samhallskunskap' | 'slojd' | 'svenska' | 'annat';
+  suggestedTags: string[];
+}
+
 /**
  * Generera personaliserad förklaring baserat på användarens intressen
  */
@@ -406,6 +413,47 @@ export async function generateSummary(
     console.error('[aiService] Sammanfattning fel, using mock data:', error);
     // Fallback till mock-svar vid fel
     const mockData = mockSummary(materialContent);
+    console.log('[aiService] Mock data:', mockData);
+    return mockData;
+  }
+}
+
+/**
+ * Generera helt nytt studiematerial från ett ämne
+ */
+export async function generateMaterial(
+  topic: string,
+  grade: number = 5
+): Promise<GenerateMaterialResponse> {
+  console.log('[aiService] generateMaterial called with topic:', topic);
+  try {
+    const response = await fetch(`${API_BASE_URL}/generate/material`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        topic,
+        grade,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Material API-fel: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log('[aiService] API response:', data);
+    return {
+      title: data.title,
+      content: data.content,
+      subject: data.subject,
+      suggestedTags: data.suggestedTags || [],
+    };
+  } catch (error) {
+    console.error('[aiService] Material generering fel, using mock data:', error);
+    // Fallback till mock-svar vid fel
+    const mockData = mockGenerateMaterial(topic);
     console.log('[aiService] Mock data:', mockData);
     return mockData;
   }
@@ -624,5 +672,19 @@ function mockSummary(_materialContent: string): SummaryResponse {
       'Huvudidé 1: Detta är den första huvudidén',
       'Huvudidé 2: Detta är den andra huvudidén',
     ],
+  };
+}
+
+function mockGenerateMaterial(topic: string): GenerateMaterialResponse {
+  const subjects: Array<'bild' | 'biologi' | 'engelska' | 'fysik' | 'geografi' | 'hem-och-konsumentkunskap' | 'historia' | 'idrott' | 'kemi' | 'matematik' | 'moderna-sprak' | 'musik' | 'religionskunskap' | 'samhallskunskap' | 'slojd' | 'svenska' | 'annat'> = [
+    'svenska', 'biologi', 'historia', 'geografi', 'annat'
+  ];
+  const randomSubject = subjects[Math.floor(Math.random() * subjects.length)];
+
+  return {
+    title: `Lär dig om ${topic}`,
+    content: `# ${topic}\n\nDetta är ett automatiskt genererat studiematerial om **${topic}**.\n\n## Introduktion\n\nHär kommer en introduktion till ämnet ${topic}. Detta material är skapat för att hjälpa dig förstå grunderna.\n\n## Viktiga punkter\n\n- Punkt 1 om ${topic}\n- Punkt 2 om ${topic}\n- Punkt 3 om ${topic}\n\n## Sammanfattning\n\nNu har du lärt dig mer om ${topic}!`,
+    subject: randomSubject,
+    suggestedTags: [topic.toLowerCase(), 'lärande', 'studie'],
   };
 }

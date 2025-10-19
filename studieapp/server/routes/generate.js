@@ -11,7 +11,8 @@ import {
   explainSelection,
   generatePersonalizedExplanation,
   generatePersonalizedExamples,
-  generateSummary
+  generateSummary,
+  generateMaterial
 } from '../services/textService.js';
 
 const router = express.Router();
@@ -287,6 +288,36 @@ router.post('/summary', async (req, res, next) => {
       summary: result.summary,
       keyPoints: result.keyPoints || [],
       mainIdeas: result.mainIdeas || [],
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/generate/material
+ * Generera helt nytt studiematerial från ett ämne/topic
+ */
+router.post('/material', async (req, res, next) => {
+  try {
+    const { topic, grade = 5 } = req.body;
+
+    if (!topic || topic.trim().length === 0) {
+      return res.status(400).json({ error: 'Inget ämne angivet.' });
+    }
+
+    if (topic.trim().length < 3) {
+      return res.status(400).json({ error: 'Ämnet är för kort.' });
+    }
+
+    const result = await generateMaterial(topic, { grade });
+
+    res.json({
+      success: true,
+      title: result.title,
+      content: result.content,
+      subject: result.subject,
+      suggestedTags: result.suggestedTags || [],
     });
   } catch (error) {
     next(error);
