@@ -59,14 +59,14 @@ interface AppStore {
   endSession: (xpEarned: number, stats?: any) => Promise<void>;
 
   // Chat
-  chatSessions: Record<string, ChatSession>;
-  loadChatSession: (materialId: string) => Promise<ChatSession | null>;
+  chatSessions: Record<string, ChatSession>; // Key: `${materialId}-${mode}`
+  loadChatSession: (materialId: string, mode: ChatMode) => Promise<ChatSession | null>;
   appendChatMessage: (
     materialId: string,
+    mode: ChatMode,
     message: ChatMessage
   ) => Promise<ChatSession | null>;
-  setChatSession: (materialId: string, session: ChatSession) => Promise<void>;
-  updateChatMode: (materialId: string, mode: ChatMode) => Promise<void>;
+  setChatSession: (materialId: string, mode: ChatMode, session: ChatSession) => Promise<void>;
 
   // Games & Felbank
   mistakeBank: Record<string, Record<string, MistakeEntry>>;
@@ -418,26 +418,30 @@ export const useAppStore = create<AppStore>()(
       },
 
       // Chat Sessions
-      loadChatSession: async (materialId) => {
+      loadChatSession: async (materialId, mode) => {
+        const sessionKey = `${materialId}-${mode}`;
+
+        // Try to find existing session for this material+mode combination
         let session = await db.chatSessions
-          .where('materialId')
-          .equals(materialId)
+          .where('[materialId+mode]')
+          .equals([materialId, mode])
           .first();
 
         if (!session) {
+          // Create new session for this material+mode
           session = {
             id: crypto.randomUUID(),
             materialId,
-            mode: 'free', // Default mode
+            mode,
             messages: [],
             createdAt: new Date(),
             updatedAt: new Date(),
           };
           await db.chatSessions.add(session);
         } else {
+          // Format existing session
           session = {
             ...session,
-            mode: session.mode || 'free', // Ensure mode exists
             messages: session.messages.map((message) => ({
               ...message,
               timestamp: new Date(message.timestamp),
@@ -450,22 +454,23 @@ export const useAppStore = create<AppStore>()(
         set((state) => ({
           chatSessions: {
             ...state.chatSessions,
-            [materialId]: session!,
+            [sessionKey]: session!,
           },
         }));
 
         return session;
       },
 
-      appendChatMessage: async (materialId, message) => {
+      appendChatMessage: async (materialId, mode, message) => {
+        const sessionKey = `${materialId}-${mode}`;
         const state = get();
-        const existing = state.chatSessions[materialId];
+        const existing = state.chatSessions[sessionKey];
 
         if (!existing) {
-          await state.loadChatSession(materialId);
+          await state.loadChatSession(materialId, mode);
         }
 
-        const session = get().chatSessions[materialId];
+        const session = get().chatSessions[sessionKey];
         if (!session) return null;
 
         const updatedSession: ChatSession = {
@@ -482,14 +487,16 @@ export const useAppStore = create<AppStore>()(
         set((prevState) => ({
           chatSessions: {
             ...prevState.chatSessions,
-            [materialId]: updatedSession,
+            [sessionKey]: updatedSession,
           },
         }));
 
         return updatedSession;
       },
 
-      setChatSession: async (materialId, session) => {
+      setChatSession: async (materialId, mode, session) => {
+        const sessionKey = `${materialId}-${mode}`;
+
         await db.chatSessions.put({
           ...session,
           updatedAt: new Date(),
@@ -498,35 +505,7 @@ export const useAppStore = create<AppStore>()(
         set((state) => ({
           chatSessions: {
             ...state.chatSessions,
-            [materialId]: { ...session, updatedAt: new Date() },
-          },
-        }));
-      },
-
-      updateChatMode: async (materialId, mode) => {
-        const state = get();
-        const session = state.chatSessions[materialId];
-
-        if (!session) {
-          console.error('No session found for material', materialId);
-          return;
-        }
-
-        const updatedSession: ChatSession = {
-          ...session,
-          mode,
-          updatedAt: new Date(),
-        };
-
-        await db.chatSessions.update(session.id, {
-          mode,
-          updatedAt: new Date(),
-        });
-
-        set((state) => ({
-          chatSessions: {
-            ...state.chatSessions,
-            [materialId]: updatedSession,
+            [sessionKey]: { ...session, updatedAt: new Date() },
           },
         }));
       },

@@ -24,12 +24,12 @@ import type { ChatMessage, ChatMode } from '../../types';
 const XP_PER_TURN = 15;
 
 const WELCOME_MESSAGES: Record<ChatMode, string> = {
-  free: 'Hej! Jag är här för att hjälpa dig förstå materialet. Ställ vilka frågor du vill!',
-  socratic: 'Hej! Jag kommer att ställa frågor som får dig att tänka själv. Är du redo att börja utforska? 🧠',
-  adventure: 'Välkommen till ditt äventyr! Jag kommer berätta en spännande historia baserad på materialet. Tryck på ett av valen för att fortsätta berättelsen! 🗺️',
-  'active-learning': 'Hej! Vi kommer att lära tillsammans genom förklaringar och praktiska uppgifter. Redo att börja? 🎯',
-  quiz: 'Hej! Jag är Quiz-mästaren och kommer att testa din kunskap med olika frågor. Jag lovar att förklara varje svar! 🏆',
-  discussion: 'Hej! Låt oss diskutera materialet tillsammans. Jag kommer utmana dina tankar och presentera olika perspektiv. 💭',
+  free: 'Hej! Jag är här för att hjälpa dig förstå materialet. Ställ vilka frågor du vill så svarar jag! 😊',
+  socratic: 'Hej! Jag kommer att förhöra dig på materialet genom att ställa frågor som får dig att tänka själv. Här kommer första frågan... 🧠',
+  adventure: 'Välkommen till ditt äventyr! Jag kommer berätta en spännande historia baserad på materialet där DU är hjälten. Äventyret börjar nu... 🗺️',
+  'active-learning': 'Hej! Jag kommer först förklara ett koncept, sedan ge dig en uppgift att lösa. Vi börjar direkt... 🎯',
+  quiz: 'Hej! Jag är Quiz-mästaren! Jag kommer testa din kunskap med frågor och förklara varje svar. Här kommer första frågan... 🏆',
+  discussion: 'Hej! Låt oss diskutera materialet tillsammans. Berätta vad du tycker eller fråga något, så presenterar jag olika perspektiv och utmanar din tanke! 💭',
 };
 
 export function ChatStudyPage() {
@@ -73,6 +73,18 @@ export function ChatStudyPage() {
     []
   );
 
+  const material = useMemo(
+    () => materials.find((item) => item.id === materialId),
+    [materials, materialId]
+  );
+
+  // Update mode when URL changes
+  useEffect(() => {
+    if (urlMode && urlMode !== currentMode) {
+      setCurrentMode(urlMode as ChatMode);
+    }
+  }, [urlMode]);
+
   useEffect(() => {
     if (materials.length === 0) {
       loadMaterials();
@@ -92,22 +104,16 @@ export function ChatStudyPage() {
 
   useEffect(() => {
     let isMounted = true;
-    if (!materialId) {
+    if (!materialId || !currentMode) {
       setIsHistoryLoading(false);
       return;
     }
 
     setIsHistoryLoading(true);
-    loadChatSession(materialId)
-      .then(async (session) => {
+    loadChatSession(materialId, currentMode)
+      .then((session) => {
         if (session && isMounted) {
           updateMessages(session.messages ?? []);
-
-          // If URL has a mode, update the session mode
-          if (urlMode && session.mode !== urlMode) {
-            await updateChatMode(materialId, urlMode as ChatMode);
-          }
-
           setHasInitialized(true);
         }
       })
@@ -120,41 +126,88 @@ export function ChatStudyPage() {
     return () => {
       isMounted = false;
     };
-  }, [materialId, loadChatSession, updateMessages, urlMode, updateChatMode]);
+  }, [materialId, currentMode, loadChatSession, updateMessages]);
 
   useEffect(() => {
-    if (!materialId) return;
-    const session = chatSessions[materialId];
-    if (session) {
-      if (session.messages !== messagesRef.current) {
-        updateMessages(session.messages);
-      }
-      // Sync mode from session
-      if (session.mode && session.mode !== currentMode) {
-        setCurrentMode(session.mode);
-      }
+    if (!materialId || !currentMode) return;
+    const sessionKey = `${materialId}-${currentMode}`;
+    const session = chatSessions[sessionKey];
+    if (session && session.messages !== messagesRef.current) {
+      updateMessages(session.messages);
     }
-  }, [chatSessions, materialId, updateMessages, currentMode]);
+  }, [chatSessions, materialId, currentMode, updateMessages]);
 
-  // Send welcome message if session is empty
+  // Send welcome message and potentially AI-generated start for certain modes
   useEffect(() => {
-    if (!hasInitialized || !materialId || !material) return;
+    if (!hasInitialized || !materialId || !material || isSending || !currentMode) return;
 
-    const session = chatSessions[materialId];
-    if (session && session.messages.length === 0 && currentMode) {
-      // Add welcome message
-      const welcomeMessage: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: WELCOME_MESSAGES[currentMode],
-        timestamp: new Date(),
+    const sessionKey = `${materialId}-${currentMode}`;
+    const session = chatSessions[sessionKey];
+    if (session && session.messages.length === 0) {
+      const sendInitialMessages = async () => {
+        try {
+          // Add welcome message
+          const welcomeMessage: ChatMessage = {
+            id: crypto.randomUUID(),
+            role: 'assistant',
+            content: WELCOME_MESSAGES[currentMode],
+            timestamp: new Date(),
+          };
+
+          await appendChatMessage(materialId, currentMode, welcomeMessage);
+
+          // For certain modes, immediately send a system message to get AI started
+          const autoStartModes: ChatMode[] = ['socratic', 'quiz', 'adventure', 'active-learning'];
+
+          if (autoStartModes.includes(currentMode)) {
+            setIsSending(true);
+
+            const startPrompts: Record<ChatMode, string> = {
+              socratic: 'börja',
+              quiz: 'börja',
+              adventure: 'starta äventyret',
+              'active-learning': 'ok',
+              free: '',
+              discussion: '',
+            };
+
+            const userStart: ChatMessage = {
+              id: crypto.randomUUID(),
+              role: 'user',
+              content: startPrompts[currentMode],
+              timestamp: new Date(),
+            };
+
+            await appendChatMessage(materialId, currentMode, userStart);
+
+            // Get AI response
+            const response = await sendChatMessage(
+              material.content,
+              [welcomeMessage, userStart],
+              userStart.content,
+              user?.grade ?? 5,
+              currentMode
+            );
+
+            const aiResponse: ChatMessage = {
+              id: crypto.randomUUID(),
+              role: 'assistant',
+              content: response.message,
+              timestamp: new Date(),
+            };
+
+            await appendChatMessage(materialId, currentMode, aiResponse);
+            setIsSending(false);
+          }
+        } catch (error) {
+          console.error('Failed to send initial messages:', error);
+          setIsSending(false);
+        }
       };
 
-      appendChatMessage(materialId, welcomeMessage).catch((error) => {
-        console.error('Failed to send welcome message:', error);
-      });
+      sendInitialMessages();
     }
-  }, [hasInitialized, materialId, material, chatSessions, currentMode, appendChatMessage]);
+  }, [hasInitialized, materialId, material, chatSessions, currentMode, appendChatMessage, isSending, user, sendChatMessage]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -176,15 +229,10 @@ export function ChatStudyPage() {
     };
   }, [endSession, materialId, sessionXp, userTurns]);
 
-  const material = useMemo(
-    () => materials.find((item) => item.id === materialId),
-    [materials, materialId]
-  );
-
   const handleModeChange = async (newMode: ChatMode) => {
     if (!materialId) return;
-    setCurrentMode(newMode);
-    await updateChatMode(materialId, newMode);
+    // Navigate to new mode URL - this will load a fresh session
+    navigate(`/study/material/${materialId}/chat/${newMode}`);
   };
 
   const handleVoiceTranscript = (transcript: string) => {
@@ -213,7 +261,7 @@ export function ChatStudyPage() {
     const conversationForAI = [...messagesRef.current];
 
     try {
-      await appendChatMessage(materialId, userMessage);
+      await appendChatMessage(materialId, currentMode, userMessage);
     } catch (error) {
       console.error('Kunde inte spara användarmeddelande', error);
     }
@@ -237,7 +285,7 @@ export function ChatStudyPage() {
       updateMessages((prev) => [...prev, assistantMessage]);
 
       try {
-        await appendChatMessage(materialId, assistantMessage);
+        await appendChatMessage(materialId, currentMode, assistantMessage);
       } catch (error) {
         console.error('Kunde inte spara AI-svar', error);
       }
@@ -264,7 +312,7 @@ export function ChatStudyPage() {
       setError('AI:n kunde inte svara just nu. Försök igen om en stund.');
 
       try {
-        await appendChatMessage(materialId, fallbackMessage);
+        await appendChatMessage(materialId, currentMode, fallbackMessage);
       } catch (persistError) {
         console.error('Kunde inte spara fallback-svar', persistError);
       }

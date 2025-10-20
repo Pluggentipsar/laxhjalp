@@ -56,6 +56,19 @@ export class StudieAppDatabase extends Dexie {
         }
       });
     });
+
+    // Version 3 - add composite index for chatSessions [materialId+mode]
+    this.version(3).stores({
+      materials: 'id, subject, folderId, *tags, createdAt, lastStudied',
+      folders: 'id, subject, createdAt',
+      userProfile: 'id',
+      studySessions: 'id, materialId, mode, startedAt',
+      gameSessions: 'id, materialId, gameType, completedAt',
+      dailyProgress: 'date',
+      mindmaps: 'id, materialId, createdAt',
+      chatSessions: 'id, [materialId+mode], materialId, mode, createdAt',
+      textEmbeddings: 'id, materialId, chunkIndex, createdAt',
+    });
   }
 }
 

@@ -108,8 +108,16 @@ export function ChatModeHub() {
     );
   }
 
-  // Check if there's an existing session for any mode
-  const existingSession = materialId ? chatSessions[materialId] : null;
+  // Helper to check if a mode has a session with messages
+  const hasSessionForMode = (mode: ChatMode): boolean => {
+    if (!materialId) return false;
+    const sessionKey = `${materialId}-${mode}`;
+    const session = chatSessions[sessionKey];
+    return session ? session.messages.length > 0 : false;
+  };
+
+  // Find any mode with an existing session to show banner
+  const existingSessionMode = chatModes.find((m) => hasSessionForMode(m.mode));
 
   return (
     <MainLayout title="Välj ditt äventyr" showBottomNav={false}>
@@ -140,7 +148,7 @@ export function ChatModeHub() {
         </motion.div>
 
         {/* Continue existing session banner */}
-        {existingSession && existingSession.messages.length > 0 && (
+        {existingSessionMode && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -151,12 +159,12 @@ export function ChatModeHub() {
                 <h3 className="text-xl font-bold mb-1">Fortsätt där du slutade</h3>
                 <p className="text-white/90">
                   Du har en pågående session med{' '}
-                  {chatModes.find((m) => m.mode === existingSession.mode)?.title || 'chattboten'}
+                  {existingSessionMode.title}
                 </p>
               </div>
               <Button
                 onClick={() =>
-                  navigate(`/study/material/${materialId}/chat/${existingSession.mode}`)
+                  navigate(`/study/material/${materialId}/chat/${existingSessionMode.mode}`)
                 }
                 className="bg-white text-primary-600 hover:bg-gray-100"
               >
@@ -178,10 +186,7 @@ export function ChatModeHub() {
               <ModeCard
                 {...modeInfo}
                 onSelect={handleSelectMode}
-                hasContinueSession={
-                  existingSession?.mode === modeInfo.mode &&
-                  existingSession.messages.length > 0
-                }
+                hasContinueSession={hasSessionForMode(modeInfo.mode)}
               />
             </motion.div>
           ))}
