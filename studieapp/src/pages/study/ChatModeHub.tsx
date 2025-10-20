@@ -102,6 +102,7 @@ export function ChatModeHub() {
   // Ladda antal konversationer för varje mode
   useEffect(() => {
     if (!materialId) return;
+    const activeMaterialId = materialId as string;
 
     async function loadConversationCounts() {
       const counts: Record<ChatMode, number> = {
@@ -114,7 +115,7 @@ export function ChatModeHub() {
       };
 
       for (const mode of Object.keys(counts) as ChatMode[]) {
-        const sessions = await getConversationsForMode(materialId, mode);
+        const sessions = await getConversationsForMode(activeMaterialId, mode);
         counts[mode] = sessions.length;
       }
 
@@ -125,6 +126,7 @@ export function ChatModeHub() {
   }, [materialId, getConversationsForMode]);
 
   const handleSelectMode = (mode: ChatMode) => {
+    if (!materialId) return;
     navigate(`/study/material/${materialId}/chat/${mode}`);
   };
 
@@ -192,14 +194,16 @@ export function ChatModeHub() {
                   {existingSessionMode.title}
                 </p>
               </div>
-              <Button
-                onClick={() =>
-                  navigate(`/study/material/${materialId}/chat/${existingSessionMode.mode}`)
-                }
-                className="bg-white text-primary-600 hover:bg-gray-100"
-              >
-                Fortsätt
-              </Button>
+              {materialId && (
+                <Button
+                  onClick={() =>
+                    navigate(`/study/material/${materialId}/chat/${existingSessionMode.mode}`)
+                  }
+                  className="bg-white text-primary-600 hover:bg-gray-100"
+                >
+                  Fortsätt
+                </Button>
+              )}
             </div>
           </motion.div>
         )}

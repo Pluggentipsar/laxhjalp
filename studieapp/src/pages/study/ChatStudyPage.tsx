@@ -50,7 +50,6 @@ export function ChatStudyPage() {
   const appendChatMessage = useAppStore((state) => state.appendChatMessage);
   const chatSessions = useAppStore((state) => state.chatSessions);
   const currentConversationId = useAppStore((state) => state.currentConversationId);
-  const setCurrentConversation = useAppStore((state) => state.setCurrentConversation);
   const startSession = useAppStore((state) => state.startSession);
   const endSession = useAppStore((state) => state.endSession);
   const currentSession = useAppStore((state) => state.currentSession);
@@ -99,9 +98,10 @@ export function ChatStudyPage() {
   // Ladda antal konversationer för aktuellt mode
   useEffect(() => {
     if (!materialId || !currentMode) return;
+    const activeMaterialId = materialId as string;
 
     async function loadCount() {
-      const sessions = await getConversationsForMode(materialId, currentMode);
+      const sessions = await getConversationsForMode(activeMaterialId, currentMode);
       setConversationCount(sessions.length);
     }
 
@@ -358,16 +358,16 @@ export function ChatStudyPage() {
   };
 
   const handleSelectConversation = async (conversationId: string) => {
-    const session = await loadChatSession(conversationId);
-    if (session) {
-      updateMessages(session.messages);
+    const loadedSession = await loadChatSession(conversationId);
+    if (loadedSession) {
+      updateMessages(loadedSession.messages);
       setShowHistory(false);
     }
   };
 
   const handleNewConversation = async () => {
     if (!materialId) return;
-    const session = await createNewConversation(materialId, currentMode);
+    await createNewConversation(materialId, currentMode);
     updateMessages([]);
     setHasInitialized(true);
     setShowHistory(false);

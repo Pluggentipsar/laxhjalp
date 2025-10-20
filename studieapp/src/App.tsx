@@ -15,6 +15,7 @@ import { ChatModeHub } from './pages/study/ChatModeHub';
 import { ChatStudyPage } from './pages/study/ChatStudyPage';
 import { ConceptExplorerPage } from './pages/study/ConceptExplorerPage';
 import { SnakeGamePage } from './pages/study/SnakeGamePage';
+import { GamesHubPage } from './pages/GamesHubPage';
 
 function AppContent() {
   const { userProfile } = useAuth();
@@ -118,7 +119,8 @@ function AppContent() {
         path="/study/material/:materialId/game/snake"
         element={<SnakeGamePage />}
       />
-      <Route path="/games" element={<Navigate to="/" replace />} />
+      <Route path="/games/snake" element={<SnakeGamePage />} />
+      <Route path="/games" element={<GamesHubPage />} />
       <Route path="/material" element={<Navigate to="/study" replace />} />
       <Route path="/import/*" element={<Navigate to="/study" replace />} />
 

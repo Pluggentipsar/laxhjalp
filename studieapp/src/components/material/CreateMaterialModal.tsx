@@ -17,13 +17,41 @@ interface CreateMaterialModalProps {
 }
 
 const subjects: { value: Subject; label: string; gradient: string }[] = [
-  { value: 'svenska', label: 'Svenska', gradient: 'bg-gradient-svenska' },
-  { value: 'engelska', label: 'Engelska', gradient: 'bg-gradient-engelska' },
-  { value: 'matte', label: 'Matte', gradient: 'bg-gradient-matte' },
-  { value: 'no', label: 'NO', gradient: 'bg-gradient-no' },
-  { value: 'so', label: 'SO', gradient: 'bg-gradient-so' },
-  { value: 'idrott', label: 'Idrott', gradient: 'bg-gradient-idrott' },
-  { value: 'annat', label: 'Annat', gradient: 'bg-gray-400' },
+  {
+    value: 'svenska',
+    label: 'Svenska',
+    gradient: 'bg-gradient-to-r from-rose-500 to-pink-500',
+  },
+  {
+    value: 'engelska',
+    label: 'Engelska',
+    gradient: 'bg-gradient-to-r from-blue-500 to-indigo-500',
+  },
+  {
+    value: 'matematik',
+    label: 'Matematik',
+    gradient: 'bg-gradient-to-r from-amber-500 to-orange-500',
+  },
+  {
+    value: 'biologi',
+    label: 'Biologi (NO)',
+    gradient: 'bg-gradient-to-r from-green-500 to-emerald-500',
+  },
+  {
+    value: 'samhallskunskap',
+    label: 'Samhällskunskap (SO)',
+    gradient: 'bg-gradient-to-r from-purple-500 to-fuchsia-500',
+  },
+  {
+    value: 'idrott',
+    label: 'Idrott & hälsa',
+    gradient: 'bg-gradient-to-r from-teal-500 to-cyan-500',
+  },
+  {
+    value: 'annat',
+    label: 'Annat',
+    gradient: 'bg-gradient-to-r from-slate-400 to-slate-500',
+  },
 ];
 
 export function CreateMaterialModal({

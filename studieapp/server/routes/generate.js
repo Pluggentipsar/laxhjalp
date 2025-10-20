@@ -84,17 +84,28 @@ router.post('/quiz', async (req, res, next) => {
  */
 router.post('/concepts', async (req, res, next) => {
   try {
-    const { content, count = 5, grade } = req.body;
+    const {
+      content = '',
+      count = 5,
+      grade,
+      language = 'sv',
+      topicHint = '',
+    } = req.body;
 
-    if (!content || content.trim().length < 50) {
+    const hasTopic = typeof topicHint === 'string' && topicHint.trim().length > 0;
+    const hasContent = typeof content === 'string' && content.trim().length > 20;
+
+    if (!hasTopic && !hasContent) {
       return res.status(400).json({
-        error: 'Inneh�llet �r f�r kort. Beh�ver minst 50 tecken.'
+        error: 'Ange ett tema/ämne eller tillräckligt material för att skapa begrepp.'
       });
     }
 
     const concepts = await generateConcepts(content, {
       count,
-      grade
+      grade,
+      language,
+      topicHint,
     });
 
     res.json({

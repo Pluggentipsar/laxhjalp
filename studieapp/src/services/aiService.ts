@@ -93,11 +93,24 @@ export async function generateQuestions(
 /**
  * Generera begrepp och definitioner från text
  */
+interface GenerateConceptsOptions {
+  count?: number;
+  grade?: number;
+  language?: string;
+  topicHint?: string;
+}
+
 export async function generateConcepts(
   content: string,
-  count: number = 5,
-  grade: number = 5
+  options: GenerateConceptsOptions = {}
 ): Promise<Concept[]> {
+  const {
+    count = 5,
+    grade = 5,
+    language = 'sv',
+    topicHint,
+  } = options;
+
   try {
     const response = await fetch(`${API_BASE_URL}/generate/concepts`, {
       method: 'POST',
@@ -107,7 +120,9 @@ export async function generateConcepts(
       body: JSON.stringify({
         content,
         count,
-        grade
+        grade,
+        language,
+        topicHint,
       }),
     });
 

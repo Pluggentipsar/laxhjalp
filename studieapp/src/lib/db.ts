@@ -182,6 +182,23 @@ export const dbHelpers = {
       .toArray();
   },
 
+  // Game Sessions
+  async getRecentGameSessions(limit = 10) {
+    return await db.gameSessions
+      .orderBy('completedAt')
+      .reverse()
+      .limit(limit)
+      .toArray();
+  },
+
+  async logGameSession(session: GameSession) {
+    const completedAt = session.completedAt ?? new Date();
+    await db.gameSessions.put({
+      ...session,
+      completedAt,
+    });
+  },
+
   // XP & Leveling
   async addXP(amount: number) {
     const profile = await this.getUserProfile();

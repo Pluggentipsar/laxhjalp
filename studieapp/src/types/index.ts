@@ -27,7 +27,28 @@ export type MaterialType = 'photo' | 'pdf' | 'text' | 'voice' | 'link';
 
 export type StudyMode = 'flashcards' | 'quiz' | 'chat' | 'mindmap' | 'read';
 
-export type GameType = 'snake' | 'memory' | 'whack' | 'timeatack' | 'boss';
+export type GameType = 'snake' | 'memory' | 'whack' | 'time-attack' | 'concept-builder' | 'boss';
+
+export type GameScopeMode = 'single-material' | 'multi-material' | 'generated';
+
+export type GameAudience = 'solo' | 'co-op' | 'versus';
+
+export interface GameDefinition {
+  id: GameType;
+  name: string;
+  tagline: string;
+  description: string;
+  status: 'available' | 'beta' | 'coming-soon';
+  focus: string[];
+  supports: {
+    scope: GameScopeMode[];
+    multiplayer: boolean;
+  };
+  averageDuration: string;
+  difficulty: Difficulty;
+  icon: string;
+  tags: string[];
+}
 
 export type LanguageCode = 'sv' | 'en' | 'es';
 
@@ -50,6 +71,7 @@ export interface GameContentPreparation {
   language: LanguageCode;
   source: 'existing' | 'generated' | 'mixed';
   needsReview: boolean;
+  materialIds?: string[];
 }
 
 export interface MistakeEntry {
@@ -60,6 +82,16 @@ export interface MistakeEntry {
   language: LanguageCode;
   missCount: number;
   lastMissedAt: string;
+}
+
+export interface GamePreferences {
+  sourceMode: GameScopeMode;
+  selectedMaterialIds: string[];
+  includeAllMaterials: boolean;
+  language: LanguageCode;
+  difficulty: Difficulty;
+  lastPlayedGame?: GameType;
+  generatedTopicHint?: string;
 }
 
 export interface GenerationLogEntry {
@@ -206,12 +238,15 @@ export interface StudySession {
 
 export interface GameSession {
   id: string;
-  materialId: string;
   gameType: GameType;
   score: number;
   duration: number;
   completedAt: Date;
   xpEarned: number;
+  materialId?: string;
+  materialIds?: string[];
+  sourceMode: GameScopeMode;
+  settings?: Record<string, unknown>;
 }
 
 // Progression & Motivation

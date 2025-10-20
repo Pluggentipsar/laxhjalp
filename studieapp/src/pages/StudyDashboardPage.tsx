@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Plus,
   Search,
   Sparkles,
+  Gamepad2,
 } from 'lucide-react';
 import { MainLayout } from '../components/layout/MainLayout';
 import { Card } from '../components/common/Card';
@@ -17,6 +19,7 @@ import type { Material, Subject } from '../types';
 
 
 export function StudyDashboardPage() {
+  const navigate = useNavigate();
   const materials = useAppStore((state) => state.materials);
   const addMaterial = useAppStore((state) => state.addMaterial);
   const deleteMaterial = useAppStore((state) => state.deleteMaterial);
@@ -136,6 +139,15 @@ export function StudyDashboardPage() {
               >
                 <Plus size={20} className="mr-2" />
                 Ladda upp/Skapa
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="bg-white text-primary-600 hover:bg-primary-50"
+                onClick={() => navigate('/games')}
+              >
+                <Gamepad2 size={20} className="mr-2" />
+                Gå till spel
               </Button>
             </div>
           </div>

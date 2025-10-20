@@ -1,77 +1,148 @@
 import { useAppStore } from '../store/appStore';
-import {
-  generateConcepts,
-} from './aiService';
+import { generateConcepts } from './aiService';
 import type {
   Concept,
   Flashcard,
   GameContentPreparation,
   GameTermBase,
+  GameScopeMode,
   GlossaryEntry,
   LanguageCode,
+  Material,
   SnakeGameTerm,
 } from '../types';
 
-interface PrepareGameContentOptions {
+export interface SnakeContentConfig {
+  sourceMode: GameScopeMode;
+  materialIds?: string[];
+  includeAllMaterials?: boolean;
   language?: LanguageCode;
   minTerms?: number;
   maxDistractors?: number;
+  topicHint?: string;
 }
 
 const DEFAULT_LANGUAGE: LanguageCode = 'sv';
 const DEFAULT_MIN_TERMS = 6;
 const DEFAULT_DISTRACTORS = 4;
+const MAX_GENERATION_CHARS = 8000;
 
 export async function prepareSnakeGameContent(
-  materialId: string,
-  options: PrepareGameContentOptions = {}
+  config: SnakeContentConfig
 ): Promise<GameContentPreparation> {
   const {
+    sourceMode,
+    materialIds = [],
+    includeAllMaterials = false,
     language = DEFAULT_LANGUAGE,
     minTerms = DEFAULT_MIN_TERMS,
     maxDistractors = DEFAULT_DISTRACTORS,
-  } = options;
+    topicHint = '',
+  } = config;
 
   const store = useAppStore.getState();
 
-  let material = store.materials.find((item) => item.id === materialId);
-  if (!material) {
+  if (!store.materials.length) {
     await store.loadMaterials();
-    material = useAppStore.getState().materials.find((item) => item.id === materialId);
   }
 
-  if (!material) {
-    throw new Error('Materialet kunde inte hittas.');
+  let materialsToUse: Material[] = [];
+  const allMaterials = useAppStore.getState().materials;
+
+  if (sourceMode === 'single-material') {
+    const targetId = materialIds[0];
+    if (!targetId) {
+      throw new Error('Välj ett material innan du startar Snake.');
+    }
+    const material = allMaterials.find((item) => item.id === targetId);
+    if (!material) {
+      throw new Error('Materialet kunde inte hittas.');
+    }
+    materialsToUse = [material];
+  } else if (sourceMode === 'multi-material') {
+    const ids =
+      includeAllMaterials || materialIds.length === 0
+        ? allMaterials.map((item) => item.id)
+        : materialIds;
+
+    materialsToUse = allMaterials.filter((item) => ids.includes(item.id));
+
+    if (!materialsToUse.length) {
+      throw new Error('Välj minst ett material för att spela med flera källor.');
+    }
+  } else {
+    // generated
+    const ids =
+      includeAllMaterials || materialIds.length === 0
+        ? allMaterials.map((item) => item.id)
+        : materialIds;
+    materialsToUse = allMaterials.filter((item) => ids.includes(item.id));
   }
 
   const grade = store.user?.grade ?? 5;
 
-  const baseTerms = collectGameTerms({
-    materialId,
-    concepts: material.concepts,
-    flashcards: material.flashcards,
-    glossary: material.glossary ?? [],
-    language,
-  });
+  const baseTerms =
+    sourceMode === 'generated'
+      ? []
+      : materialsToUse.flatMap((material) =>
+          collectGameTerms({
+            materialId: material.id,
+            concepts: material.concepts,
+            flashcards: material.flashcards,
+            glossary: material.glossary ?? [],
+            language,
+          })
+        );
 
-  let source: GameContentPreparation['source'] = 'existing';
-  let terms = baseTerms;
+  let terms = deduplicateTerms(baseTerms);
+  let source: GameContentPreparation['source'] = sourceMode === 'generated' ? 'generated' : 'existing';
 
-  if (terms.length < minTerms) {
-    const generatedConcepts = await generateConcepts(material.content, Math.max(minTerms, 8), grade);
+  const contentForGeneration = buildGenerationContent(materialsToUse);
+  const normalizedTopic = topicHint.trim();
+  const languageLabel =
+    language === 'sv' ? 'svenska' : language === 'en' ? 'engelska' : language === 'es' ? 'spanska' : language;
+  const needsGeneration =
+    sourceMode === 'generated' || terms.length < minTerms || terms.length === 0;
+
+  if (needsGeneration) {
+    const conceptCount = Math.max(minTerms, 8);
+
+    const generationInput = [
+      normalizedTopic ? `Tema/fokus: ${normalizedTopic}.` : null,
+      `Språk: ${languageLabel}.`,
+      contentForGeneration
+        ? `Bakgrundsmaterial:\n${contentForGeneration}`
+        : 'Skapa en fristående begreppslista baserat på temat och årskursen.',
+    ]
+      .filter(Boolean)
+      .join('\n\n');
+
+    const generatedConcepts = await generateConcepts(generationInput, {
+      count: conceptCount,
+      grade,
+      language,
+      topicHint: normalizedTopic || undefined,
+    });
     const generatedTerms = generatedConcepts.map((concept) =>
-      createGameTermFromConcept(concept, materialId, language, 'generated')
+      createGameTermFromConcept(
+        concept,
+        materialsToUse[0]?.id ?? 'generated',
+        language,
+        'generated'
+      )
     );
 
-    const merged = deduplicateTerms([...terms, ...generatedTerms]);
-    terms = merged;
-    source = terms.length === generatedTerms.length ? 'generated' : 'mixed';
-  } else if (terms.some((term) => term.source === 'generated')) {
-    source = 'mixed';
+    terms = deduplicateTerms(sourceMode === 'generated' ? generatedTerms : [...terms, ...generatedTerms]);
+    source =
+      sourceMode === 'generated'
+        ? 'generated'
+        : terms.some((term) => term.source === 'generated')
+        ? 'mixed'
+        : 'existing';
   }
 
   if (terms.length < 3) {
-    throw new Error('För få begrepp för att starta spelet. Lägg till fler i materialet.');
+    throw new Error('För få begrepp för att starta spelet. Lägg till fler eller generera nytt.');
   }
 
   const enrichedTerms: SnakeGameTerm[] = terms.map((term) => ({
@@ -79,21 +150,53 @@ export async function prepareSnakeGameContent(
     distractors: buildDistractors(term, terms, maxDistractors),
   }));
 
-  const mistakesForMaterial = store.mistakeBank?.[materialId] ?? {};
-  if (mistakesForMaterial) {
-    enrichedTerms.sort((a, b) => {
-      const scoreA = mistakesForMaterial[a.term.toLowerCase()]?.missCount ?? 0;
-      const scoreB = mistakesForMaterial[b.term.toLowerCase()]?.missCount ?? 0;
-      return scoreB - scoreA;
-    });
+  const mistakeWeights = buildMistakeWeightMap(materialsToUse.map((material) => material.id));
+  if (Object.keys(mistakeWeights).length > 0) {
+    enrichedTerms.sort((a, b) => (mistakeWeights[b.term.toLowerCase()] ?? 0) - (mistakeWeights[a.term.toLowerCase()] ?? 0));
   }
+
+  const materialIdList =
+    materialsToUse.length > 0
+      ? materialsToUse.map((material) => material.id)
+      : config.materialIds && config.materialIds.length > 0
+      ? config.materialIds
+      : ['generated'];
 
   return {
     terms: enrichedTerms,
     language,
     source,
     needsReview: source !== 'existing',
+    materialIds: materialIdList,
   };
+}
+
+function buildMistakeWeightMap(materialIds: string[]): Record<string, number> {
+  const store = useAppStore.getState();
+  const weights: Record<string, number> = {};
+
+  materialIds.forEach((materialId) => {
+    const mistakes = store.mistakeBank?.[materialId];
+    if (!mistakes) return;
+
+    Object.values(mistakes).forEach((entry) => {
+      const key = entry.term.toLowerCase();
+      weights[key] = (weights[key] ?? 0) + entry.missCount;
+    });
+  });
+
+  return weights;
+}
+
+function buildGenerationContent(materials: Material[]): string {
+  if (!materials.length) return '';
+
+  const combinedContent = materials
+    .map((material) => `${material.title}\n${material.content}`)
+    .join('\n\n')
+    .slice(0, MAX_GENERATION_CHARS);
+
+  return combinedContent;
 }
 
 function collectGameTerms({
@@ -175,6 +278,7 @@ function deduplicateTerms(terms: GameTermBase[]): GameTermBase[] {
       definition: selectLonger(existing.definition, term.definition),
       examples: mergeExamples(existing.examples, term.examples),
       source: existing.source === 'generated' || term.source === 'generated' ? 'generated' : existing.source,
+      materialId: existing.materialId ?? term.materialId,
     });
   }
 

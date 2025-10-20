@@ -13,6 +13,9 @@ import type {
   ChatMode,
   LanguageCode,
   MistakeEntry,
+  GamePreferences,
+  GameSession,
+  GameType,
 } from '../types';
 import { db, dbHelpers } from '../lib/db';
 import {
@@ -79,6 +82,11 @@ interface AppStore {
     entry: { term: string; definition?: string; language?: LanguageCode }
   ) => void;
   clearMistakesForMaterial: (materialId: string) => void;
+  gamePreferences: GamePreferences;
+  setGamePreferences: (updates: Partial<GamePreferences>) => void;
+  recentGameSessions: GameSession[];
+  loadRecentGameSessions: (limit?: number) => Promise<void>;
+  logGameSession: (session: GameSession) => Promise<void>;
 
   // XP & Streak
   addXP: (amount: number) => Promise<void>;
@@ -106,6 +114,16 @@ export const useAppStore = create<AppStore>()(
       chatSessions: {},
       currentConversationId: null,
       mistakeBank: {},
+      gamePreferences: {
+        sourceMode: 'single-material',
+        selectedMaterialIds: [],
+        includeAllMaterials: false,
+        language: 'sv',
+        difficulty: 'medium',
+        lastPlayedGame: undefined,
+        generatedTopicHint: '',
+      },
+      recentGameSessions: [],
       isLoading: false,
       error: null,
 
@@ -627,6 +645,31 @@ export const useAppStore = create<AppStore>()(
         });
       },
 
+      setGamePreferences: (updates) =>
+        set((state) => ({
+          gamePreferences: { ...state.gamePreferences, ...updates },
+        })),
+
+      loadRecentGameSessions: async (limit = 6) => {
+        const sessions = await dbHelpers.getRecentGameSessions(limit);
+        set({ recentGameSessions: sessions });
+      },
+
+      logGameSession: async (session) => {
+        const completedSession: GameSession = {
+          ...session,
+          completedAt: session.completedAt ?? new Date(),
+        };
+        await dbHelpers.logGameSession(completedSession);
+        set((state) => ({
+          recentGameSessions: [completedSession, ...state.recentGameSessions].slice(0, 10),
+          gamePreferences: {
+            ...state.gamePreferences,
+            lastPlayedGame: completedSession.gameType as GameType,
+          },
+        }));
+      },
+
       // XP & Leveling
       addXP: async (amount) => {
         const result = await dbHelpers.addXP(amount);
@@ -688,6 +731,7 @@ export const useAppStore = create<AppStore>()(
       partialize: (state) => ({
         onboarding: state.onboarding,
         mistakeBank: state.mistakeBank,
+        gamePreferences: state.gamePreferences,
       }),
     }
   )

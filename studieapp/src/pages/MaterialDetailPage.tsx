@@ -515,7 +515,10 @@ export function MaterialDetailPage() {
   const handleGenerateConcepts = async () => {
     if (!material) return;
     await withGeneration('concepts', async () => {
-      const concepts = await generateConcepts(material.content, 10, grade);
+      const concepts = await generateConcepts(material.content, {
+        count: 10,
+        grade,
+      });
 
       await updateMaterial(material.id, {
         concepts: concepts.map((concept) => ({

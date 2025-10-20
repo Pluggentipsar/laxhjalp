@@ -137,7 +137,7 @@ export function ReadingModeToolbar({ settings, onSettingsChange, onClose }: Read
             {/* Reading ruler */}
             <Button
               size="sm"
-              variant={settings.rulerEnabled ? 'default' : 'ghost'}
+              variant={settings.rulerEnabled ? 'primary' : 'ghost'}
               onClick={toggleRuler}
               className="text-xs h-8"
             >
@@ -148,7 +148,7 @@ export function ReadingModeToolbar({ settings, onSettingsChange, onClose }: Read
             {/* Dyslexic font */}
             <Button
               size="sm"
-              variant={settings.fontFamily === 'dyslexic' ? 'default' : 'ghost'}
+              variant={settings.fontFamily === 'dyslexic' ? 'primary' : 'ghost'}
               onClick={toggleFont}
               className="text-xs h-8"
             >

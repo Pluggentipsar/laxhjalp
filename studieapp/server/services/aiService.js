@@ -4,6 +4,33 @@ import { AzureOpenAI, OpenAI } from 'openai';
 let openai = null;
 let useAzure = false;
 
+function safeParseJson(rawContent, contextLabel = 'OpenAI response') {
+  if (!rawContent || typeof rawContent !== 'string') {
+    throw new Error(`${contextLabel} saknar innehåll att tolka.`);
+  }
+
+  const trimmed = rawContent.trim();
+
+  try {
+    return JSON.parse(trimmed);
+  } catch (error) {
+    const firstBrace = trimmed.indexOf('{');
+    const lastBrace = trimmed.lastIndexOf('}');
+
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      const candidate = trimmed.slice(firstBrace, lastBrace + 1);
+      try {
+        return JSON.parse(candidate);
+      } catch (innerError) {
+        console.error(`[AI JSON] Misslyckades att tolka kandidatsträngen i ${contextLabel}:`, candidate);
+      }
+    }
+
+    console.error(`[AI JSON] Kunde inte tolka svaret i ${contextLabel}. Rådata:`, rawContent);
+    throw error;
+  }
+}
+
 function getOpenAIClient() {
   if (openai) return openai;
 
@@ -107,7 +134,10 @@ Regler:
       ...getMaxTokenOptions(2000)
     });
 
-    const result = JSON.parse(completion.choices[0].message.content);
+    const result = safeParseJson(
+      completion.choices?.[0]?.message?.content,
+      'Flashcards'
+    );
 
     // Formatera till vårt Flashcard-format
     return result.flashcards.map((card, index) => ({
@@ -183,7 +213,10 @@ Regler:
       ...getMaxTokenOptions(2000)
     });
 
-    const result = JSON.parse(completion.choices[0].message.content);
+    const result = safeParseJson(
+      completion.choices?.[0]?.message?.content,
+      'Quiz'
+    );
 
     return result.questions.map((q) => ({
       id: crypto.randomUUID(),
@@ -205,15 +238,27 @@ Regler:
  * Generera nyckelbegrepp och definitioner från text
  */
 export async function generateConcepts(content, options = {}) {
-  const { count = 5, grade = 5 } = options;
+  const {
+    count = 5,
+    grade = 5,
+    language = 'sv',
+    topicHint = '',
+  } = options;
   const client = getOpenAIClient();
 
-  const prompt = `Du är en expert på att identifiera och förklara viktiga begrepp för svenska elever i årskurs ${grade}.
+  const languageLabel =
+    language === 'sv' ? 'svenska' : language === 'en' ? 'engelska' : language === 'es' ? 'spanska' : language;
+  const topicSection = topicHint ? `Fokusera på följande tema/område: ${topicHint.trim()}.\n\n` : '';
+  const baseMaterial =
+    content && content.trim().length > 0
+      ? `TEXT:\n${content}`
+      : 'Ingen källtext finns. Skapa begrepp som passar temat och årskursen.';
 
-Identifiera de ${count} viktigaste begreppen i följande text och förklara dem på ett sätt som är lämpligt för årskurs ${grade}.
+  const prompt = `Du är en expert på att identifiera och förklara viktiga begrepp för elever i årskurs ${grade}.
 
-TEXT:
-${content}
+${topicSection}Identifiera de ${count} viktigaste begreppen och förklara dem på ett sätt som är lämpligt för årskurs ${grade}.
+
+${baseMaterial}
 
 Returnera ett JSON-objekt med denna struktur:
 {
@@ -227,44 +272,63 @@ Returnera ett JSON-objekt med denna struktur:
 }
 
 Regler:
-- Skriv på svenska
-- Välj verkligen viktiga centrala begrepp
+- Skriv på ${languageLabel}
+- Välj verkligen centrala begrepp kopplade till temat
 - Ge tydliga definitioner med enkelt språk för årskurs ${grade}
 - Ge 1-3 konkreta exempel per begrepp
 - Förklara abstrakta begrepp med vardagliga liknelser`;
 
-  try {
-    const completion = await client.chat.completions.create({
-      model: getModelName(),
-      messages: [
-        {
-          role: 'system',
-          content: 'Du är en pedagogisk expert som förklarar begrepp för svenska elever. Du returnerar alltid välformaterad JSON.'
-        },
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      response_format: { type: 'json_object' },
-      ...getTemperatureOptions(0.7),
-      ...getMaxTokenOptions(2000)
-    });
+  const maxAttempts = 2;
+  let lastError = null;
 
-    const result = JSON.parse(completion.choices[0].message.content);
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const completion = await client.chat.completions.create({
+        model: getModelName(),
+        messages: [
+          {
+            role: 'system',
+            content:
+              'Du är en pedagogisk expert som förklarar begrepp för svenska elever. Du returnerar alltid välformaterad JSON.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        response_format: { type: 'json_object' },
+        ...getTemperatureOptions(0.7),
+        ...getMaxTokenOptions(2000)
+      });
 
-    return result.concepts.map((concept) => ({
-      id: crypto.randomUUID(),
-      materialId: '',
-      term: concept.term,
-      definition: concept.definition,
-      examples: concept.examples || [],
-      relatedConcepts: []
-    }));
-  } catch (error) {
-    console.error('AI-generering concepts fel:', error);
-    throw new Error(`Kunde inte generera begrepp: ${error.message}`);
+      const result = safeParseJson(
+        completion.choices?.[0]?.message?.content,
+        `Koncept (försök ${attempt})`
+      );
+
+      if (!Array.isArray(result?.concepts)) {
+        throw new Error('Svaret saknade fältet "concepts".');
+      }
+
+      return result.concepts.map((concept) => ({
+        id: crypto.randomUUID(),
+        materialId: '',
+        term: concept.term,
+        definition: concept.definition,
+        examples: concept.examples || [],
+        relatedConcepts: []
+      }));
+    } catch (error) {
+      lastError = error;
+      console.warn(`AI-generering begrepp försök ${attempt}/${maxAttempts} misslyckades:`, error);
+      if (attempt === maxAttempts) {
+        console.error('AI-generering concepts fel (slutligt):', error);
+        throw new Error(`Kunde inte generera begrepp efter flera försök: ${error.message}`);
+      }
+    }
   }
+
+  throw new Error(`Kunde inte generera begrepp: ${lastError?.message ?? 'Okänt fel.'}`);
 }
 
 /**
@@ -328,7 +392,10 @@ Regler:
       ...getMaxTokenOptions(1500)
     });
 
-    const result = JSON.parse(completion.choices[0].message.content);
+    const result = safeParseJson(
+      completion.choices?.[0]?.message?.content,
+      "Mindmap"
+    );
 
     // Konvertera till vårt Mindmap-format
     const flattenNodes = (node, x = 0, y = 0, level = 0) => {
