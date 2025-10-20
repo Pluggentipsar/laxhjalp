@@ -13,6 +13,7 @@ interface ModeCardProps {
   gradient: string;
   onSelect: (mode: ChatMode) => void;
   hasContinueSession?: boolean;
+  conversationCount?: number;
 }
 
 export function ModeCard({
@@ -25,6 +26,7 @@ export function ModeCard({
   gradient,
   onSelect,
   hasContinueSession = false,
+  conversationCount = 0,
 }: ModeCardProps) {
   return (
     <motion.div
@@ -67,10 +69,15 @@ export function ModeCard({
 
           <p className="text-white/90 text-base leading-relaxed">{description}</p>
 
-          <div className="pt-2 flex items-center gap-2 text-sm">
+          <div className="pt-2 flex items-center gap-2 text-sm flex-wrap">
             <span className="px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm text-white font-medium">
               {perfectFor}
             </span>
+            {conversationCount > 0 && (
+              <span className="px-3 py-1 rounded-full bg-white/30 backdrop-blur-sm text-white font-medium">
+                {conversationCount} {conversationCount === 1 ? 'konversation' : 'konversationer'}
+              </span>
+            )}
           </div>
         </div>
 

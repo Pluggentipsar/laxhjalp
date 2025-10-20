@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -78,7 +78,15 @@ export function ChatModeHub() {
   const navigate = useNavigate();
   const materials = useAppStore((state) => state.materials);
   const loadMaterials = useAppStore((state) => state.loadMaterials);
-  const chatSessions = useAppStore((state) => state.chatSessions);
+  const getConversationsForMode = useAppStore((state) => state.getConversationsForMode);
+  const [conversationCounts, setConversationCounts] = useState<Record<ChatMode, number>>({
+    free: 0,
+    socratic: 0,
+    adventure: 0,
+    'active-learning': 0,
+    quiz: 0,
+    discussion: 0,
+  });
 
   useEffect(() => {
     if (materials.length === 0) {
@@ -90,6 +98,31 @@ export function ChatModeHub() {
     () => materials.find((item) => item.id === materialId),
     [materials, materialId]
   );
+
+  // Ladda antal konversationer för varje mode
+  useEffect(() => {
+    if (!materialId) return;
+
+    async function loadConversationCounts() {
+      const counts: Record<ChatMode, number> = {
+        free: 0,
+        socratic: 0,
+        adventure: 0,
+        'active-learning': 0,
+        quiz: 0,
+        discussion: 0,
+      };
+
+      for (const mode of Object.keys(counts) as ChatMode[]) {
+        const sessions = await getConversationsForMode(materialId, mode);
+        counts[mode] = sessions.length;
+      }
+
+      setConversationCounts(counts);
+    }
+
+    loadConversationCounts();
+  }, [materialId, getConversationsForMode]);
 
   const handleSelectMode = (mode: ChatMode) => {
     navigate(`/study/material/${materialId}/chat/${mode}`);
@@ -108,12 +141,9 @@ export function ChatModeHub() {
     );
   }
 
-  // Helper to check if a mode has a session with messages
+  // Helper to check if a mode has any conversations
   const hasSessionForMode = (mode: ChatMode): boolean => {
-    if (!materialId) return false;
-    const sessionKey = `${materialId}-${mode}`;
-    const session = chatSessions[sessionKey];
-    return session ? session.messages.length > 0 : false;
+    return conversationCounts[mode] > 0;
   };
 
   // Find any mode with an existing session to show banner
@@ -187,6 +217,7 @@ export function ChatModeHub() {
                 {...modeInfo}
                 onSelect={handleSelectMode}
                 hasContinueSession={hasSessionForMode(modeInfo.mode)}
+                conversationCount={conversationCounts[modeInfo.mode]}
               />
             </motion.div>
           ))}

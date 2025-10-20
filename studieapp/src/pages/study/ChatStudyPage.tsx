@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import {
   MessageSquare,
   Brain,
@@ -9,6 +11,8 @@ import {
   Target,
   Trophy,
   Users,
+  History,
+  Plus,
 } from 'lucide-react';
 import { MainLayout } from '../../components/layout/MainLayout';
 import { Card } from '../../components/common/Card';
@@ -17,6 +21,7 @@ import { ChatModeSelector } from '../../components/chat/ChatModeSelector';
 import { CollapsibleMaterialReference } from '../../components/chat/CollapsibleMaterialReference';
 import { VoiceInput } from '../../components/chat/VoiceInput';
 import { ExportChatButton } from '../../components/chat/ExportChatButton';
+import { ConversationHistory } from '../../components/chat/ConversationHistory';
 import { useAppStore } from '../../store/appStore';
 import { sendChatMessage } from '../../services/aiService';
 import type { ChatMessage, ChatMode } from '../../types';
@@ -39,9 +44,13 @@ export function ChatStudyPage() {
   const loadMaterials = useAppStore((state) => state.loadMaterials);
   const setError = useAppStore((state) => state.setError);
   const loadChatSession = useAppStore((state) => state.loadChatSession);
+  const loadOrCreateConversation = useAppStore((state) => state.loadOrCreateConversation);
+  const createNewConversation = useAppStore((state) => state.createNewConversation);
+  const getConversationsForMode = useAppStore((state) => state.getConversationsForMode);
   const appendChatMessage = useAppStore((state) => state.appendChatMessage);
-  const updateChatMode = useAppStore((state) => state.updateChatMode);
   const chatSessions = useAppStore((state) => state.chatSessions);
+  const currentConversationId = useAppStore((state) => state.currentConversationId);
+  const setCurrentConversation = useAppStore((state) => state.setCurrentConversation);
   const startSession = useAppStore((state) => state.startSession);
   const endSession = useAppStore((state) => state.endSession);
   const currentSession = useAppStore((state) => state.currentSession);
@@ -56,6 +65,8 @@ export function ChatStudyPage() {
   const [currentMode, setCurrentMode] = useState<ChatMode>((urlMode as ChatMode) || 'free');
   const [highlightedSource, setHighlightedSource] = useState<string>('');
   const [hasInitialized, setHasInitialized] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [conversationCount, setConversationCount] = useState(0);
 
   const [messagesState, setMessagesState] = useState<ChatMessage[]>([]);
   const messagesRef = useRef<ChatMessage[]>([]);
@@ -85,6 +96,18 @@ export function ChatStudyPage() {
     }
   }, [urlMode]);
 
+  // Ladda antal konversationer för aktuellt mode
+  useEffect(() => {
+    if (!materialId || !currentMode) return;
+
+    async function loadCount() {
+      const sessions = await getConversationsForMode(materialId, currentMode);
+      setConversationCount(sessions.length);
+    }
+
+    loadCount();
+  }, [materialId, currentMode, getConversationsForMode, currentConversationId]);
+
   useEffect(() => {
     if (materials.length === 0) {
       loadMaterials();
@@ -102,6 +125,7 @@ export function ChatStudyPage() {
     }
   }, [materialId, currentSession, startSession]);
 
+  // Ladda eller skapa konversation när mode ändras
   useEffect(() => {
     let isMounted = true;
     if (!materialId || !currentMode) {
@@ -110,7 +134,7 @@ export function ChatStudyPage() {
     }
 
     setIsHistoryLoading(true);
-    loadChatSession(materialId, currentMode)
+    loadOrCreateConversation(materialId, currentMode)
       .then((session) => {
         if (session && isMounted) {
           updateMessages(session.messages ?? []);
@@ -126,23 +150,22 @@ export function ChatStudyPage() {
     return () => {
       isMounted = false;
     };
-  }, [materialId, currentMode, loadChatSession, updateMessages]);
+  }, [materialId, currentMode, loadOrCreateConversation, updateMessages]);
 
+  // Uppdatera meddelanden när aktiv konversation ändras
   useEffect(() => {
-    if (!materialId || !currentMode) return;
-    const sessionKey = `${materialId}-${currentMode}`;
-    const session = chatSessions[sessionKey];
+    if (!currentConversationId) return;
+    const session = chatSessions[currentConversationId];
     if (session && session.messages !== messagesRef.current) {
       updateMessages(session.messages);
     }
-  }, [chatSessions, materialId, currentMode, updateMessages]);
+  }, [chatSessions, currentConversationId, updateMessages]);
 
   // Send welcome message and potentially AI-generated start for certain modes
   useEffect(() => {
-    if (!hasInitialized || !materialId || !material || isSending || !currentMode) return;
+    if (!hasInitialized || !materialId || !material || isSending || !currentMode || !currentConversationId) return;
 
-    const sessionKey = `${materialId}-${currentMode}`;
-    const session = chatSessions[sessionKey];
+    const session = chatSessions[currentConversationId];
     if (session && session.messages.length === 0) {
       const sendInitialMessages = async () => {
         try {
@@ -154,7 +177,7 @@ export function ChatStudyPage() {
             timestamp: new Date(),
           };
 
-          await appendChatMessage(materialId, currentMode, welcomeMessage);
+          await appendChatMessage(currentConversationId, welcomeMessage);
 
           // For certain modes, immediately send a system message to get AI started
           const autoStartModes: ChatMode[] = ['socratic', 'quiz', 'adventure', 'active-learning'];
@@ -178,7 +201,7 @@ export function ChatStudyPage() {
               timestamp: new Date(),
             };
 
-            await appendChatMessage(materialId, currentMode, userStart);
+            await appendChatMessage(currentConversationId, userStart);
 
             // Get AI response
             const response = await sendChatMessage(
@@ -196,7 +219,7 @@ export function ChatStudyPage() {
               timestamp: new Date(),
             };
 
-            await appendChatMessage(materialId, currentMode, aiResponse);
+            await appendChatMessage(currentConversationId, aiResponse);
             setIsSending(false);
           }
         } catch (error) {
@@ -207,7 +230,7 @@ export function ChatStudyPage() {
 
       sendInitialMessages();
     }
-  }, [hasInitialized, materialId, material, chatSessions, currentMode, appendChatMessage, isSending, user, sendChatMessage]);
+  }, [hasInitialized, materialId, material, chatSessions, currentMode, currentConversationId, appendChatMessage, isSending, user, sendChatMessage]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -240,9 +263,12 @@ export function ChatStudyPage() {
   };
 
   const handleSend = async () => {
-    if (!materialId || !material || isSending) return;
+    console.log('[ChatStudyPage] handleSend called', { materialId, material: !!material, isSending, input, currentConversationId });
+    if (!materialId || !material || isSending || !currentConversationId) return;
     const trimmed = input.trim();
     if (!trimmed) return;
+
+    console.log('[ChatStudyPage] Sending message:', trimmed);
 
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
@@ -261,12 +287,14 @@ export function ChatStudyPage() {
     const conversationForAI = [...messagesRef.current];
 
     try {
-      await appendChatMessage(materialId, currentMode, userMessage);
+      await appendChatMessage(currentConversationId, userMessage);
+      console.log('[ChatStudyPage] User message saved to DB');
     } catch (error) {
       console.error('Kunde inte spara användarmeddelande', error);
     }
 
     try {
+      console.log('[ChatStudyPage] Calling sendChatMessage API...', { mode: currentMode, grade: user?.grade ?? 5 });
       const response = await sendChatMessage(
         material.content,
         conversationForAI,
@@ -274,6 +302,7 @@ export function ChatStudyPage() {
         user?.grade ?? 5,
         currentMode
       );
+      console.log('[ChatStudyPage] Got response from API:', response);
 
       const assistantMessage: ChatMessage = {
         id: crypto.randomUUID(),
@@ -285,7 +314,7 @@ export function ChatStudyPage() {
       updateMessages((prev) => [...prev, assistantMessage]);
 
       try {
-        await appendChatMessage(materialId, currentMode, assistantMessage);
+        await appendChatMessage(currentConversationId, assistantMessage);
       } catch (error) {
         console.error('Kunde inte spara AI-svar', error);
       }
@@ -312,7 +341,7 @@ export function ChatStudyPage() {
       setError('AI:n kunde inte svara just nu. Försök igen om en stund.');
 
       try {
-        await appendChatMessage(materialId, currentMode, fallbackMessage);
+        await appendChatMessage(currentConversationId, fallbackMessage);
       } catch (persistError) {
         console.error('Kunde inte spara fallback-svar', persistError);
       }
@@ -326,6 +355,22 @@ export function ChatStudyPage() {
       event.preventDefault();
       handleSend();
     }
+  };
+
+  const handleSelectConversation = async (conversationId: string) => {
+    const session = await loadChatSession(conversationId);
+    if (session) {
+      updateMessages(session.messages);
+      setShowHistory(false);
+    }
+  };
+
+  const handleNewConversation = async () => {
+    if (!materialId) return;
+    const session = await createNewConversation(materialId, currentMode);
+    updateMessages([]);
+    setHasInitialized(true);
+    setShowHistory(false);
   };
 
   if (!material) {
@@ -359,98 +404,222 @@ export function ChatStudyPage() {
 
   return (
     <MainLayout title="Chattförhör" showBottomNav={false}>
-      <div className="py-6 space-y-6">
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-              {material.title}
-            </h2>
-            {/* Small mode badge with selector */}
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-800 text-xs">
-                <ModeIcon className="h-3.5 w-3.5 text-primary-500" />
-                <span className="font-medium text-gray-700 dark:text-gray-300">
-                  {currentModeInfo.label}
-                </span>
+      <div className="py-6 space-y-6 max-w-6xl mx-auto">
+        {/* Elegant header with gradient */}
+        <motion.section
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary-500 via-primary-600 to-purple-600 p-6 shadow-xl"
+        >
+          {/* Background decoration */}
+          <div className="absolute top-0 right-0 w-64 h-64 opacity-10">
+            <ModeIcon className="w-full h-full" />
+          </div>
+
+          <div className="relative z-10 space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="space-y-1">
+                <h2 className="text-2xl font-bold text-white">
+                  {material.title}
+                </h2>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-sm">
+                    <ModeIcon className="h-4 w-4 text-white" />
+                    <span className="text-sm font-medium text-white">
+                      {currentModeInfo.label}
+                    </span>
+                  </div>
+                  {conversationCount > 0 && (
+                    <div className="px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-sm">
+                      <span className="text-sm font-medium text-white">
+                        {conversationCount} {conversationCount === 1 ? 'konversation' : 'konversationer'}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
-              <ChatModeSelector
-                currentMode={currentMode}
-                onModeChange={handleModeChange}
-                disabled={isSending}
-              />
+
+              {/* Action buttons */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleNewConversation}
+                  disabled={isSending}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-primary-600 font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Plus className="h-4 w-4" />
+                  Ny konversation
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setShowHistory(!showHistory)}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 backdrop-blur-sm text-white font-semibold hover:bg-white/20 transition-all"
+                >
+                  <History className="h-4 w-4" />
+                  {showHistory ? 'Dölj' : 'Historik'}
+                  {conversationCount > 0 && (
+                    <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-white text-primary-600">
+                      {conversationCount}
+                    </span>
+                  )}
+                </motion.button>
+                <ChatModeSelector
+                  currentMode={currentMode}
+                  onModeChange={handleModeChange}
+                  disabled={isSending}
+                />
+              </div>
             </div>
           </div>
-        </section>
+        </motion.section>
 
-        <Card className="p-5 h-[60vh] flex flex-col gap-4">
-          <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-3 pr-2">
+        {showHistory && materialId && (
+          <ConversationHistory
+            materialId={materialId}
+            mode={currentMode}
+            currentConversationId={currentConversationId}
+            onSelectConversation={handleSelectConversation}
+          />
+        )}
+
+        <Card className="p-6 h-[60vh] flex flex-col gap-4 shadow-xl">
+          <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-4 pr-2">
             {isHistoryLoading && (
-              <div className="text-sm text-gray-500">
-                Hämtar tidigare konversation...
-              </div>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex items-center justify-center py-8"
+              >
+                <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                  <div className="h-4 w-4 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+                  Hämtar tidigare konversation...
+                </div>
+              </motion.div>
             )}
 
             {!isHistoryLoading && messagesState.length === 0 && (
-              <div className="text-sm text-gray-500">
-                <p>
-                  Tips: be AI:n förklara ett begrepp, skapa en minnesregel eller
-                  låtsas vara din lärare och ställ följdfrågor.
-                </p>
-              </div>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="flex items-center justify-center h-full"
+              >
+                <div className="text-center max-w-md p-8 rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 shadow-inner">
+                  <div className="text-4xl mb-4">💡</div>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+                    Tips: be AI:n förklara ett begrepp, skapa en minnesregel eller
+                    låtsas vara din lärare och ställ följdfrågor.
+                  </p>
+                </div>
+              </motion.div>
             )}
 
-            {messagesState.map((message) => (
+            {messagesState.map((message, index) => (
               <motion.div
                 key={message.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
                 className={`flex ${
                   message.role === 'user' ? 'justify-end' : 'justify-start'
                 }`}
               >
                 <div
-                  className={`max-w-xs sm:max-w-md px-4 py-3 rounded-2xl text-sm shadow-sm ${
+                  className={`max-w-xs sm:max-w-md px-5 py-3.5 rounded-2xl text-sm shadow-lg transition-all hover:shadow-xl ${
                     message.role === 'user'
-                      ? 'bg-primary-500 text-white rounded-br-none'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-bl-none'
+                      ? 'bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-br-none'
+                      : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-bl-none border border-gray-200 dark:border-gray-700'
                   }`}
                 >
-                  {message.content}
+                  {message.role === 'assistant' ? (
+                    <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-p:leading-relaxed prose-strong:font-bold prose-strong:text-inherit whitespace-pre-line">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {message.content}
+                      </ReactMarkdown>
+                    </div>
+                  ) : (
+                    <div className="leading-relaxed">{message.content}</div>
+                  )}
                 </div>
               </motion.div>
             ))}
 
             {isSending && (
-              <div className="flex justify-start">
-                <div className="px-4 py-3 rounded-2xl bg-gray-100 dark:bg-gray-800 text-xs text-gray-500">
-                  AI skriver...
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="flex justify-start"
+              >
+                <div className="px-5 py-3.5 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg">
+                  <div className="flex items-center gap-2">
+                    <div className="flex gap-1">
+                      <motion.div
+                        animate={{ y: [0, -5, 0] }}
+                        transition={{ duration: 0.6, repeat: Infinity, delay: 0 }}
+                        className="w-2 h-2 bg-primary-500 rounded-full"
+                      />
+                      <motion.div
+                        animate={{ y: [0, -5, 0] }}
+                        transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }}
+                        className="w-2 h-2 bg-primary-500 rounded-full"
+                      />
+                      <motion.div
+                        animate={{ y: [0, -5, 0] }}
+                        transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }}
+                        className="w-2 h-2 bg-primary-500 rounded-full"
+                      />
+                    </div>
+                    <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">
+                      AI skriver...
+                    </span>
+                  </div>
                 </div>
-              </div>
+              </motion.div>
             )}
           </div>
 
-          <div className="flex items-end gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
-            <div className="flex items-end gap-2 flex-1">
-              <textarea
-                value={input}
-                onChange={(event) => setInput(event.target.value)}
-                onKeyDown={handleKeyDown}
-                disabled={isSending || isHistoryLoading}
-                placeholder="Ställ en fråga eller be om ett förhör..."
-                className="flex-1 h-24 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-60"
-              />
-              <VoiceInput
-                onTranscript={handleVoiceTranscript}
-                disabled={isSending || isHistoryLoading}
-              />
+          <div className="relative pt-4">
+            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gray-200 dark:via-gray-700 to-transparent" />
+
+            <div className="flex items-end gap-3 pt-3">
+              <div className="flex items-end gap-2 flex-1">
+                <div className="relative flex-1">
+                  <textarea
+                    value={input}
+                    onChange={(event) => setInput(event.target.value)}
+                    onKeyDown={handleKeyDown}
+                    disabled={isSending || isHistoryLoading}
+                    placeholder="Ställ en fråga eller be om ett förhör..."
+                    className="w-full h-24 px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm resize-none focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 disabled:opacity-60 transition-all shadow-sm hover:shadow-md"
+                  />
+                </div>
+                <VoiceInput
+                  onTranscript={handleVoiceTranscript}
+                  disabled={isSending || isHistoryLoading}
+                />
+              </div>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleSend}
+                disabled={!input.trim() || isSending || isHistoryLoading}
+                className={`px-6 py-3 rounded-xl font-semibold text-sm shadow-lg transition-all ${
+                  !input.trim() || isSending || isHistoryLoading
+                    ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-primary-500 to-primary-600 text-white hover:shadow-xl hover:from-primary-600 hover:to-primary-700'
+                }`}
+              >
+                {isSending ? (
+                  <div className="flex items-center gap-2">
+                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Skickar...
+                  </div>
+                ) : (
+                  'Skicka'
+                )}
+              </motion.button>
             </div>
-            <Button
-              onClick={handleSend}
-              disabled={!input.trim() || isSending || isHistoryLoading}
-              isLoading={isSending}
-            >
-              Skicka
-            </Button>
           </div>
         </Card>
 

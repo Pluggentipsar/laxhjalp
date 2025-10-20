@@ -345,6 +345,7 @@ export interface ChatSession {
   id: string;
   materialId: string;
   mode: ChatMode;
+  title?: string;             // Auto-genererad eller user-given titel
   messages: ChatMessage[];
   createdAt: Date;
   updatedAt?: Date;
@@ -352,6 +353,8 @@ export interface ChatSession {
     progress?: number;        // För progressspårning i vissa modes
     conceptsCovered?: string[]; // Begrepp som täckts
     adventureState?: any;     // State för textäventyr
+    score?: number;           // För quiz-mode
+    questionsAsked?: number;  // Antal frågor i session
   };
 }
 

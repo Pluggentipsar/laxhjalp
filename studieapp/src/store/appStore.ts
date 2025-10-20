@@ -58,15 +58,19 @@ interface AppStore {
   startSession: (materialId: string, mode: StudySession['mode']) => void;
   endSession: (xpEarned: number, stats?: any) => Promise<void>;
 
-  // Chat
-  chatSessions: Record<string, ChatSession>; // Key: `${materialId}-${mode}`
-  loadChatSession: (materialId: string, mode: ChatMode) => Promise<ChatSession | null>;
+  // Chat - nu med stöd för flera konversationer per mode
+  chatSessions: Record<string, ChatSession>; // Key: conversationId
+  currentConversationId: string | null; // Aktiv konversation
+  loadChatSession: (conversationId: string) => Promise<ChatSession | null>;
+  loadOrCreateConversation: (materialId: string, mode: ChatMode) => Promise<ChatSession>;
+  createNewConversation: (materialId: string, mode: ChatMode, title?: string) => Promise<ChatSession>;
+  getConversationsForMode: (materialId: string, mode: ChatMode) => Promise<ChatSession[]>;
   appendChatMessage: (
-    materialId: string,
-    mode: ChatMode,
+    conversationId: string,
     message: ChatMessage
   ) => Promise<ChatSession | null>;
-  setChatSession: (materialId: string, mode: ChatMode, session: ChatSession) => Promise<void>;
+  setChatSession: (session: ChatSession) => Promise<void>;
+  setCurrentConversation: (conversationId: string | null) => void;
 
   // Games & Felbank
   mistakeBank: Record<string, Record<string, MistakeEntry>>;
@@ -100,6 +104,7 @@ export const useAppStore = create<AppStore>()(
       folders: [],
       currentSession: null,
       chatSessions: {},
+      currentConversationId: null,
       mistakeBank: {},
       isLoading: false,
       error: null,
@@ -417,61 +422,107 @@ export const useAppStore = create<AppStore>()(
         set({ currentSession: null });
       },
 
-      // Chat Sessions
-      loadChatSession: async (materialId, mode) => {
-        const sessionKey = `${materialId}-${mode}`;
+      // Chat Sessions - Nu med stöd för flera konversationer per mode
 
-        // Try to find existing session for this material+mode combination
-        let session = await db.chatSessions
-          .where('[materialId+mode]')
-          .equals([materialId, mode])
-          .first();
+      // Ladda en specifik konversation
+      loadChatSession: async (conversationId) => {
+        let session = await db.chatSessions.get(conversationId);
 
-        if (!session) {
-          // Create new session for this material+mode
-          session = {
-            id: crypto.randomUUID(),
-            materialId,
-            mode,
-            messages: [],
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          };
-          await db.chatSessions.add(session);
-        } else {
-          // Format existing session
-          session = {
-            ...session,
-            messages: session.messages.map((message) => ({
-              ...message,
-              timestamp: new Date(message.timestamp),
-            })),
-            createdAt: new Date(session.createdAt),
-            updatedAt: session.updatedAt ? new Date(session.updatedAt) : new Date(),
-          };
-        }
+        if (!session) return null;
+
+        // Format existing session
+        session = {
+          ...session,
+          messages: session.messages.map((message) => ({
+            ...message,
+            timestamp: new Date(message.timestamp),
+          })),
+          createdAt: new Date(session.createdAt),
+          updatedAt: session.updatedAt ? new Date(session.updatedAt) : new Date(),
+        };
 
         set((state) => ({
           chatSessions: {
             ...state.chatSessions,
-            [sessionKey]: session!,
+            [conversationId]: session!,
           },
+          currentConversationId: conversationId,
         }));
 
         return session;
       },
 
-      appendChatMessage: async (materialId, mode, message) => {
-        const sessionKey = `${materialId}-${mode}`;
-        const state = get();
-        const existing = state.chatSessions[sessionKey];
+      // Ladda senaste konversationen för ett mode, eller skapa ny om ingen finns
+      loadOrCreateConversation: async (materialId, mode) => {
+        // Försök hitta senaste konversationen för detta material+mode
+        const sessions = await db.chatSessions
+          .where('[materialId+mode]')
+          .equals([materialId, mode])
+          .reverse()
+          .sortBy('updatedAt');
 
-        if (!existing) {
-          await state.loadChatSession(materialId, mode);
+        if (sessions.length > 0) {
+          // Ladda senaste konversationen
+          return await get().loadChatSession(sessions[0].id) as ChatSession;
         }
 
-        const session = get().chatSessions[sessionKey];
-        if (!session) return null;
+        // Ingen konversation finns, skapa ny
+        return await get().createNewConversation(materialId, mode);
+      },
+
+      // Skapa en ny konversation
+      createNewConversation: async (materialId, mode, title) => {
+        const conversationId = crypto.randomUUID();
+        const session: ChatSession = {
+          id: conversationId,
+          materialId,
+          mode,
+          title: title || `${mode} - ${new Date().toLocaleDateString('sv-SE')}`,
+          messages: [],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+
+        await db.chatSessions.add(session);
+
+        set((state) => ({
+          chatSessions: {
+            ...state.chatSessions,
+            [conversationId]: session,
+          },
+          currentConversationId: conversationId,
+        }));
+
+        return session;
+      },
+
+      // Hämta alla konversationer för ett specifikt mode
+      getConversationsForMode: async (materialId, mode) => {
+        const sessions = await db.chatSessions
+          .where('[materialId+mode]')
+          .equals([materialId, mode])
+          .reverse()
+          .sortBy('updatedAt');
+
+        return sessions.map(session => ({
+          ...session,
+          messages: session.messages.map((message) => ({
+            ...message,
+            timestamp: new Date(message.timestamp),
+          })),
+          createdAt: new Date(session.createdAt),
+          updatedAt: session.updatedAt ? new Date(session.updatedAt) : new Date(),
+        }));
+      },
+
+      appendChatMessage: async (conversationId, message) => {
+        const state = get();
+        let session = state.chatSessions[conversationId];
+
+        if (!session) {
+          session = await state.loadChatSession(conversationId) as ChatSession;
+          if (!session) return null;
+        }
 
         const updatedSession: ChatSession = {
           ...session,
@@ -479,7 +530,7 @@ export const useAppStore = create<AppStore>()(
           updatedAt: new Date(),
         };
 
-        await db.chatSessions.update(session.id, {
+        await db.chatSessions.update(conversationId, {
           messages: updatedSession.messages,
           updatedAt: updatedSession.updatedAt,
         });
@@ -487,27 +538,30 @@ export const useAppStore = create<AppStore>()(
         set((prevState) => ({
           chatSessions: {
             ...prevState.chatSessions,
-            [sessionKey]: updatedSession,
+            [conversationId]: updatedSession,
           },
         }));
 
         return updatedSession;
       },
 
-      setChatSession: async (materialId, mode, session) => {
-        const sessionKey = `${materialId}-${mode}`;
-
+      setChatSession: async (session) => {
         await db.chatSessions.put({
           ...session,
-          updatedAt: new Date(),
+          createdAt: session.createdAt instanceof Date ? session.createdAt : new Date(session.createdAt),
+          updatedAt: session.updatedAt instanceof Date ? session.updatedAt : new Date(session.updatedAt || session.createdAt),
         });
 
-        set((state) => ({
+        set((prevState) => ({
           chatSessions: {
-            ...state.chatSessions,
-            [sessionKey]: { ...session, updatedAt: new Date() },
+            ...prevState.chatSessions,
+            [session.id]: session,
           },
         }));
+      },
+
+      setCurrentConversation: (conversationId) => {
+        set({ currentConversationId: conversationId });
       },
 
       registerMistake: (materialId, entry) => {

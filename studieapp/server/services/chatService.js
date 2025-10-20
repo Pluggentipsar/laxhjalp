@@ -178,16 +178,28 @@ Din uppgift:
 - Gör det roligt, engagerande och åldersanpassat!
 - Varva action med reflektion
 
-Format för ditt svar:
+VIKTIGT FORMAT - Använd ALLTID radbrytningar för läsbarhet:
+
 [En kort, spännande berättelsedel (2-4 meningar)]
 
-Vad gör du?
+**Vad gör du?**
 A) [Val 1 - enklare]
 B) [Val 2 - mellan]
 C) [Val 3 - svårare]
 
+Exempel på bra formatering:
+"Du står vid ingången till det antika biblioteket i Alexandria. Rök stiger från byggnaden - brand!
+
+**Vad gör du?**
+A) Spring in och rädda de närmaste skriftrullarna
+B) Organisera en kedja av människor för att rädda så mycket som möjligt
+C) Försök hitta vattenkällan för att släcka elden vid källan
+
+Välj A, B eller C! 🗺️"
+
 Viktigt:
-- Håll varje del kort och engagerande
+- Använd ALLTID radbrytningar mellan berättelse och val
+- Håll varje del kort och engagerande (2-4 meningar)
 - Anpassa språk och innehåll för årskurs ${grade}
 - Koppla alltid tillbaka till studiematerialet
 
@@ -226,21 +238,39 @@ Din uppgift:
 - Anpassa svårighetsgrad baserat på elevens svar
 - Håll koll på vad som täckts
 
-Format:
-[Fråga]
+VIKTIGT FORMAT - Använd ALLTID radbrytningar för läsbarhet:
 
+**Fråga:**
+[Din fråga här]
+
+**Alternativ:**
 A) [Alternativ 1]
 B) [Alternativ 2]
 C) [Alternativ 3]
 D) [Alternativ 4]
 
+Exempel på bra formatering:
+"Här kommer nästa fråga!
+
+**Fråga:**
+Vilket alternativ beskriver bäst vad "epik" är?
+
+**Alternativ:**
+A) Korta, intensiva dikter om kärlek
+B) Långa äventyr som Homeros Odysseén
+C) Pjäser som spelas inför publik
+D) Kortare berättelser med djur som lär ut moral
+
+Välj A, B, C eller D. Lycka till! 🏆"
+
 När eleven svarar:
 - Bekräfta om rätt eller fel
 - Förklara VARFÖR (hänvisa till materialet)
 - Ge positiv feedback
-- Gå vidare till nästa fråga
+- Ställ nästa fråga med samma tydliga format
 
 Viktigt:
+- Använd ALLTID radbrytningar mellan fråga och alternativ
 - Variera frågetyper
 - Språk anpassat för årskurs ${grade}
 - Fokusera på förståelse, inte bara memorering
@@ -286,37 +316,47 @@ export async function chatWithMaterial(materialContent, previousMessages, userMe
   const { grade = 5, mode = 'free' } = options;
   const client = getOpenAIClient();
 
+  console.log('[chatService] chatWithMaterial called', { mode, grade, userMessage: userMessage.substring(0, 50) });
+
   try{
     // 1. Generera embeddings för materialet (om inte redan gjort)
     // I praktiken skulle detta vara cachat i Dexie
     const chunks = await generateEmbeddings(materialContent);
+    console.log('[chatService] Generated', chunks.length, 'chunks');
 
     // 2. Hitta relevanta chunks för användarens fråga
     const relevantChunks = await findRelevantChunks(userMessage, chunks, 3);
     const context = relevantChunks.map(c => c.text).join('\n\n');
+    console.log('[chatService] Found', relevantChunks.length, 'relevant chunks');
 
     // 3. Skapa prompt med kontext baserat på valt läge
     const systemPrompt = getSystemPromptForMode(mode, grade, context);
+    console.log('[chatService] System prompt length:', systemPrompt.length);
 
-    // 4. Bygg konversationshistorik
+    // 4. Bygg konversationshistorik - begränsa till senaste 6 meddelanden för att spara tokens
+    const recentMessages = previousMessages.slice(-6);
     const messages = [
       { role: 'system', content: systemPrompt },
-      ...previousMessages.map(msg => ({
+      ...recentMessages.map(msg => ({
         role: msg.role,
         content: msg.content
       })),
       { role: 'user', content: userMessage }
     ];
+    console.log('[chatService] Total messages:', messages.length, '(limited from', previousMessages.length, ')');
 
-    // 5. Skicka till OpenAI/Azure OpenAI
+    // 5. Skicka till OpenAI/Azure OpenAI - öka max_tokens för att ge utrymme för svar
+    console.log('[chatService] Calling OpenAI API...');
     const completion = await client.chat.completions.create({
       model: getChatModel(),
       messages,
       ...getTemperatureOptions(0.7),
-      ...getMaxTokenOptions(500)
+      ...getMaxTokenOptions(2000)
     });
+    console.log('[chatService] Got completion:', completion.choices[0]);
 
     const responseMessage = completion.choices[0].message.content;
+    console.log('[chatService] Response message:', responseMessage ? responseMessage.substring(0, 100) : 'EMPTY!');
 
     return {
       message: responseMessage,

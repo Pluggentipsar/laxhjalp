@@ -21,7 +21,8 @@
       "Bash(tasklist:*)",
       "Bash(powershell:*)",
       "Bash(timeout 10 npm run dev)",
-      "Bash(timeout 5 sleep 5)"
+      "Bash(timeout 5 sleep 5)",
+      "Bash(Get-Content -Path \"*.log\" -Tail 30 -ErrorAction SilentlyContinue)"
     ],
     "deny": [],
     "ask": []

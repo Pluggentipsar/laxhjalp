@@ -69,6 +69,19 @@ export class StudieAppDatabase extends Dexie {
       chatSessions: 'id, [materialId+mode], materialId, mode, createdAt',
       textEmbeddings: 'id, materialId, chunkIndex, createdAt',
     });
+
+    // Version 4 - update chatSessions index to support multiple conversations per mode
+    this.version(4).stores({
+      materials: 'id, subject, folderId, *tags, createdAt, lastStudied',
+      folders: 'id, subject, createdAt',
+      userProfile: 'id',
+      studySessions: 'id, materialId, mode, startedAt',
+      gameSessions: 'id, materialId, gameType, completedAt',
+      dailyProgress: 'date',
+      mindmaps: 'id, materialId, createdAt',
+      chatSessions: 'id, [materialId+mode], materialId, mode, createdAt, updatedAt',
+      textEmbeddings: 'id, materialId, chunkIndex, createdAt',
+    });
   }
 }
 
