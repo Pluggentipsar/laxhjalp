@@ -106,25 +106,28 @@ export function GameSourceSelector({
   const generatedTopicIsValid = generatedTopicValue.trim().length >= 3;
 
   return (
-    <Card className="p-4 sm:p-6 space-y-5">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Innehållskälla</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+    <Card className="p-5 sm:p-7 space-y-6 border-primary-100 dark:border-primary-900/30 bg-gradient-to-br from-white to-primary-50/30 dark:from-gray-900 dark:to-primary-950/20">
+      <div className="flex items-start justify-between flex-wrap gap-4">
+        <div className="flex-1">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-1">
+            <Layers className="h-6 w-6 text-primary-500" />
+            Innehållskälla
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
             Bestäm vilka begrepp som ska användas när du spelar.
           </p>
         </div>
-        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-          <Sparkles className="h-4 w-4" />
-          <span>
-            {selectedCount > 0
-              ? `${selectedCount} material valda`
-              : 'Inga material valda'}
-          </span>
-        </div>
+        {selectedCount > 0 && (
+          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-100 dark:bg-primary-900/40 border border-primary-200 dark:border-primary-800">
+            <CheckCircle2 className="h-4 w-4 text-primary-600 dark:text-primary-300" />
+            <span className="text-sm font-semibold text-primary-700 dark:text-primary-200">
+              {selectedCount} {selectedCount === 1 ? 'material valt' : 'material valda'}
+            </span>
+          </div>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {(Object.keys(SOURCE_LABELS) as Array<GamePreferences['sourceMode']>).map((mode) => {
           const isActive = preferences.sourceMode === mode;
           const disableButton =
@@ -137,41 +140,55 @@ export function GameSourceSelector({
               key={mode}
               type="button"
               onClick={() => !disableButton && handleSelectSource(mode)}
-              className={`text-left rounded-2xl border px-4 py-3 transition-all ${
+              className={`group relative text-left rounded-2xl border-2 px-5 py-4 transition-all duration-200 ${
                 isActive
-                  ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/20 shadow-inner'
-                  : 'border-gray-200 dark:border-gray-700 hover:border-primary-300'
-              } ${disableButton ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  ? 'border-primary-500 bg-gradient-to-br from-primary-50 to-white dark:from-primary-900/30 dark:to-primary-950/20 dark:border-primary-400 shadow-lg shadow-primary-500/10'
+                  : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:border-primary-300 dark:hover:border-primary-600 hover:shadow-md'
+              } ${disableButton ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
             >
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-                  {labels.title}
-                </h3>
-                {isActive && <CheckCircle2 className="h-4 w-4 text-primary-500" />}
+              {/* Selection indicator */}
+              {isActive && (
+                <div className="absolute top-3 right-3">
+                  <div className="p-1 rounded-full bg-primary-500">
+                    <CheckCircle2 className="h-4 w-4 text-white" />
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-3">
+                <div>
+                  <h3 className="text-base font-bold text-gray-900 dark:text-white mb-1">
+                    {labels.title}
+                  </h3>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                    {labels.description}
+                  </p>
+                </div>
+
+                {mode === 'multi-material' && (
+                  <span className="inline-flex items-center gap-1.5 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 px-2.5 py-1 text-xs font-medium text-purple-700 dark:text-purple-300">
+                    <Layers className="h-3.5 w-3.5" />
+                    Blanda material
+                  </span>
+                )}
+                {mode === 'generated' && (
+                  <span className="inline-flex items-center gap-1.5 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-2.5 py-1 text-xs font-medium text-amber-700 dark:text-amber-300">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    AI-genererat
+                  </span>
+                )}
+
+                {disableButton && mode === 'single-material' && materials.length === 0 && (
+                  <p className="text-xs text-amber-700 dark:text-amber-300 font-medium leading-relaxed">
+                    ⚠️ Lägg till material först
+                  </p>
+                )}
+                {disableButton && mode === 'multi-material' && materials.length < 2 && (
+                  <p className="text-xs text-amber-700 dark:text-amber-300 font-medium leading-relaxed">
+                    ⚠️ Behöver minst 2 material
+                  </p>
+                )}
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{labels.description}</p>
-              {mode === 'multi-material' && (
-                <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-1 text-[11px] text-gray-500 dark:text-gray-400">
-                  <Layers className="h-3 w-3" />
-                  Blanda flera material
-                </span>
-              )}
-              {mode === 'generated' && (
-                <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-1 text-[11px] text-gray-500 dark:text-gray-400">
-                  <Sparkles className="h-3 w-3" />
-                  AI-genererat paket
-                </span>
-              )}
-              {disableButton && mode === 'single-material' && materials.length === 0 && (
-                <p className="mt-2 text-xs text-amber-600 dark:text-amber-300">
-                  Lägg till ett material för att spela med denna källa.
-                </p>
-              )}
-              {disableButton && mode === 'multi-material' && materials.length < 2 && (
-                <p className="mt-2 text-xs text-amber-600 dark:text-amber-300">
-                  Välj minst två material för att kombinera dem i spel.
-                </p>
-              )}
             </button>
           );
         })}
@@ -239,12 +256,12 @@ export function GameSourceSelector({
         </div>
       )}
 
-      <div className="space-y-3">
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Välj material</h3>
+          <h3 className="text-base font-bold text-gray-900 dark:text-white">Välj material</h3>
           <Button
             size="sm"
-            variant="ghost"
+            variant="outline"
             onClick={() =>
               onUpdate({
                 selectedMaterialIds:
@@ -255,17 +272,26 @@ export function GameSourceSelector({
               })
             }
             disabled={materials.length === 0}
+            className="text-xs"
           >
-            {preferences.includeAllMaterials ? 'Rensa' : 'Välj alla'}
+            {preferences.includeAllMaterials ? 'Rensa alla' : 'Välj alla'}
           </Button>
         </div>
 
         {materials.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 p-4 text-sm text-gray-500 dark:text-gray-400">
-            Du har ännu inga material. Skapa eller importera material för att spela.
+          <div className="rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 p-8 text-center">
+            <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+              <Layers className="h-6 w-6 text-gray-400" />
+            </div>
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Inga material ännu
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Skapa eller importera material för att komma igång med spel.
+            </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-64 overflow-y-auto pr-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-72 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700">
             {sortedMaterials.map((material) => {
               const isSelected = preferences.includeAllMaterials || selectedIds.includes(material.id);
               const termCount = getMaterialStats(material);
@@ -274,22 +300,28 @@ export function GameSourceSelector({
                   key={material.id}
                   type="button"
                   onClick={() => handleToggleMaterial(material.id)}
-                  className={`text-left rounded-xl border px-3 py-2 transition-all ${
+                  className={`group text-left rounded-xl border-2 px-4 py-3 transition-all duration-200 ${
                     isSelected
-                      ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/20'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-primary-300'
+                      ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/20 shadow-sm'
+                      : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:border-primary-300 dark:hover:border-primary-600 hover:shadow-sm'
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-gray-900 dark:text-white line-clamp-1 mb-0.5">
                         {material.title}
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {termCount} begrepp
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                        {termCount} {termCount === 1 ? 'begrepp' : 'begrepp'}
                       </p>
                     </div>
-                    {isSelected && <CheckCircle2 className="h-4 w-4 text-primary-500" />}
+                    {isSelected ? (
+                      <div className="p-1 rounded-full bg-primary-500 shrink-0">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-white" />
+                      </div>
+                    ) : (
+                      <div className="w-5 h-5 rounded-full border-2 border-gray-300 dark:border-gray-600 group-hover:border-primary-400 shrink-0 transition-colors" />
+                    )}
                   </div>
                 </button>
               );

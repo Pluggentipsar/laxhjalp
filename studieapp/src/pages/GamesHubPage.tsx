@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import {
   BookOpen,
   Clock3,
@@ -8,6 +9,19 @@ import {
   Sparkles,
   Target,
   Users,
+  ChevronDown,
+  ChevronUp,
+  Gamepad2,
+  Trophy,
+  TrendingUp,
+  Zap,
+  X,
+  Layers,
+  Hammer,
+  Shield,
+  Grid3x3,
+  Timer,
+  type LucideIcon,
 } from 'lucide-react';
 import { MainLayout } from '../components/layout/MainLayout';
 import { Card } from '../components/common/Card';
@@ -37,6 +51,15 @@ const REQUESTED_RECENT_SESSIONS = 12;
 const DISPLAYED_RECENT_SESSIONS = 5;
 
 type MultiplayerFilter = 'solo' | 'multiplayer';
+
+const ICON_MAP: Record<string, LucideIcon> = {
+  Gamepad2,
+  Hammer,
+  Shield,
+  Grid3x3,
+  Timer,
+  Layers,
+};
 
 function formatDuration(seconds: number): string {
   if (!seconds || seconds <= 0) {
@@ -181,6 +204,7 @@ export function GamesHubPage() {
   const [scopeFilter, setScopeFilter] = useState<GameScopeMode | null>(null);
   const [multiplayerFilter, setMultiplayerFilter] = useState<MultiplayerFilter | null>(null);
   const [difficultyFilter, setDifficultyFilter] = useState<Difficulty | null>(null);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
   useEffect(() => {
     if (!materials.length) {
@@ -472,135 +496,238 @@ export function GamesHubPage() {
 
   return (
     <MainLayout title="Spel">
-      <div className="py-6 space-y-6">
-        <Card className="p-6 md:p-8 border-primary-200 bg-gradient-to-br from-primary-50 via-white to-primary-100 dark:from-primary-950 dark:via-gray-950 dark:to-primary-900/40">
-          <div className="flex flex-col gap-6 lg:flex-row lg:justify-between">
-            <div className="space-y-4 max-w-2xl">
-              <span className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-primary-600 shadow-sm dark:bg-gray-900/60 dark:text-primary-200">
-                <Sparkles className="h-3.5 w-3.5" />
-                Ny spelhubbsbeta
-              </span>
-              <div>
-                <h1 className="text-3xl font-semibold text-gray-900 dark:text-white">Spelhubben</h1>
-                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-                  Snabbstarta Snake, förbered kommande spel och följ din spelstatistik. Välj material,
-                  få AI-paket och hoppa tillbaka till ditt senaste pass på några sekunder.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-3">
-                <Button onClick={() => handleQuickStart(QUICK_START_GAME)}>
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  Snabbstarta Snake
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => navigate('/study')}
-                  className="bg-white text-gray-700 hover:bg-gray-50 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
-                >
-                  <BookOpen className="mr-2 h-4 w-4" />
-                  Skapa nytt material
-                </Button>
-              </div>
-              <div className="flex flex-wrap items-center gap-3 text-sm text-primary-800 dark:text-primary-200">
-                <Sparkles className="h-4 w-4" />
-                <span>{sourceSummary}</span>
-                {gamePreferences.sourceMode === 'generated' && (
-                  <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-200">
-                    AI-granskning före start
-                  </span>
+      <div className="py-6 space-y-8">
+        {/* Hero Section - Redesigned */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <Card className="relative overflow-hidden border-primary-200 bg-gradient-to-br from-primary-500/10 via-primary-50/50 to-white dark:from-primary-950 dark:via-primary-900/20 dark:to-gray-950">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-primary-500/5 rounded-full blur-3xl" />
+            <div className="absolute bottom-0 left-0 w-96 h-96 bg-primary-400/5 rounded-full blur-3xl" />
+
+            <div className="relative p-8 md:p-10">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
+                <div className="flex-1 space-y-6 max-w-2xl">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 shadow-lg shadow-primary-500/30">
+                      <Gamepad2 className="h-8 w-8 text-white" />
+                    </div>
+                    <div>
+                      <span className="inline-flex items-center gap-2 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-primary-600 shadow-sm dark:bg-gray-900/70 dark:text-primary-300">
+                        <Sparkles className="h-3.5 w-3.5" />
+                        Ny spelhubb
+                      </span>
+                      <h1 className="text-4xl font-bold text-gray-900 dark:text-white mt-2">
+                        Spelhubben
+                      </h1>
+                    </div>
+                  </div>
+
+                  <p className="text-lg text-gray-600 dark:text-gray-300 leading-relaxed">
+                    Välj material eller generera begrepp med AI, sedan spelar du direkt. Snake är live – fler spel släpps snart!
+                  </p>
+
+                  <div className="flex flex-wrap gap-3">
+                    <Button
+                      size="lg"
+                      onClick={() => handleQuickStart(QUICK_START_GAME)}
+                      className="shadow-lg shadow-primary-500/20 hover:shadow-xl hover:shadow-primary-500/30 transition-all"
+                    >
+                      <Zap className="mr-2 h-5 w-5" />
+                      Snabbstarta Snake
+                    </Button>
+                    <Button
+                      size="lg"
+                      variant="secondary"
+                      onClick={() => navigate('/study')}
+                      className="bg-white/80 backdrop-blur text-gray-700 hover:bg-white dark:bg-gray-900/80 dark:text-gray-200 dark:hover:bg-gray-900 shadow-md"
+                    >
+                      <BookOpen className="mr-2 h-5 w-5" />
+                      Skapa material
+                    </Button>
+                  </div>
+
+                  {/* Current Source Preview */}
+                  <div className="flex flex-wrap items-center gap-2 p-4 rounded-xl bg-white/60 backdrop-blur border border-primary-100 dark:bg-gray-900/40 dark:border-primary-800/50">
+                    <Target className="h-4 w-4 text-primary-500" />
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                      Valt innehåll:
+                    </span>
+                    <span className="text-sm text-gray-600 dark:text-gray-300">{sourceSummary}</span>
+                    {gamePreferences.sourceMode === 'generated' && (
+                      <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-900/40 dark:text-amber-200">
+                        AI-granskning krävs
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Latest Session Card - Redesigned */}
+                {latestSession && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                  >
+                    <Card className="w-full lg:w-80 border-primary-200 bg-white/90 backdrop-blur p-5 shadow-xl dark:border-primary-800/50 dark:bg-gray-900/80">
+                      <div className="flex items-center justify-between gap-2 mb-4">
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 rounded-lg bg-primary-500/10">
+                            <History className="h-4 w-4 text-primary-500" />
+                          </div>
+                          <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                            Senaste session
+                          </span>
+                        </div>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {formatRelativeTime(new Date(latestSession.completedAt))}
+                        </span>
+                      </div>
+
+                      <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
+                        {GAME_DEFINITIONS.find((game) => game.id === latestSession.gameType)?.name ??
+                          latestSession.gameType}
+                      </h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                        {getSessionSourceDescription(latestSession, materialMap)}
+                      </p>
+
+                      <div className="grid grid-cols-3 gap-3 mb-4">
+                        <div className="text-center p-3 rounded-xl bg-gray-50 dark:bg-gray-800">
+                          <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                            {latestSession.score}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">poäng</p>
+                        </div>
+                        <div className="text-center p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20">
+                          <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">
+                            {latestSession.xpEarned}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">XP</p>
+                        </div>
+                        <div className="text-center p-3 rounded-xl bg-gray-50 dark:bg-gray-800">
+                          <p className="text-lg font-bold text-gray-900 dark:text-white">
+                            {formatDuration(latestSession.duration ?? 0)}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">tid</p>
+                        </div>
+                      </div>
+
+                      <Button
+                        className="w-full"
+                        onClick={() => handleResumeSession(latestSession)}
+                      >
+                        <History className="mr-2 h-4 w-4" />
+                        Spela igen
+                      </Button>
+                    </Card>
+                  </motion.div>
                 )}
               </div>
             </div>
+          </Card>
+        </motion.div>
 
-            {latestSession && (
-              <Card className="w-full max-w-sm border-primary-200 bg-white/80 p-4 shadow-md backdrop-blur dark:border-primary-800 dark:bg-gray-900/70">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-                    <History className="h-4 w-4 text-primary-500" />
-                    Senaste session
-                  </div>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    {formatRelativeTime(new Date(latestSession.completedAt))}
-                  </span>
-                </div>
-                <h3 className="mt-2 text-lg font-semibold text-gray-900 dark:text-white">
-                  {GAME_DEFINITIONS.find((game) => game.id === latestSession.gameType)?.name ??
-                    latestSession.gameType}
-                </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-300">
-                  {getSessionSourceDescription(latestSession, materialMap)}
-                </p>
-                <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs text-gray-500 dark:text-gray-400">
-                  <div>
-                    <p className="font-semibold text-gray-900 dark:text-white">
-                      {latestSession.score}
-                    </p>
-                    <p>poäng</p>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-900 dark:text-white">
-                      {latestSession.xpEarned}
-                    </p>
-                    <p>XP</p>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-900 dark:text-white">
-                      {formatDuration(latestSession.duration ?? 0)}
-                    </p>
-                    <p>tid</p>
-                  </div>
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="mt-4 w-full"
-                  onClick={() => handleResumeSession(latestSession)}
-                >
-                  Spela igen
-                </Button>
-              </Card>
-            )}
-          </div>
-        </Card>
-
+        {/* Progress Stats - Redesigned */}
         {hubStats && (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <Card className="p-4">
-              <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                Spelsessioner
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+          >
+            <div className="mb-4">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <TrendingUp className="h-6 w-6 text-primary-500" />
+                Dina framsteg
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Statistik från dina senaste {recentGameSessions.length} sessioner
               </p>
-              <p className="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">
-                {hubStats.totalSessions}
-              </p>
-            </Card>
-            <Card className="p-4">
-              <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                XP insamlat
-              </p>
-              <p className="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">
-                {hubStats.totalXp}
-              </p>
-            </Card>
-            <Card className="p-4">
-              <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                Spelad tid
-              </p>
-              <p className="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">
-                {formatDuration(hubStats.totalDuration)}
-              </p>
-            </Card>
-            <Card className="p-4">
-              <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                Snake-toppar
-              </p>
-              <p className="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">
-                {hubStats.bestSnakeScore}
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Snitt {hubStats.averageSnakeScore} poäng
-              </p>
-            </Card>
-          </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                transition={{ type: 'spring', stiffness: 300 }}
+              >
+                <Card className="p-5 border-primary-200 bg-gradient-to-br from-primary-50 to-white dark:from-primary-950/50 dark:to-gray-900 dark:border-primary-800">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 rounded-xl bg-primary-500/10">
+                      <Gamepad2 className="h-5 w-5 text-primary-500" />
+                    </div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-400">
+                      Sessioner
+                    </p>
+                  </div>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                    {hubStats.totalSessions}
+                  </p>
+                </Card>
+              </motion.div>
+
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                transition={{ type: 'spring', stiffness: 300 }}
+              >
+                <Card className="p-5 border-emerald-200 bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-950/50 dark:to-gray-900 dark:border-emerald-800">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 rounded-xl bg-emerald-500/10">
+                      <Sparkles className="h-5 w-5 text-emerald-500" />
+                    </div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-400">
+                      XP Insamlat
+                    </p>
+                  </div>
+                  <p className="text-3xl font-bold text-emerald-700 dark:text-emerald-300">
+                    {hubStats.totalXp}
+                  </p>
+                </Card>
+              </motion.div>
+
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                transition={{ type: 'spring', stiffness: 300 }}
+              >
+                <Card className="p-5 border-blue-200 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/50 dark:to-gray-900 dark:border-blue-800">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 rounded-xl bg-blue-500/10">
+                      <Clock3 className="h-5 w-5 text-blue-500" />
+                    </div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-400">
+                      Spelad tid
+                    </p>
+                  </div>
+                  <p className="text-3xl font-bold text-blue-700 dark:text-blue-300">
+                    {formatDuration(hubStats.totalDuration)}
+                  </p>
+                </Card>
+              </motion.div>
+
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                transition={{ type: 'spring', stiffness: 300 }}
+              >
+                <Card className="p-5 border-amber-200 bg-gradient-to-br from-amber-50 to-white dark:from-amber-950/50 dark:to-gray-900 dark:border-amber-800">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 rounded-xl bg-amber-500/10">
+                      <Trophy className="h-5 w-5 text-amber-500" />
+                    </div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-400">
+                      Bästa Snake
+                    </p>
+                  </div>
+                  <p className="text-3xl font-bold text-amber-700 dark:text-amber-300">
+                    {hubStats.bestSnakeScore}
+                  </p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                    Snitt {hubStats.averageSnakeScore}p
+                  </p>
+                </Card>
+              </motion.div>
+            </div>
+          </motion.div>
         )}
 
         <section className="space-y-3">
@@ -622,161 +749,375 @@ export function GamesHubPage() {
           />
         </section>
 
-        <Card className="p-4 space-y-3">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div className="flex flex-1 items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 focus-within:ring-2 focus-within:ring-primary-200 dark:border-gray-700 dark:text-gray-300">
-              <Search className="h-4 w-4" />
-              <input
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Sök efter spel, fokus eller taggar…"
-                className="flex-1 bg-transparent focus:outline-none"
-              />
-            </div>
-            <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-              <input
-                type="checkbox"
-                checked={showOnlyAvailable}
-                onChange={(event) => setShowOnlyAvailable(event.target.checked)}
-                className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-              />
-              Visa endast klara spel
-            </label>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <div>
-              <p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                <Target className="h-3.5 w-3.5" />
-                Fokus
-              </p>
-              {renderFilterChips(
-                GAME_FOCUS_FILTERS,
-                (id) => focusFilters.includes(id),
-                toggleFocusFilter
-              )}
-            </div>
-            <div>
-              <p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                <Sparkles className="h-3.5 w-3.5" />
-                Innehåll
-              </p>
-              {renderFilterChips(
-                GAME_SCOPE_FILTERS,
-                (id) => scopeFilter === id,
-                (id) =>
-                  setScopeFilter((current) => (current === id ? null : (id as GameScopeMode)))
-              )}
-            </div>
-            <div>
-              <p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                <Users className="h-3.5 w-3.5" />
-                Spelläge
-              </p>
-              {renderFilterChips(
-                GAME_MULTIPLAYER_FILTERS,
-                (id) => multiplayerFilter === id,
-                (id) =>
-                  setMultiplayerFilter((current) =>
-                    current === (id as MultiplayerFilter) ? null : (id as MultiplayerFilter)
-                  )
-              )}
-            </div>
-            <div>
-              <p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                <Clock3 className="h-3.5 w-3.5" />
-                Svårighet
-              </p>
-              {renderFilterChips(
-                GAME_DIFFICULTY_FILTERS,
-                (id) => difficultyFilter === id,
-                (id) =>
-                  setDifficultyFilter((current) => (current === id ? null : (id as Difficulty)))
-              )}
-            </div>
-          </div>
-        </Card>
-
-        <section className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Tillgängliga spel</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Filtrera fram ett spelläge som matchar din träning.
-              </p>
-            </div>
-            <span className="text-xs text-gray-500 dark:text-gray-400">
-              {filteredGames.length} spel matchar dina filter
-            </span>
-          </div>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {filteredGames.map((game) => (
-              <GameCard
-                key={game.id}
-                definition={game}
-                disabled={game.status !== 'available'}
-                disabledReason={getDisabledReason(game)}
-                onPlay={() => handlePlayGame(game)}
-              />
-            ))}
-          </div>
-        </section>
-
-        <Card className="p-5 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
-              <History className="h-4 w-4 text-primary-500" />
-              Senaste sessioner
-            </div>
-            <span className="text-xs text-gray-500 dark:text-gray-400">
-              Visar {displayedRecentSessions.length} av {recentGameSessions.length} sparade sessioner
-            </span>
-          </div>
-          {displayedRecentSessions.length === 0 ? (
-            <p className="text-sm text-gray-600 dark:text-gray-300">
-              Ingen speldata än. Starta Snake från snabbstarten för att fylla listan.
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {displayedRecentSessions.map((session) => {
-                const definition = GAME_DEFINITIONS.find((game) => game.id === session.gameType);
-                const canResume = definition?.id === 'snake' && definition.status === 'available';
-
-                return (
-                  <div
-                    key={session.id}
-                    className="flex flex-col gap-3 rounded-xl border border-gray-200 px-3 py-3 md:flex-row md:items-center md:justify-between dark:border-gray-700"
-                  >
-                    <div className="space-y-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                          {definition?.name ?? session.gameType}
-                        </span>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                          {formatRelativeTime(new Date(session.completedAt))}
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap gap-3 text-xs text-gray-600 dark:text-gray-300">
-                        <span>Poäng {session.score}</span>
-                        <span>XP {session.xpEarned}</span>
-                        <span>{formatDuration(session.duration ?? 0)}</span>
-                        <span>{getSessionSourceDescription(session, materialMap)}</span>
-                      </div>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant={canResume ? 'outline' : 'ghost'}
-                      disabled={!canResume}
-                      onClick={() => handleResumeSession(session)}
+        {/* Filters Section - Redesigned */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+        >
+          <Card className="p-5 space-y-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm shadow-sm focus-within:ring-2 focus-within:ring-primary-300 focus-within:border-primary-400 dark:border-gray-700 dark:bg-gray-900 transition-all">
+                  <Search className="h-5 w-5 text-gray-400" />
+                  <input
+                    value={searchTerm}
+                    onChange={(event) => setSearchTerm(event.target.value)}
+                    placeholder="Sök spel, fokus eller taggar..."
+                    className="flex-1 bg-transparent text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none"
+                  />
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm('')}
+                      className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                     >
-                      {canResume ? 'Spela igen' : 'Inte öppet ännu'}
-                    </Button>
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer hover:border-primary-300 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={showOnlyAvailable}
+                    onChange={(event) => setShowOnlyAvailable(event.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  />
+                  Endast klara spel
+                </label>
+
+                <button
+                  onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900 text-sm font-medium text-gray-700 dark:text-gray-300 hover:border-primary-300 transition-colors"
+                >
+                  <Target className="h-4 w-4" />
+                  Avancerade filter
+                  {showAdvancedFilters ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Active Filters Summary */}
+            {(focusFilters.length > 0 || scopeFilter || multiplayerFilter || difficultyFilter) && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                  Aktiva filter:
+                </span>
+                {focusFilters.map((filter) => (
+                  <button
+                    key={filter}
+                    onClick={() => toggleFocusFilter(filter)}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-200 text-xs font-medium hover:bg-primary-200 dark:hover:bg-primary-900/60 transition-colors"
+                  >
+                    {GAME_FOCUS_FILTERS.find((f) => f.id === filter)?.label}
+                    <X className="h-3 w-3" />
+                  </button>
+                ))}
+                {scopeFilter && (
+                  <button
+                    onClick={() => setScopeFilter(null)}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-200 text-xs font-medium hover:bg-primary-200 dark:hover:bg-primary-900/60 transition-colors"
+                  >
+                    {GAME_SCOPE_FILTERS.find((f) => f.id === scopeFilter)?.label}
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+                {multiplayerFilter && (
+                  <button
+                    onClick={() => setMultiplayerFilter(null)}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-200 text-xs font-medium hover:bg-primary-200 dark:hover:bg-primary-900/60 transition-colors"
+                  >
+                    {GAME_MULTIPLAYER_FILTERS.find((f) => f.id === multiplayerFilter)?.label}
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+                {difficultyFilter && (
+                  <button
+                    onClick={() => setDifficultyFilter(null)}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-200 text-xs font-medium hover:bg-primary-200 dark:hover:bg-primary-900/60 transition-colors"
+                  >
+                    {GAME_DIFFICULTY_FILTERS.find((f) => f.id === difficultyFilter)?.label}
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    setFocusFilters([]);
+                    setScopeFilter(null);
+                    setMultiplayerFilter(null);
+                    setDifficultyFilter(null);
+                  }}
+                  className="text-xs font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 underline"
+                >
+                  Rensa alla
+                </button>
+              </div>
+            )}
+
+            {/* Advanced Filters - Collapsible */}
+            {showAdvancedFilters && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3 }}
+                className="pt-4 border-t border-gray-200 dark:border-gray-700"
+              >
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+                  <div>
+                    <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                      <Target className="h-4 w-4 text-primary-500" />
+                      Fokus
+                    </p>
+                    {renderFilterChips(
+                      GAME_FOCUS_FILTERS,
+                      (id) => focusFilters.includes(id),
+                      toggleFocusFilter
+                    )}
                   </div>
-                );
-              })}
+                  <div>
+                    <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                      <Sparkles className="h-4 w-4 text-primary-500" />
+                      Innehåll
+                    </p>
+                    {renderFilterChips(
+                      GAME_SCOPE_FILTERS,
+                      (id) => scopeFilter === id,
+                      (id) =>
+                        setScopeFilter((current) => (current === id ? null : (id as GameScopeMode)))
+                    )}
+                  </div>
+                  <div>
+                    <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                      <Users className="h-4 w-4 text-primary-500" />
+                      Spelläge
+                    </p>
+                    {renderFilterChips(
+                      GAME_MULTIPLAYER_FILTERS,
+                      (id) => multiplayerFilter === id,
+                      (id) =>
+                        setMultiplayerFilter((current) =>
+                          current === (id as MultiplayerFilter) ? null : (id as MultiplayerFilter)
+                        )
+                    )}
+                  </div>
+                  <div>
+                    <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                      <Clock3 className="h-4 w-4 text-primary-500" />
+                      Svårighet
+                    </p>
+                    {renderFilterChips(
+                      GAME_DIFFICULTY_FILTERS,
+                      (id) => difficultyFilter === id,
+                      (id) =>
+                        setDifficultyFilter((current) => (current === id ? null : (id as Difficulty)))
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </Card>
+        </motion.div>
+
+        {/* Games Catalog - Redesigned */}
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+          className="space-y-5"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <Layers className="h-6 w-6 text-primary-500" />
+                Tillgängliga spel
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                {filteredGames.length === GAME_DEFINITIONS.length
+                  ? 'Alla spel i katalogen'
+                  : `${filteredGames.length} spel matchar dina filter`}
+              </p>
+            </div>
+            {filteredGames.length > 0 && filteredGames.length < GAME_DEFINITIONS.length && (
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-200 text-sm font-medium">
+                <Target className="h-4 w-4" />
+                {filteredGames.length} / {GAME_DEFINITIONS.length}
+              </span>
+            )}
+          </div>
+
+          {filteredGames.length === 0 ? (
+            <Card className="p-12 text-center">
+              <div className="max-w-md mx-auto space-y-4">
+                <div className="w-16 h-16 mx-auto rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                  <Search className="h-8 w-8 text-gray-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                    Inga spel hittades
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Prova att justera dina filter eller sökord för att hitta fler spel.
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSearchTerm('');
+                    setFocusFilters([]);
+                    setScopeFilter(null);
+                    setMultiplayerFilter(null);
+                    setDifficultyFilter(null);
+                    setShowOnlyAvailable(false);
+                  }}
+                >
+                  Rensa alla filter
+                </Button>
+              </div>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+              {filteredGames.map((game, index) => (
+                <motion.div
+                  key={game.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.05 }}
+                >
+                  <GameCard
+                    definition={game}
+                    disabled={game.status !== 'available'}
+                    disabledReason={getDisabledReason(game)}
+                    onPlay={() => handlePlayGame(game)}
+                  />
+                </motion.div>
+              ))}
             </div>
           )}
-        </Card>
+        </motion.section>
+
+        {/* Session History - Redesigned */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.5 }}
+        >
+          <Card className="p-6 space-y-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <History className="h-6 w-6 text-primary-500" />
+                  Senaste sessioner
+                </h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  {displayedRecentSessions.length > 0
+                    ? `Visar ${displayedRecentSessions.length} av ${recentGameSessions.length} sessioner`
+                    : 'Ingen spelhistorik ännu'}
+                </p>
+              </div>
+            </div>
+
+            {displayedRecentSessions.length === 0 ? (
+              <div className="py-12 text-center">
+                <div className="w-16 h-16 mx-auto rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
+                  <Gamepad2 className="h-8 w-8 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                  Börja spela för att se statistik
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                  Starta Snake från snabbstarten för att bygga upp din spelhistorik.
+                </p>
+                <Button onClick={() => handleQuickStart(QUICK_START_GAME)}>
+                  <Zap className="mr-2 h-4 w-4" />
+                  Starta första sessionen
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {displayedRecentSessions.map((session, index) => {
+                  const definition = GAME_DEFINITIONS.find((game) => game.id === session.gameType);
+                  const canResume = definition?.id === 'snake' && definition.status === 'available';
+                  const Icon = definition?.icon && ICON_MAP[definition.icon] ? ICON_MAP[definition.icon] : Gamepad2;
+
+                  return (
+                    <motion.div
+                      key={session.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3, delay: index * 0.05 }}
+                      whileHover={{ scale: 1.01 }}
+                      className="group"
+                    >
+                      <Card className="p-4 border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-700 transition-all">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="flex items-start gap-3 flex-1">
+                            <div className="p-2.5 rounded-xl bg-primary-50 dark:bg-primary-900/20 group-hover:bg-primary-100 dark:group-hover:bg-primary-900/40 transition-colors">
+                              <Icon className="h-5 w-5 text-primary-500" />
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-wrap items-center gap-2 mb-1">
+                                <h3 className="text-base font-bold text-gray-900 dark:text-white">
+                                  {definition?.name ?? session.gameType}
+                                </h3>
+                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                  {formatRelativeTime(new Date(session.completedAt))}
+                                </span>
+                              </div>
+
+                              <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
+                                {getSessionSourceDescription(session, materialMap)}
+                              </p>
+
+                              <div className="flex flex-wrap gap-2">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-gray-800 text-xs font-medium text-gray-700 dark:text-gray-300">
+                                  <Trophy className="h-3 w-3" />
+                                  {session.score}p
+                                </span>
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-900/20 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                                  <Sparkles className="h-3 w-3" />
+                                  {session.xpEarned} XP
+                                </span>
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-100 dark:bg-blue-900/20 text-xs font-medium text-blue-700 dark:text-blue-300">
+                                  <Clock3 className="h-3 w-3" />
+                                  {formatDuration(session.duration ?? 0)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <Button
+                            size="sm"
+                            variant={canResume ? 'default' : 'ghost'}
+                            disabled={!canResume}
+                            onClick={() => handleResumeSession(session)}
+                            className="sm:w-auto w-full"
+                          >
+                            {canResume ? (
+                              <>
+                                <History className="mr-2 h-4 w-4" />
+                                Spela igen
+                              </>
+                            ) : (
+                              'Kommer snart'
+                            )}
+                          </Button>
+                        </div>
+                      </Card>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
+          </Card>
+        </motion.div>
       </div>
     </MainLayout>
   );
