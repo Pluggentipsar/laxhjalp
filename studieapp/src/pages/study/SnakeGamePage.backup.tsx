@@ -16,15 +16,10 @@ import {
   Play,
   RefreshCcw,
   Sparkles,
-  ChevronUp,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
 } from 'lucide-react';
 import { MainLayout } from '../../components/layout/MainLayout';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
-import { SnakeCanvas } from '../../components/games/SnakeCanvas';
 import { useAppStore } from '../../store/appStore';
 import { prepareSnakeGameContent, type SnakeContentConfig } from '../../services/gameService';
 import type {
@@ -313,7 +308,6 @@ export function SnakeGamePage() {
   const [activeMaterialIds, setActiveMaterialIds] = useState<string[]>([]);
   const [activeSourceMode, setActiveSourceMode] = useState<GameScopeMode>('single-material');
   const [editableTerms, setEditableTerms] = useState<SnakeGameTerm[]>([]);
-  const [fullscreen, setFullscreen] = useState(false);
 
   const [snake, setSnake] = useState<Position[]>(createInitialSnake());
   const [tokens, setTokens] = useState<TokenOnBoard[]>([]);
@@ -1005,7 +999,49 @@ export function SnakeGamePage() {
     }
   };
 
-  // Canvas rendering - no need for gridCells anymore
+  const gridCells = useMemo(() => {
+    const cells = Array.from({ length: GRID_SIZE * GRID_SIZE }, () => ({
+      snake: false,
+      head: false,
+      token: null as TokenOnBoard | null,
+    }));
+
+    snake.forEach((segment, index) => {
+      if (
+        segment.x < 0 ||
+        segment.x >= GRID_SIZE ||
+        segment.y < 0 ||
+        segment.y >= GRID_SIZE
+      ) {
+        return;
+      }
+      const cellIndex = segment.y * GRID_SIZE + segment.x;
+      cells[cellIndex] = {
+        snake: true,
+        head: index === 0,
+        token: null,
+      };
+    });
+
+    tokens.forEach((token) => {
+      if (
+        token.position.x < 0 ||
+        token.position.x >= GRID_SIZE ||
+        token.position.y < 0 ||
+        token.position.y >= GRID_SIZE
+      ) {
+        return;
+      }
+      const cellIndex = token.position.y * GRID_SIZE + token.position.x;
+      cells[cellIndex] = {
+        snake: cells[cellIndex].snake,
+        head: cells[cellIndex].head,
+        token,
+      };
+    });
+
+    return cells;
+  }, [snake, tokens]);
 
   const accuracy = useMemo(() => {
     if (!roundResults.length) return 0;
@@ -1387,15 +1423,37 @@ export function SnakeGamePage() {
               </p>
             </Card>
 
-            <SnakeCanvas
-              gridSize={GRID_SIZE}
-              snake={snake}
-              tokens={tokens}
-              isPlaying={gamePhase === 'playing'}
-              shake={feedback ? 0.5 : 0}
-              fullscreen={fullscreen}
-              onFullscreenToggle={() => setFullscreen(!fullscreen)}
-            />
+            <div
+              className="grid gap-1"
+              style={{
+                gridTemplateColumns: `repeat(${GRID_SIZE}, minmax(0, 1fr))`,
+              }}
+            >
+              {gridCells.map((cell, index) => (
+                <div
+                  key={index}
+                  className={`relative aspect-square rounded-md border border-gray-100 dark:border-gray-800 transition-colors ${
+                    cell.snake
+                      ? cell.head
+                        ? 'bg-primary-500 dark:bg-primary-400'
+                        : 'bg-primary-200 dark:bg-primary-600/70'
+                      : 'bg-gray-50 dark:bg-gray-900'
+                  }`}
+                >
+                  {cell.token && (
+                    <div
+                      className={`absolute inset-0 m-1 flex items-center justify-center rounded-md border text-[0.65rem] font-semibold text-center leading-tight px-1 ${
+                        cell.token.isCorrect
+                          ? 'border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200'
+                          : 'border-gray-300 bg-white text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200'
+                      }`}
+                    >
+                      <span className="line-clamp-2">{cell.token.term}</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
 
             {feedback && (
               <Card
@@ -1415,56 +1473,18 @@ export function SnakeGamePage() {
               </Card>
             )}
 
-            {/* Touch Controls - Mobile friendly grid layout */}
-            <div className="grid grid-cols-3 gap-2 max-w-xs mx-auto md:hidden">
-              <div />
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={() => changeDirection('up')}
-                disabled={gamePhase !== 'playing'}
-                className="aspect-square flex items-center justify-center"
-              >
-                <ChevronUp className="h-6 w-6" />
-              </Button>
-              <div />
-
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={() => changeDirection('left')}
-                disabled={gamePhase !== 'playing'}
-                className="aspect-square flex items-center justify-center"
-              >
-                <ChevronLeft className="h-6 w-6" />
-              </Button>
-              <div />
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={() => changeDirection('right')}
-                disabled={gamePhase !== 'playing'}
-                className="aspect-square flex items-center justify-center"
-              >
-                <ChevronRight className="h-6 w-6" />
-              </Button>
-
-              <div />
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={() => changeDirection('down')}
-                disabled={gamePhase !== 'playing'}
-                className="aspect-square flex items-center justify-center"
-              >
-                <ChevronDown className="h-6 w-6" />
-              </Button>
-              <div />
-            </div>
-
-            {/* Desktop keyboard hint */}
-            <div className="hidden md:block text-center text-sm text-gray-500 dark:text-gray-400">
-              Använd piltangenterna eller WASD för att styra ormen
+            <div className="flex flex-wrap justify-center gap-2">
+              {(['up', 'left', 'down', 'right'] as Direction[]).map((dir) => (
+                <Button
+                  key={dir}
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => changeDirection(dir)}
+                  disabled={gamePhase !== 'playing'}
+                >
+                  {dir === 'up' ? '↑' : dir === 'down' ? '↓' : dir === 'left' ? '←' : '→'}
+                </Button>
+              ))}
             </div>
           </Card>
         )}

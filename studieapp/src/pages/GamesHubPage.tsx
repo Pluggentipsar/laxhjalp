@@ -1095,7 +1095,7 @@ export function GamesHubPage() {
 
                           <Button
                             size="sm"
-                            variant={canResume ? 'default' : 'ghost'}
+                            variant={canResume ? 'primary' : 'ghost'}
                             disabled={!canResume}
                             onClick={() => handleResumeSession(session)}
                             className="sm:w-auto w-full"
