@@ -8,10 +8,11 @@
     "dev:backend": "cd server && npm run dev",
     "dev:all": "concurrently \"npm run dev:backend\" \"npm run dev\"",
     "build": "tsc -b && vite build",
+    "build:scalingo": "node build.js",
     "lint": "eslint .",
     "preview": "vite preview",
     "start": "cd server && npm start",
-    "postinstall": "npm run build && cd server && npm install"
+    "postinstall": "npm run build:scalingo && cd server && npm install"
   },
   "dependencies": {
     "@radix-ui/react-collapsible": "^1.1.12",
