@@ -7,7 +7,9 @@
       "Bash(findstr:*)",
       "Bash(taskkill:*)",
       "Bash(node:*)",
-      "Bash(git remote add:*)"
+      "Bash(git remote add:*)",
+      "Bash(cat:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []
