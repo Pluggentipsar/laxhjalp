@@ -205,6 +205,7 @@ export function MaterialDetailPage() {
     wordSpacing: 0.16,
   });
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [explanationHistory, setExplanationHistory] = useState<Array<{
     id: string;
     text: string;
@@ -1582,78 +1583,123 @@ export function MaterialDetailPage() {
             </motion.button>
           )}
 
-          {/* Mobile AI Panel - Shows on mobile/tablet */}
-          <div className="lg:hidden mt-6">
-            <Card className="space-y-4 relative overflow-hidden">
-              {/* Decorative gradient background */}
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-400/20 to-pink-400/20 rounded-full blur-2xl" />
+          {/* Mobile Floating Action Button - Opens AI Drawer */}
+          <motion.button
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.5, type: "spring", stiffness: 260, damping: 20 }}
+            onClick={() => setIsMobileDrawerOpen(true)}
+            className="lg:hidden fixed bottom-20 right-6 z-40 w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 text-white rounded-full shadow-2xl hover:shadow-3xl active:scale-95 transition-all flex items-center justify-center group"
+            aria-label="Öppna AI-verktyg"
+          >
+            <Sparkles className="h-7 w-7" />
+            {/* Badge for available features */}
+            {(material.flashcards.length === 0 || material.questions.length === 0 || material.concepts.length === 0) && (
+              <span className="absolute -top-1 -right-1 flex h-5 w-5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-5 w-5 bg-pink-500 items-center justify-center text-xs font-bold">
+                  !
+                </span>
+              </span>
+            )}
+          </motion.button>
 
-              <div className="relative">
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
-                      <Sparkles className="h-5 w-5 text-white" />
+          {/* Mobile Drawer - Bottom Sheet Style */}
+          {isMobileDrawerOpen && (
+            <>
+              {/* Backdrop */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setIsMobileDrawerOpen(false)}
+                className="lg:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+              />
+
+              {/* Drawer */}
+              <motion.div
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "100%" }}
+                transition={{ type: "spring", damping: 30, stiffness: 300 }}
+                className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 rounded-t-3xl shadow-2xl max-h-[85vh] overflow-y-auto"
+              >
+                {/* Drag Handle */}
+                <div className="sticky top-0 bg-white dark:bg-gray-900 pt-3 pb-2 px-6 border-b border-gray-200 dark:border-gray-800">
+                  <div className="w-12 h-1.5 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto mb-4" />
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
+                        <Sparkles className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                          AI-verktyg
+                        </h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Generera studiematerial
+                        </p>
+                      </div>
                     </div>
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                      AI-stöd
-                    </h3>
+                    <button
+                      onClick={() => setIsMobileDrawerOpen(false)}
+                      className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                    >
+                      <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+                    </button>
                   </div>
                 </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-                  Generera studiematerial automatiskt
-                </p>
-              </div>
 
-              <div className="space-y-3">
-                {/* Status översikt */}
-                <div className="flex flex-wrap gap-2 pb-2 border-b border-gray-100 dark:border-gray-800">
-                  {material.flashcards.length > 0 && (
-                    <span className="inline-flex items-center gap-1.5 px-2 py-1 text-xs rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
-                      <CheckCircle2 size={12} />
-                      {material.flashcards.length} kort
-                    </span>
-                  )}
-                  {material.questions.length > 0 && (
-                    <span className="inline-flex items-center gap-1.5 px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
-                      <CheckCircle2 size={12} />
-                      {material.questions.length} frågor
-                    </span>
-                  )}
-                  {material.concepts.length > 0 && (
-                    <span className="inline-flex items-center gap-1.5 px-2 py-1 text-xs rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
-                      <CheckCircle2 size={12} />
-                      {material.concepts.length} begrepp
-                    </span>
-                  )}
-                </div>
+                <div className="p-6 space-y-4">
+                  {/* Status Overview */}
+                  <div className="flex flex-wrap gap-2">
+                    {material.flashcards.length > 0 && (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 font-medium">
+                        <CheckCircle2 size={14} />
+                        {material.flashcards.length} flashcards
+                      </span>
+                    )}
+                    {material.questions.length > 0 && (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 font-medium">
+                        <CheckCircle2 size={14} />
+                        {material.questions.length} quizfrågor
+                      </span>
+                    )}
+                    {material.concepts.length > 0 && (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 font-medium">
+                        <CheckCircle2 size={14} />
+                        {material.concepts.length} begrepp
+                      </span>
+                    )}
+                  </div>
 
-                <div>
-                  <label className="flex items-center justify-between text-sm font-medium text-gray-600 dark:text-gray-300">
-                    Svårighetsgrad
-                    <span className="text-xs text-gray-400">
-                      {difficulty === 'easy'
-                        ? 'Lätt'
-                        : difficulty === 'medium'
-                        ? 'Lagom'
-                        : 'Utmanande'}
-                    </span>
-                  </label>
-                  <select
-                    value={difficulty}
-                    onChange={(event) => setDifficulty(event.target.value as Difficulty)}
-                    className="mt-1 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm"
-                  >
-                    <option value="easy">Lätt</option>
-                    <option value="medium">Lagom</option>
-                    <option value="hard">Utmanande</option>
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                      Flashcards ({cardCount})
+                  {/* Difficulty Selector */}
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl p-4">
+                    <label className="flex items-center justify-between text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Svårighetsgrad
+                      <span className="text-xs px-2 py-1 rounded-full bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400">
+                        {difficulty === 'easy' ? '🟢 Lätt' : difficulty === 'medium' ? '🟡 Lagom' : '🔴 Utmanande'}
+                      </span>
                     </label>
+                    <select
+                      value={difficulty}
+                      onChange={(event) => setDifficulty(event.target.value as Difficulty)}
+                      className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3 text-sm font-medium"
+                    >
+                      <option value="easy">🟢 Lätt</option>
+                      <option value="medium">🟡 Lagom</option>
+                      <option value="hard">🔴 Utmanande</option>
+                    </select>
+                  </div>
+
+                  {/* Flashcards Section */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        ⚡ Flashcards
+                      </label>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">{cardCount} kort</span>
+                    </div>
                     <input
                       type="range"
                       min={4}
@@ -1661,50 +1707,51 @@ export function MaterialDetailPage() {
                       step={2}
                       value={cardCount}
                       onChange={(event) => setCardCount(Number(event.target.value))}
-                      className="mt-1 w-full"
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
                     />
                     {material.flashcards.length === 0 ? (
-                      <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                      <Button
+                        className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-lg"
+                        onClick={() => {
+                          handleGenerateFlashcards();
+                          setIsMobileDrawerOpen(false);
+                        }}
+                        isLoading={isGenerating.flashcards}
+                      >
+                        <Sparkles className="mr-2 h-5 w-5" />
+                        Generera Flashcards
+                      </Button>
+                    ) : (
+                      <div className="flex gap-2">
                         <Button
-                          className="mt-2 w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-lg"
-                          size="sm"
+                          className="flex-1 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-lg"
+                          onClick={() => {
+                            scrollToSection(flashcardsRef, 'flashcards');
+                            setIsMobileDrawerOpen(false);
+                          }}
+                        >
+                          <Sparkles className="mr-2 h-5 w-5" />
+                          Öppna ({material.flashcards.length})
+                        </Button>
+                        <Button
+                          className="bg-gradient-to-r from-orange-400 to-amber-400 hover:from-orange-500 hover:to-amber-500 text-white shadow"
                           onClick={handleGenerateFlashcards}
                           isLoading={isGenerating.flashcards}
                         >
-                          <Sparkles className="mr-2 h-4 w-4" />
-                          Flashcards
+                          +{cardCount}
                         </Button>
-                      </motion.div>
-                    ) : (
-                      <div className="flex gap-2 mt-2">
-                        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1">
-                          <Button
-                            className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-lg"
-                            size="sm"
-                            onClick={() => scrollToSection(flashcardsRef, 'flashcards')}
-                          >
-                            <Sparkles className="mr-2 h-4 w-4" />
-                            Öppna ({material.flashcards.length})
-                          </Button>
-                        </motion.div>
-                        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                          <Button
-                            className="bg-gradient-to-r from-orange-400 to-amber-400 hover:from-orange-500 hover:to-amber-500 text-white shadow"
-                            size="sm"
-                            variant="outline"
-                            onClick={handleGenerateFlashcards}
-                            isLoading={isGenerating.flashcards}
-                          >
-                            +{cardCount}
-                          </Button>
-                        </motion.div>
                       </div>
                     )}
                   </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                      Quizfrågor ({quizCount})
-                    </label>
+
+                  {/* Quiz Section */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        💬 Quizfrågor
+                      </label>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">{quizCount} frågor</span>
+                    </div>
                     <input
                       type="range"
                       min={3}
@@ -1712,87 +1759,86 @@ export function MaterialDetailPage() {
                       step={1}
                       value={quizCount}
                       onChange={(event) => setQuizCount(Number(event.target.value))}
-                      className="mt-1 w-full"
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
                     />
                     {material.questions.length === 0 ? (
-                      <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                      <Button
+                        className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg"
+                        onClick={() => {
+                          handleGenerateQuiz();
+                          setIsMobileDrawerOpen(false);
+                        }}
+                        isLoading={isGenerating.quiz}
+                      >
+                        <MessageSquare className="mr-2 h-5 w-5" />
+                        Skapa Quizfrågor
+                      </Button>
+                    ) : (
+                      <div className="flex gap-2">
                         <Button
-                          className="mt-2 w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg"
-                          size="sm"
+                          className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg"
+                          onClick={() => {
+                            scrollToSection(quizRef, 'quiz');
+                            setIsMobileDrawerOpen(false);
+                          }}
+                        >
+                          <MessageSquare className="mr-2 h-5 w-5" />
+                          Starta ({material.questions.length})
+                        </Button>
+                        <Button
+                          className="bg-gradient-to-r from-purple-400 to-pink-400 hover:from-purple-500 hover:to-pink-500 text-white shadow"
                           onClick={handleGenerateQuiz}
                           isLoading={isGenerating.quiz}
                         >
-                          <MessageSquare className="mr-2 h-4 w-4" />
-                          Skapa quiz
+                          +{quizCount}
                         </Button>
-                      </motion.div>
-                    ) : (
-                      <div className="flex gap-2 mt-2">
-                        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1">
-                          <Button
-                            className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg"
-                            size="sm"
-                            onClick={() => scrollToSection(quizRef, 'quiz')}
-                          >
-                            <MessageSquare className="mr-2 h-4 w-4" />
-                            Starta ({material.questions.length})
-                          </Button>
-                        </motion.div>
-                        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                          <Button
-                            className="bg-gradient-to-r from-purple-400 to-pink-400 hover:from-purple-500 hover:to-pink-500 text-white shadow"
-                            size="sm"
-                            variant="outline"
-                            onClick={handleGenerateQuiz}
-                            isLoading={isGenerating.quiz}
-                          >
-                            +{quizCount}
-                          </Button>
-                        </motion.div>
                       </div>
                     )}
                   </div>
+
+                  {/* Concepts Section */}
+                  <div className="space-y-2">
+                    {material.concepts.length === 0 ? (
+                      <Button
+                        className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white shadow-lg"
+                        onClick={() => {
+                          handleGenerateConcepts();
+                          setIsMobileDrawerOpen(false);
+                        }}
+                        isLoading={isGenerating.concepts}
+                      >
+                        <Brain className="mr-2 h-5 w-5" />
+                        Hitta Viktiga Ord
+                      </Button>
+                    ) : (
+                      <Button
+                        className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white shadow-lg"
+                        onClick={() => {
+                          scrollToSection(conceptsRef, 'concepts');
+                          setIsMobileDrawerOpen(false);
+                        }}
+                      >
+                        <Brain className="mr-2 h-5 w-5" />
+                        Visa Begrepp ({material.concepts.length})
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Chat Button */}
+                  <Link
+                    to={`/study/material/${material.id}/chat`}
+                    className="block"
+                    onClick={() => setIsMobileDrawerOpen(false)}
+                  >
+                    <Button className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white shadow-lg">
+                      <MessageSquare className="mr-2 h-5 w-5" />
+                      Chatta om Materialet
+                    </Button>
+                  </Link>
                 </div>
-
-                {material.concepts.length === 0 ? (
-                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                    <Button
-                      className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white shadow-lg"
-                      size="sm"
-                      onClick={handleGenerateConcepts}
-                      isLoading={isGenerating.concepts}
-                    >
-                      <Brain className="mr-2 h-4 w-4" />
-                      Hitta viktiga ord i texten
-                    </Button>
-                  </motion.div>
-                ) : (
-                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                    <Button
-                      className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white shadow-lg"
-                      size="sm"
-                      onClick={() => scrollToSection(conceptsRef, 'concepts')}
-                    >
-                      <Brain className="mr-2 h-4 w-4" />
-                      Visa begrepp ({material.concepts.length})
-                    </Button>
-                  </motion.div>
-                )}
-
-                <Link
-                  to={`/study/material/${material.id}/chat`}
-                  className="block"
-                >
-                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                    <Button className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white shadow-lg" size="sm">
-                      <MessageSquare className="mr-2 h-4 w-4" />
-                      Chatta om materialet
-                    </Button>
-                  </motion.div>
-                </Link>
-              </div>
-            </Card>
-          </div>
+              </motion.div>
+            </>
+          )}
         </div>
 
         {explainResult && (
