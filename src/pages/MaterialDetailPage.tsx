@@ -1172,6 +1172,7 @@ export function MaterialDetailPage() {
           </div>
 
           {/* Collapsible Sidebar */}
+          {/* Desktop Sidebar */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{
@@ -1561,7 +1562,7 @@ export function MaterialDetailPage() {
             )}
           </motion.div>
 
-          {/* Floating Toggle Button - Öppna (when sidebar is closed) */}
+          {/* Floating Toggle Button - Öppna (when sidebar is closed) - Desktop Only */}
           {!isSidebarOpen && (
             <motion.button
               initial={{ opacity: 0, x: 20 }}
@@ -1580,6 +1581,218 @@ export function MaterialDetailPage() {
               </span>
             </motion.button>
           )}
+
+          {/* Mobile AI Panel - Shows on mobile/tablet */}
+          <div className="lg:hidden mt-6">
+            <Card className="space-y-4 relative overflow-hidden">
+              {/* Decorative gradient background */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-400/20 to-pink-400/20 rounded-full blur-2xl" />
+
+              <div className="relative">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
+                      <Sparkles className="h-5 w-5 text-white" />
+                    </div>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                      AI-stöd
+                    </h3>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                  Generera studiematerial automatiskt
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                {/* Status översikt */}
+                <div className="flex flex-wrap gap-2 pb-2 border-b border-gray-100 dark:border-gray-800">
+                  {material.flashcards.length > 0 && (
+                    <span className="inline-flex items-center gap-1.5 px-2 py-1 text-xs rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                      <CheckCircle2 size={12} />
+                      {material.flashcards.length} kort
+                    </span>
+                  )}
+                  {material.questions.length > 0 && (
+                    <span className="inline-flex items-center gap-1.5 px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+                      <CheckCircle2 size={12} />
+                      {material.questions.length} frågor
+                    </span>
+                  )}
+                  {material.concepts.length > 0 && (
+                    <span className="inline-flex items-center gap-1.5 px-2 py-1 text-xs rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
+                      <CheckCircle2 size={12} />
+                      {material.concepts.length} begrepp
+                    </span>
+                  )}
+                </div>
+
+                <div>
+                  <label className="flex items-center justify-between text-sm font-medium text-gray-600 dark:text-gray-300">
+                    Svårighetsgrad
+                    <span className="text-xs text-gray-400">
+                      {difficulty === 'easy'
+                        ? 'Lätt'
+                        : difficulty === 'medium'
+                        ? 'Lagom'
+                        : 'Utmanande'}
+                    </span>
+                  </label>
+                  <select
+                    value={difficulty}
+                    onChange={(event) => setDifficulty(event.target.value as Difficulty)}
+                    className="mt-1 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm"
+                  >
+                    <option value="easy">Lätt</option>
+                    <option value="medium">Lagom</option>
+                    <option value="hard">Utmanande</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                      Flashcards ({cardCount})
+                    </label>
+                    <input
+                      type="range"
+                      min={4}
+                      max={20}
+                      step={2}
+                      value={cardCount}
+                      onChange={(event) => setCardCount(Number(event.target.value))}
+                      className="mt-1 w-full"
+                    />
+                    {material.flashcards.length === 0 ? (
+                      <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                        <Button
+                          className="mt-2 w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-lg"
+                          size="sm"
+                          onClick={handleGenerateFlashcards}
+                          isLoading={isGenerating.flashcards}
+                        >
+                          <Sparkles className="mr-2 h-4 w-4" />
+                          Flashcards
+                        </Button>
+                      </motion.div>
+                    ) : (
+                      <div className="flex gap-2 mt-2">
+                        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1">
+                          <Button
+                            className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-lg"
+                            size="sm"
+                            onClick={() => scrollToSection(flashcardsRef, 'flashcards')}
+                          >
+                            <Sparkles className="mr-2 h-4 w-4" />
+                            Öppna ({material.flashcards.length})
+                          </Button>
+                        </motion.div>
+                        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                          <Button
+                            className="bg-gradient-to-r from-orange-400 to-amber-400 hover:from-orange-500 hover:to-amber-500 text-white shadow"
+                            size="sm"
+                            variant="outline"
+                            onClick={handleGenerateFlashcards}
+                            isLoading={isGenerating.flashcards}
+                          >
+                            +{cardCount}
+                          </Button>
+                        </motion.div>
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                      Quizfrågor ({quizCount})
+                    </label>
+                    <input
+                      type="range"
+                      min={3}
+                      max={10}
+                      step={1}
+                      value={quizCount}
+                      onChange={(event) => setQuizCount(Number(event.target.value))}
+                      className="mt-1 w-full"
+                    />
+                    {material.questions.length === 0 ? (
+                      <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                        <Button
+                          className="mt-2 w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg"
+                          size="sm"
+                          onClick={handleGenerateQuiz}
+                          isLoading={isGenerating.quiz}
+                        >
+                          <MessageSquare className="mr-2 h-4 w-4" />
+                          Skapa quiz
+                        </Button>
+                      </motion.div>
+                    ) : (
+                      <div className="flex gap-2 mt-2">
+                        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1">
+                          <Button
+                            className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg"
+                            size="sm"
+                            onClick={() => scrollToSection(quizRef, 'quiz')}
+                          >
+                            <MessageSquare className="mr-2 h-4 w-4" />
+                            Starta ({material.questions.length})
+                          </Button>
+                        </motion.div>
+                        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                          <Button
+                            className="bg-gradient-to-r from-purple-400 to-pink-400 hover:from-purple-500 hover:to-pink-500 text-white shadow"
+                            size="sm"
+                            variant="outline"
+                            onClick={handleGenerateQuiz}
+                            isLoading={isGenerating.quiz}
+                          >
+                            +{quizCount}
+                          </Button>
+                        </motion.div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {material.concepts.length === 0 ? (
+                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                    <Button
+                      className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white shadow-lg"
+                      size="sm"
+                      onClick={handleGenerateConcepts}
+                      isLoading={isGenerating.concepts}
+                    >
+                      <Brain className="mr-2 h-4 w-4" />
+                      Hitta viktiga ord i texten
+                    </Button>
+                  </motion.div>
+                ) : (
+                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                    <Button
+                      className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white shadow-lg"
+                      size="sm"
+                      onClick={() => scrollToSection(conceptsRef, 'concepts')}
+                    >
+                      <Brain className="mr-2 h-4 w-4" />
+                      Visa begrepp ({material.concepts.length})
+                    </Button>
+                  </motion.div>
+                )}
+
+                <Link
+                  to={`/study/material/${material.id}/chat`}
+                  className="block"
+                >
+                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                    <Button className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white shadow-lg" size="sm">
+                      <MessageSquare className="mr-2 h-4 w-4" />
+                      Chatta om materialet
+                    </Button>
+                  </motion.div>
+                </Link>
+              </div>
+            </Card>
+          </div>
         </div>
 
         {explainResult && (
