@@ -11,7 +11,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "start": "cd server && npm start",
-    "postinstall": "cd server && npm install"
+    "postinstall": "npm run build && cd server && npm install"
   },
   "dependencies": {
     "@radix-ui/react-collapsible": "^1.1.12",
