@@ -7,18 +7,24 @@ import ocrRouter from './routes/ocr.js';
 import generateRouter from './routes/generate.js';
 import chatRouter from './routes/chat.js';
 
-// Hitta .env i parent directory (studieapp/)
+// Hitta .env i parent directory (studieapp/) - endast i development
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const envPath = join(__dirname, '../.env');
-const result = dotenv.config({ path: envPath });
 
-// Debug: visa om .env laddades
-if (result.error) {
-  console.error('❌ Fel vid laddning av .env:', result.error);
-  console.error('   Sökte efter:', envPath);
+// I production (Scalingo) använder vi environment variables direkt
+if (process.env.NODE_ENV !== 'production') {
+  const envPath = join(__dirname, '../.env');
+  const result = dotenv.config({ path: envPath });
+
+  // Debug: visa om .env laddades
+  if (result.error) {
+    console.warn('⚠️  Ingen .env-fil hittades:', envPath);
+    console.warn('   Förväntar environment variables från systemet');
+  } else {
+    console.log('✓ .env laddad från:', envPath);
+  }
 } else {
-  console.log('✓ .env laddad från:', envPath);
+  console.log('✓ Production mode - använder systemets environment variables');
 }
 
 const app = express();

@@ -13,6 +13,7 @@ console.log('🔧 Förbereder build för Scalingo...');
 
 // Skapa .env.production från environment variables
 const envVars = [
+  'VITE_API_URL',
   'VITE_FIREBASE_API_KEY',
   'VITE_FIREBASE_AUTH_DOMAIN',
   'VITE_FIREBASE_PROJECT_ID',
