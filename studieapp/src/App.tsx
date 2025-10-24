@@ -15,7 +15,14 @@ import { ChatModeHub } from './pages/study/ChatModeHub';
 import { ChatStudyPage } from './pages/study/ChatStudyPage';
 import { ConceptExplorerPage } from './pages/study/ConceptExplorerPage';
 import { SnakeGamePage } from './pages/study/SnakeGamePage';
+import { WhackATermPage } from './pages/study/WhackATermPage';
 import { GamesHubPage } from './pages/GamesHubPage';
+import { SubjectsOverviewPage } from './pages/subjects/SubjectsOverviewPage';
+import { SubjectHubPage } from './pages/subjects/SubjectHubPage';
+import { ActivityPlaceholderPage } from './pages/subjects/ActivityPlaceholderPage';
+import { AdditionSubtractionActivity } from './pages/subjects/activities/AdditionSubtractionActivity';
+import { ReviewMistakesActivity } from './pages/subjects/activities/ReviewMistakesActivity';
+import { ArithmeticActivity } from './pages/subjects/activities/ArithmeticActivity';
 
 function AppContent() {
   const { userProfile } = useAuth();
@@ -120,7 +127,34 @@ function AppContent() {
         element={<SnakeGamePage />}
       />
       <Route path="/games/snake" element={<SnakeGamePage />} />
+      <Route path="/games/whack" element={<WhackATermPage />} />
+      <Route
+        path="/study/material/:materialId/game/whack"
+        element={<WhackATermPage />}
+      />
       <Route path="/games" element={<GamesHubPage />} />
+      <Route path="/subjects" element={<SubjectsOverviewPage />} />
+      <Route path="/subjects/:subjectHub" element={<SubjectHubPage />} />
+
+      {/* Arithmetic activities - all use the same component with different concept areas */}
+      <Route path="/subjects/matematik/addition-1-5" element={<ArithmeticActivity />} />
+      <Route path="/subjects/matematik/addition-1-10" element={<ArithmeticActivity />} />
+      <Route path="/subjects/matematik/addition-11-20" element={<ArithmeticActivity />} />
+      <Route path="/subjects/matematik/addition-dubbletter" element={<ArithmeticActivity />} />
+      <Route path="/subjects/matematik/addition-tiotalsovergaing" element={<ArithmeticActivity />} />
+      <Route path="/subjects/matematik/subtraktion-1-5" element={<ArithmeticActivity />} />
+      <Route path="/subjects/matematik/subtraktion-1-10" element={<ArithmeticActivity />} />
+      <Route path="/subjects/matematik/subtraktion-11-20" element={<ArithmeticActivity />} />
+      <Route path="/subjects/matematik/blandade-operationer" element={<ArithmeticActivity />} />
+
+      {/* Legacy route - keeping for backwards compatibility */}
+      <Route path="/subjects/matematik/addition-subtraktion-1-3" element={<AdditionSubtractionActivity />} />
+
+      {/* Mistake review */}
+      <Route path="/subjects/matematik/repetera-misstag-1-3" element={<ReviewMistakesActivity />} />
+
+      {/* Catch-all for future activities */}
+      <Route path="/subjects/:subjectHub/:activityId" element={<ActivityPlaceholderPage />} />
       <Route path="/material" element={<Navigate to="/study" replace />} />
       <Route path="/import/*" element={<Navigate to="/study" replace />} />
 

@@ -9,6 +9,11 @@ import type {
   Mindmap,
   ChatSession,
   TextEmbedding,
+  ActivityAttempt,
+  ActivityMistake,
+  StudentCognitiveProfile,
+  PedagogicalSession,
+  SubjectSession,
 } from '../types';
 
 export class StudieAppDatabase extends Dexie {
@@ -21,6 +26,13 @@ export class StudieAppDatabase extends Dexie {
   mindmaps!: Dexie.Table<Mindmap, string>;
   chatSessions!: Dexie.Table<ChatSession, string>;
   textEmbeddings!: Dexie.Table<TextEmbedding, string>;
+
+  // Activity tables
+  activityAttempts!: Dexie.Table<ActivityAttempt, string>;
+  activityMistakes!: Dexie.Table<ActivityMistake, string>;
+  cognitiveProfiles!: Dexie.Table<StudentCognitiveProfile, string>;
+  subjectSessions!: Dexie.Table<SubjectSession, string>;
+  pedagogicalSessions!: Dexie.Table<PedagogicalSession, string>;
 
   constructor() {
     super('StudieAppDB');
@@ -81,6 +93,24 @@ export class StudieAppDatabase extends Dexie {
       mindmaps: 'id, materialId, createdAt',
       chatSessions: 'id, [materialId+mode], materialId, mode, createdAt, updatedAt',
       textEmbeddings: 'id, materialId, chunkIndex, createdAt',
+    });
+
+    // Version 5 - add activity/pedagogical tables
+    this.version(5).stores({
+      materials: 'id, subject, folderId, *tags, createdAt, lastStudied',
+      folders: 'id, subject, createdAt',
+      userProfile: 'id',
+      studySessions: 'id, materialId, mode, startedAt',
+      gameSessions: 'id, materialId, gameType, completedAt',
+      dailyProgress: 'date',
+      mindmaps: 'id, materialId, createdAt',
+      chatSessions: 'id, [materialId+mode], materialId, mode, createdAt, updatedAt',
+      textEmbeddings: 'id, materialId, chunkIndex, createdAt',
+      activityAttempts: 'id, userId, sessionId, activityId, questionId, timestamp, [userId+activityId], questionConceptArea',
+      activityMistakes: 'id, userId, activityId, questionId, conceptArea, [userId+conceptArea], needsReview, nextReviewAt',
+      cognitiveProfiles: '[userId+subjectHub], userId, subjectHub, lastUpdated',
+      subjectSessions: 'id, userId, subjectHub, activityId, startedAt',
+      pedagogicalSessions: 'id, userId, subjectHub, activityId, startedAt',
     });
   }
 }
@@ -344,5 +374,149 @@ export const dbHelpers = {
       flashcards: material.flashcards,
       lastStudied: new Date(),
     });
+  },
+
+  // Activity Attempts
+  async saveActivityAttempt(attempt: ActivityAttempt) {
+    await db.activityAttempts.put(attempt);
+  },
+
+  async getActivityAttempts(userId: string, activityId: string, limit = 50) {
+    return await db.activityAttempts
+      .where('[userId+activityId]')
+      .equals([userId, activityId])
+      .reverse()
+      .limit(limit)
+      .toArray();
+  },
+
+  async getRecentAttempts(_userId: string, sessionId: string) {
+    return await db.activityAttempts
+      .where('sessionId')
+      .equals(sessionId)
+      .toArray();
+  },
+
+  // Activity Mistakes (Spaced Repetition)
+  async saveMistake(mistake: ActivityMistake) {
+    const existing = await db.activityMistakes
+      .where('[userId+conceptArea]')
+      .equals([mistake.userId, mistake.conceptArea])
+      .and(m => m.questionId === mistake.questionId)
+      .first();
+
+    if (existing) {
+      // Update existing mistake
+      await db.activityMistakes.update(existing.id, {
+        mistakeCount: existing.mistakeCount + 1,
+        lastMistakeAt: mistake.lastMistakeAt,
+        needsReview: true,
+        interval: 1, // Reset interval
+        easeFactor: Math.max(1.3, existing.easeFactor - 0.2),
+        userAnswer: mistake.userAnswer,
+      });
+    } else {
+      // New mistake
+      await db.activityMistakes.put(mistake);
+    }
+  },
+
+  async getDueMistakes(userId: string, conceptArea?: string) {
+    const today = new Date();
+
+    if (conceptArea) {
+      return await db.activityMistakes
+        .where('[userId+conceptArea]')
+        .equals([userId, conceptArea])
+        .and(m => m.needsReview && (!m.nextReviewAt || m.nextReviewAt <= today))
+        .toArray();
+    }
+
+    return await db.activityMistakes
+      .where('userId')
+      .equals(userId)
+      .and(m => m.needsReview && (!m.nextReviewAt || m.nextReviewAt <= today))
+      .toArray();
+  },
+
+  async updateMistakeReview(mistakeId: string, wasCorrect: boolean) {
+    const mistake = await db.activityMistakes.get(mistakeId);
+    if (!mistake) return;
+
+    let newInterval = mistake.interval;
+    let newEaseFactor = mistake.easeFactor;
+
+    if (wasCorrect) {
+      // Correct - increase interval
+      newInterval = Math.ceil(mistake.interval * mistake.easeFactor);
+      newEaseFactor = Math.min(2.5, mistake.easeFactor + 0.1);
+
+      const nextReview = new Date();
+      nextReview.setDate(nextReview.getDate() + newInterval);
+
+      await db.activityMistakes.update(mistakeId, {
+        interval: newInterval,
+        easeFactor: newEaseFactor,
+        needsReview: false,
+        nextReviewAt: nextReview,
+      });
+    } else {
+      // Still incorrect - reset
+      newInterval = 1;
+      newEaseFactor = Math.max(1.3, mistake.easeFactor - 0.2);
+
+      const nextReview = new Date();
+      nextReview.setDate(nextReview.getDate() + 1);
+
+      await db.activityMistakes.update(mistakeId, {
+        interval: newInterval,
+        easeFactor: newEaseFactor,
+        mistakeCount: mistake.mistakeCount + 1,
+        lastMistakeAt: new Date(),
+        needsReview: true,
+        nextReviewAt: nextReview,
+      });
+    }
+  },
+
+  // Cognitive Profiles
+  async getCognitiveProfile(userId: string, subjectHub: string) {
+    return await db.cognitiveProfiles.get([userId, subjectHub]);
+  },
+
+  async saveCognitiveProfile(profile: StudentCognitiveProfile) {
+    await db.cognitiveProfiles.put(profile);
+  },
+
+  // Subject Sessions
+  async saveSubjectSession(session: SubjectSession | PedagogicalSession) {
+    // Determine if it's a pedagogical session
+    if ('pedagogicalJourney' in session) {
+      await db.pedagogicalSessions.put(session as PedagogicalSession);
+    } else {
+      await db.subjectSessions.put(session);
+    }
+  },
+
+  async getRecentSubjectSessions(userId: string, limit = 10) {
+    // Get both types
+    const subject = await db.subjectSessions
+      .where('userId')
+      .equals(userId)
+      .reverse()
+      .limit(limit)
+      .toArray();
+
+    const pedagogical = await db.pedagogicalSessions
+      .where('userId')
+      .equals(userId)
+      .reverse()
+      .limit(limit)
+      .toArray();
+
+    // Merge and sort
+    return [...subject, ...pedagogical]
+      .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime())
+      .slice(0, limit);
   },
 };

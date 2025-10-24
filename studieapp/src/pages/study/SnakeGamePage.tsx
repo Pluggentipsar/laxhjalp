@@ -34,6 +34,7 @@ import type {
   Material,
   LanguageCode,
   SnakeGameTerm,
+  Difficulty,
 } from '../../types';
 
 type LoadState = 'idle' | 'loading' | 'error' | 'ready';
@@ -68,13 +69,14 @@ interface FeedbackState {
   example?: string;
 }
 
-const GRID_SIZE = 12;
+const GRID_WIDTH = 20;
+const GRID_HEIGHT = 12;
 const BASE_SPEED = 420;
 const SPEED_STEP = 40;
 const MIN_SPEED = 160;
 const MAX_LIVES = 3;
 const DEFAULT_ROUNDS = 10;
-const FEEDBACK_TIMEOUT = 2200;
+const FEEDBACK_TIMEOUT = 800;
 
 const LANGUAGE_OPTIONS: Array<{ id: LanguageCode; label: string; helper: string }> = [
   { id: 'sv', label: 'Svenska', helper: 'Standard – svenska begrepp' },
@@ -97,11 +99,12 @@ const oppositeDirections: Record<Direction, Direction> = {
 };
 
 const createInitialSnake = (): Position[] => {
-  const center = Math.floor(GRID_SIZE / 2);
+  const centerX = Math.floor(GRID_WIDTH / 2);
+  const centerY = Math.floor(GRID_HEIGHT / 2);
   return [
-    { x: center + 1, y: center },
-    { x: center, y: center },
-    { x: center - 1, y: center },
+    { x: centerX + 1, y: centerY },
+    { x: centerX, y: centerY },
+    { x: centerX - 1, y: centerY },
   ];
 };
 
@@ -158,8 +161,8 @@ const getFreePosition = (
   let attempts = 0;
   while (attempts < 2000) {
     const candidate = {
-      x: randomInt(0, GRID_SIZE - 1),
-      y: randomInt(0, GRID_SIZE - 1),
+      x: randomInt(0, GRID_WIDTH - 1),
+      y: randomInt(0, GRID_HEIGHT - 1),
     };
     if (!occupied.some((pos) => positionsEqual(pos, candidate))) {
       return candidate;
@@ -172,7 +175,8 @@ const getFreePosition = (
 const createTokensForTerm = (
   term: SnakeGameTerm,
   allTerms: SnakeGameTerm[],
-  snakePositions: Position[]
+  snakePositions: Position[],
+  difficulty: Difficulty = 'easy'
 ): TokenOnBoard[] => {
   const occupied = [...snakePositions];
   const tokens: TokenOnBoard[] = [];
@@ -199,10 +203,11 @@ const createTokensForTerm = (
   const correctPosition = getFreePosition(occupied);
   occupied.push(correctPosition);
 
+  // Show green indicator only on 'easy' difficulty
   tokens.push({
     id: `correct-${term.term}-${crypto.randomUUID()}`,
     term: term.term,
-    isCorrect: true,
+    isCorrect: difficulty === 'easy',
     position: correctPosition,
   });
 
@@ -559,12 +564,12 @@ export function SnakeGamePage() {
       setDirection('right');
       directionRef.current = 'right';
       nextDirectionRef.current = 'right';
-      setTokens(createTokensForTerm(term, prepResult.terms, nextSnake));
+      setTokens(createTokensForTerm(term, prepResult.terms, nextSnake, gamePreferences.difficulty));
       setCurrentTerm(term);
       roundActiveRef.current = true;
       roundStartRef.current = performance.now();
     },
-    [prepResult]
+    [prepResult, gamePreferences.difficulty]
   );
 
   const finishGame = useCallback(
@@ -661,7 +666,7 @@ export function SnakeGamePage() {
     });
 
     setTokens([]);
-    setGamePhase('paused');
+    // Keep game in 'playing' state so snake can still move during feedback
     scheduleAction(() => {
       setFeedback(null);
       advanceRound();
@@ -719,7 +724,7 @@ export function SnakeGamePage() {
       });
 
       setTokens([]);
-      setGamePhase('paused');
+      // Keep game in 'playing' state so snake can still move during feedback
 
       if (nextLives <= 0) {
         scheduleAction(() => {
@@ -754,9 +759,9 @@ export function SnakeGamePage() {
 
     if (
       newHead.x < 0 ||
-      newHead.x >= GRID_SIZE ||
+      newHead.x >= GRID_WIDTH ||
       newHead.y < 0 ||
-      newHead.y >= GRID_SIZE
+      newHead.y >= GRID_HEIGHT
     ) {
       handleMistake({ reason: 'collision' });
       setSnake(createInitialSnake());
@@ -860,7 +865,7 @@ export function SnakeGamePage() {
     if (
       gamePreferences.sourceMode === 'generated' &&
       trimmedTopic.length < 3 &&
-      (!prepResult || prepResult.source !== 'existing')
+      (!prepResultRef.current || prepResultRef.current.source !== 'existing')
     ) {
       // Vänta på att användaren skriver in ett tydligt tema innan vi ringer backend.
       setLoadState('idle');
@@ -933,7 +938,7 @@ export function SnakeGamePage() {
           : 'Kunde inte förbereda materialet för spelet.'
       );
     }
-  }, [cancelScheduledAction, gamePreferences, generatedTopicLabel, loadMaterials, materialId, materials.length, prepResult]);
+  }, [cancelScheduledAction, gamePreferences, generatedTopicLabel, loadMaterials, materialId, materials.length]);
 
   useEffect(() => {
     if (!materialId) return;
@@ -1378,23 +1383,30 @@ export function SnakeGamePage() {
               </Button>
             </div>
 
-            <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4">
-              <p className="text-xs uppercase tracking-wide text-primary-500 mb-1">
-                Förklaring
-              </p>
-              <p className="text-sm text-gray-900 dark:text-gray-100 min-h-[48px]">
-                {currentTerm?.definition ?? 'Tryck på “Starta spel” för att börja.'}
+            <Card className="border-2 border-primary-300 dark:border-primary-700 bg-gradient-to-br from-primary-50 to-white dark:from-primary-950 dark:to-gray-900 p-5 shadow-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary-500 text-white">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <p className="text-sm font-bold uppercase tracking-wide text-primary-600 dark:text-primary-400">
+                  Hitta begreppet som matchar:
+                </p>
+              </div>
+              <p className="text-base font-medium text-gray-900 dark:text-gray-100 min-h-[48px] leading-relaxed">
+                {currentTerm?.definition ?? 'Tryck på "Starta spel" för att börja.'}
               </p>
             </Card>
 
             <SnakeCanvas
-              gridSize={GRID_SIZE}
+              gridWidth={GRID_WIDTH}
+              gridHeight={GRID_HEIGHT}
               snake={snake}
               tokens={tokens}
               isPlaying={gamePhase === 'playing'}
               shake={feedback ? 0.5 : 0}
               fullscreen={fullscreen}
               onFullscreenToggle={() => setFullscreen(!fullscreen)}
+              currentDefinition={currentTerm?.definition}
             />
 
             {feedback && (

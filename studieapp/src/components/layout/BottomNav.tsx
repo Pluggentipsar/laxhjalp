@@ -1,10 +1,11 @@
-import { Home, GraduationCap, Gamepad2, User } from 'lucide-react';
+import { Home, GraduationCap, Gamepad2, BookOpen, User } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
 
 const navItems = [
   { icon: Home, label: 'Hem', path: '/' },
   { icon: GraduationCap, label: 'Studera', path: '/study' },
+  { icon: BookOpen, label: 'Ämnen', path: '/subjects' },
   { icon: Gamepad2, label: 'Spel', path: '/games' },
   { icon: User, label: 'Profil', path: '/profile' },
 ];

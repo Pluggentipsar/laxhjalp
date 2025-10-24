@@ -37,10 +37,29 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Routes
+// API Routes
 app.use('/api/ocr', ocrRouter);
 app.use('/api/generate', generateRouter);
 app.use('/api/chat', chatRouter);
+
+// Serve static files from dist folder (production only)
+if (process.env.NODE_ENV === 'production') {
+  const distPath = join(__dirname, '../dist');
+  console.log('📦 Serving static files from:', distPath);
+
+  app.use(express.static(distPath));
+
+  // Handle client-side routing - serve index.html for all non-API routes
+  app.get('*', (req, res) => {
+    res.sendFile(join(distPath, 'index.html'));
+  });
+} else {
+  // Development mode - API only
+  // 404 handler for API routes only
+  app.use((req, res) => {
+    res.status(404).json({ error: 'Endpoint hittades inte' });
+  });
+}
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -49,11 +68,6 @@ app.use((err, req, res, next) => {
     error: err.message || 'Något gick fel',
     details: process.env.NODE_ENV === 'development' ? err.stack : undefined
   });
-});
-
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({ error: 'Endpoint hittades inte' });
 });
 
 app.listen(PORT, () => {

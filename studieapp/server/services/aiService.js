@@ -265,18 +265,28 @@ Returnera ett JSON-objekt med denna struktur:
   "concepts": [
     {
       "term": "Begreppet",
-      "definition": "Tydlig och koncis definition",
+      "definition": "En beskrivning som INTE nämner själva begreppet",
       "examples": ["Exempel 1", "Exempel 2"]
     }
   ]
 }
 
-Regler:
+VIKTIGA REGLER:
 - Skriv på ${languageLabel}
 - Välj verkligen centrala begrepp kopplade till temat
 - Ge tydliga definitioner med enkelt språk för årskurs ${grade}
+- **ANVÄND ALDRIG SJÄLVA BEGREPPET I DEFINITIONEN** - beskriv vad det är utan att nämna ordet
 - Ge 1-3 konkreta exempel per begrepp
-- Förklara abstrakta begrepp med vardagliga liknelser`;
+- Förklara abstrakta begrepp med vardagliga liknelser
+
+Exempel på BRA definitioner (som INTE nämner termen):
+- Term: "Industriella revolutionen" → Definition: "Ett samhällsomvandlande skifte där produktionen gick från hantverk till fabriker"
+- Term: "Ångmaskin" → Definition: "En maskin som utnyttjade ånga för att skapa rörelse och driva fabriker och tåg"
+- Term: "Urbanisering" → Definition: "Den process där människor flyttar från landsbygden till städer för att arbeta"
+
+Exempel på DÅLIGA definitioner (använder termen):
+- Term: "Fotosyntesen" → Definition: "Fotosyntesen är processen där..." ❌
+- Term: "Derivata" → Definition: "En derivata är..." ❌`;
 
   const maxAttempts = 2;
   let lastError = null;
@@ -432,5 +442,187 @@ Regler:
   } catch (error) {
     console.error('AI-generering mindmap fel:', error);
     throw new Error(`Kunde inte generera mindmap: ${error.message}`);
+  }
+}
+
+/**
+ * Check and grade an open-ended activity answer
+ */
+export async function checkActivityAnswer(question, userAnswer, correctAnswer, conceptArea, ageGroup) {
+  const client = getOpenAIClient();
+
+  const prompt = `Du är en tålmodig och uppmuntrande lärare för en elev i årskurs ${ageGroup === '1-3' ? '1-3' : ageGroup === '4-6' ? '4-6' : '7-9'}.
+
+UPPGIFT: ${question}
+ELEVENS SVAR: ${userAnswer}
+FÖRVÄNTAT SVAR: ${correctAnswer}
+KONCEPTOMRÅDE: ${conceptArea}
+
+Bedöm elevens svar och ge pedagogisk feedback.
+
+Returnera ett JSON-objekt med denna struktur:
+{
+  "isCorrect": true/false,
+  "partialCredit": 0-100 (procent rätt om delvis korrekt),
+  "feedback": "Kort pedagogisk feedback (1-2 meningar)",
+  "explanation": "Förklaring av rätt svar (2-3 meningar)",
+  "encouragement": "Uppmuntrande kommentar (1 mening)",
+  "conceptUnderstanding": "Elevens förståelsenivå: 'excellent', 'good', 'partial', 'poor'",
+  "suggestions": "Vad eleven bör fokusera på härnäst"
+}
+
+Var generös med delpoäng om eleven visar förståelse även om svaret inte är perfekt formulerat.
+Var alltid uppmuntrande och konstruktiv.`;
+
+  try {
+    const completion = await client.chat.completions.create({
+      model: getModelName(),
+      messages: [{ role: 'user', content: prompt }],
+      response_format: { type: 'json_object' },
+      ...getTemperatureOptions(0.3),
+      ...getMaxTokenOptions(500)
+    });
+
+    return safeParseJson(
+      completion.choices?.[0]?.message?.content,
+      "Activity Answer Check"
+    );
+  } catch (error) {
+    console.error('AI-rättning fel:', error);
+    throw new Error(`Kunde inte rätta svar: ${error.message}`);
+  }
+}
+
+/**
+ * Generate activity questions dynamically
+ */
+export async function generateActivityQuestions(activityId, conceptArea, difficulty, ageGroup, count = 5, interests = []) {
+  const client = getOpenAIClient();
+
+  const difficultyMap = {
+    easy: 'enkla',
+    medium: 'lagom svåra',
+    hard: 'utmanande'
+  };
+
+  const ageGroupMap = {
+    '1-3': 'årskurs 1-3 (6-9 år)',
+    '4-6': 'årskurs 4-6 (10-12 år)',
+    '7-9': 'årskurs 7-9 (13-15 år)'
+  };
+
+  const interestsText = interests.length > 0
+    ? `Försök inkludera elevens intressen i exemplen: ${interests.join(', ')}.`
+    : '';
+
+  const prompt = `Du är en expert på att skapa pedagogiska matematikuppgifter för svenska elever.
+
+AKTIVITET: ${activityId}
+KONCEPTOMRÅDE: ${conceptArea}
+SVÅRIGHETSGRAD: ${difficultyMap[difficulty]}
+MÅLGRUPP: ${ageGroupMap[ageGroup]}
+ANTAL FRÅGOR: ${count}
+${interestsText}
+
+Skapa ${count} olika matematikuppgifter som:
+- Är anpassade för målgruppen
+- Täcker olika aspekter av konceptområdet
+- Följer SOLO-taxonomin (börja enkelt, öka komplexitet)
+- Varierar mellan olika typer (ren räkning, ordproblem, visuellt)
+
+För addition/subtraktion:
+- Årskurs 1-3: tal 1-20, konkreta situationer
+- Årskurs 4-6: tal upp till 100, tiotalsövergång
+- Årskurs 7-9: större tal, negativa tal
+
+Returnera JSON:
+{
+  "questions": [
+    {
+      "id": "unique-id",
+      "question": "Frågetexten",
+      "questionType": "multiple-choice" | "number-input" | "open-ended",
+      "correctAnswer": svar (nummer eller sträng),
+      "options": [alt1, alt2, alt3, alt4] (endast för multiple-choice),
+      "explanation": "Förklaring av lösningen",
+      "hint1": "Första hinten",
+      "hint2": "Andra hinten",
+      "hint3": "Tredje hinten",
+      "visualSupport": true/false,
+      "showNumberLine": true/false,
+      "showConcreteObjects": true/false,
+      "realWorldContext": "Verklig situation om relevant",
+      "soloLevel": "unistructural" | "multistructural" | "relational",
+      "bloomLevel": "remember" | "understand" | "apply"
+    }
+  ]
+}`;
+
+  try {
+    const completion = await client.chat.completions.create({
+      model: getModelName(),
+      messages: [{ role: 'user', content: prompt }],
+      response_format: { type: 'json_object' },
+      ...getTemperatureOptions(0.7),
+      ...getMaxTokenOptions(2000)
+    });
+
+    return safeParseJson(
+      completion.choices?.[0]?.message?.content,
+      "Activity Questions Generation"
+    );
+  } catch (error) {
+    console.error('AI-generering frågor fel:', error);
+    throw new Error(`Kunde inte generera frågor: ${error.message}`);
+  }
+}
+
+/**
+ * Generate personalized explanation for a mistake
+ */
+export async function generatePersonalizedExplanation(question, userAnswer, correctAnswer, conceptArea, studentInterests = [], previousMistakes = 0) {
+  const client = getOpenAIClient();
+
+  const interestsText = studentInterests.length > 0
+    ? `Eleven är intresserad av: ${studentInterests.join(', ')}. Använd dessa intressen i exempel.`
+    : '';
+
+  const mistakesContext = previousMistakes > 0
+    ? `Eleven har gjort detta fel ${previousMistakes} gånger tidigare. Var extra tydlig och ge ett nytt perspektiv.`
+    : '';
+
+  const prompt = `Du är en tålmodig mattelärare som förklarar varför ett svar är fel och hur man tänker rätt.
+
+FRÅGA: ${question}
+ELEVENS SVAR: ${userAnswer}
+RÄTT SVAR: ${correctAnswer}
+KONCEPT: ${conceptArea}
+${interestsText}
+${mistakesContext}
+
+Skapa en personlig, uppmuntrande förklaring som:
+1. Visar förståelse för elevens tankesätt
+2. Förklarar var det gick fel
+3. Visar steg för steg hur man löser det rätt
+4. Använder elevens intressen i exempel om möjligt
+5. Ger ett liknande exempel att tänka på
+
+Håll det kort och enkelt (max 150 ord).
+Var alltid positiv och uppmuntrande.
+
+Returnera bara texten, ingen JSON.`;
+
+  try {
+    const completion = await client.chat.completions.create({
+      model: getModelName(),
+      messages: [{ role: 'user', content: prompt }],
+      ...getTemperatureOptions(0.7),
+      ...getMaxTokenOptions(300)
+    });
+
+    return completion.choices?.[0]?.message?.content?.trim() || 'Försök igen och tänk igenom steg för steg!';
+  } catch (error) {
+    console.error('AI-förklaring fel:', error);
+    return 'Försök igen och tänk igenom steg för steg!';
   }
 }

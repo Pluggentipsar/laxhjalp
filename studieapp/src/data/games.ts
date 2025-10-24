@@ -28,8 +28,8 @@ export const GAME_DEFINITIONS: GameDefinition[] = [
     name: 'Whack-a-Term',
     tagline: 'Slå rätt begrepp',
     description:
-      'Tryck på rätt ord när det dyker upp utifrån korta definitioner. Övar snabb igenkänning.',
-    status: 'beta',
+      'Tryck på rätt ord när det dyker upp utifrån korta definitioner. Adaptiv svårighet med SOLO-progression.',
+    status: 'available',
     focus: ['begrepp', 'reaktion'],
     supports: {
       scope: ['single-material', 'multi-material', 'generated'],
@@ -38,7 +38,7 @@ export const GAME_DEFINITIONS: GameDefinition[] = [
     averageDuration: '4 min',
     difficulty: 'easy',
     icon: 'Hammer',
-    tags: ['Tempo', 'Fokuserat'],
+    tags: ['Tempo', 'Adaptivt'],
   },
   {
     id: 'memory',

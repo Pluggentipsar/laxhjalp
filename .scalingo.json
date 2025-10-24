@@ -1,0 +1,9 @@
+{
+  "build": {
+    "type": "nodejs",
+    "node": {
+      "node_env": "production",
+      "project_dir": "studieapp"
+    }
+  }
+}

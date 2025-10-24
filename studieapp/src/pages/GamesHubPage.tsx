@@ -403,30 +403,68 @@ export function GamesHubPage() {
     navigate('/games/snake');
   };
 
-  const handlePlayGame = (definition: GameDefinition) => {
-    if (definition.id !== 'snake') {
-      const statusMessage =
-        definition.status === 'beta'
-          ? 'Det här spelet är i beta. Vi öppnar för testare via feedback-kanalen snart.'
-          : 'Spelet släpps snart direkt i hubben – håll utkik!';
-      alert(statusMessage);
+  const handlePlayWhack = (mode: GameScopeMode) => {
+    if (mode === 'single-material') {
+      const materialId = ensureSingleMaterialSelection();
+      if (!materialId) {
+        alert('Välj ett material innan du startar Whack-a-Term.');
+        return;
+      }
+      navigate(`/study/material/${materialId}/game/whack`);
       return;
     }
 
-    handlePlaySnake(gamePreferences.sourceMode);
+    if (mode === 'multi-material') {
+      if (!materials.length) {
+        alert('Lägg till material innan du kombinerar flera källor.');
+        return;
+      }
+
+      if (!gamePreferences.selectedMaterialIds.length && !gamePreferences.includeAllMaterials) {
+        setGamePreferences({
+          selectedMaterialIds: materials.map((material) => material.id),
+          includeAllMaterials: true,
+        });
+      }
+    }
+
+    navigate('/games/whack');
+  };
+
+  const handlePlayGame = (definition: GameDefinition) => {
+    // Only allow available games
+    if (definition.status === 'coming-soon') {
+      alert('Spelet släpps snart direkt i hubben – håll utkik!');
+      return;
+    }
+
+    if (definition.status === 'beta') {
+      alert('Det här spelet är i beta. Vi öppnar för testare via feedback-kanalen snart.');
+      return;
+    }
+
+    // Route to the appropriate game
+    if (definition.id === 'snake') {
+      handlePlaySnake(gamePreferences.sourceMode);
+    } else if (definition.id === 'whack') {
+      handlePlayWhack(gamePreferences.sourceMode);
+    } else {
+      alert('Spelet är inte implementerat än.');
+    }
   };
 
   const handleQuickStart = (gameId: GameType) => {
-    if (gameId !== QUICK_START_GAME) {
-      alert('Snabbstart stöds just nu för Snake. Övriga spel släpps successivt.');
-      return;
+    if (gameId === 'snake') {
+      handlePlaySnake(gamePreferences.sourceMode);
+    } else if (gameId === 'whack') {
+      handlePlayWhack(gamePreferences.sourceMode);
+    } else {
+      alert('Snabbstart stöds för Snake och Whack-a-Term. Övriga spel släpps successivt.');
     }
-
-    handlePlaySnake(gamePreferences.sourceMode);
   };
 
   const handleResumeSession = (session: GameSession) => {
-    if (session.gameType !== 'snake') {
+    if (session.gameType !== 'snake' && session.gameType !== 'whack') {
       alert('Det här spelläget är inte redo än, men dina sessioner sparas tills vidare.');
       return;
     }
@@ -449,7 +487,7 @@ export function GamesHubPage() {
         includeAllMaterials: false,
       });
 
-      navigate(`/study/material/${materialId}/game/snake`);
+      navigate(`/study/material/${materialId}/game/${session.gameType}`);
       return;
     }
 
@@ -459,7 +497,7 @@ export function GamesHubPage() {
       includeAllMaterials: session.sourceMode === 'multi-material' ? session.materialIds?.length === materials.length : false,
     });
 
-    navigate('/games/snake');
+    navigate(`/games/${session.gameType}`);
   };
 
   const toggleFocusFilter = (id: string) => {

@@ -218,27 +218,35 @@ function collectGameTerms({
 
   const flashcardTerms = flashcards
     .filter((card) => card.type === 'term-definition' && isNonEmpty(card.front) && isNonEmpty(card.back))
-    .map((card) => ({
-      id: card.id || crypto.randomUUID(),
-      materialId,
-      term: sanitize(card.front),
-      definition: sanitize(card.back),
-      examples: [],
-      source: 'flashcard' as const,
-      language,
-    }));
+    .map((card) => {
+      const term = sanitize(card.front);
+      const definition = sanitize(card.back);
+      return {
+        id: card.id || crypto.randomUUID(),
+        materialId,
+        term,
+        definition: removeTermFromDefinition(term, definition),
+        examples: [],
+        source: 'flashcard' as const,
+        language,
+      };
+    });
 
   const glossaryTerms = glossary
     .filter((entry) => isNonEmpty(entry.term) && isNonEmpty(entry.definition))
-    .map((entry) => ({
-      id: entry.id || crypto.randomUUID(),
-      materialId,
-      term: sanitize(entry.term),
-      definition: sanitize(entry.definition),
-      examples: entry.example ? [sanitize(entry.example)] : [],
-      source: 'glossary' as const,
-      language,
-    }));
+    .map((entry) => {
+      const term = sanitize(entry.term);
+      const definition = sanitize(entry.definition);
+      return {
+        id: entry.id || crypto.randomUUID(),
+        materialId,
+        term,
+        definition: removeTermFromDefinition(term, definition),
+        examples: entry.example ? [sanitize(entry.example)] : [],
+        source: 'glossary' as const,
+        language,
+      };
+    });
 
   return deduplicateTerms([...conceptTerms, ...flashcardTerms, ...glossaryTerms]);
 }
@@ -249,11 +257,14 @@ function createGameTermFromConcept(
   language: LanguageCode,
   source: GameTermBase['source']
 ): GameTermBase {
+  const term = sanitize(concept.term);
+  const definition = sanitize(concept.definition);
+
   return {
     id: concept.id || crypto.randomUUID(),
     materialId,
-    term: sanitize(concept.term),
-    definition: sanitize(concept.definition),
+    term,
+    definition: removeTermFromDefinition(term, definition),
     examples: concept.examples?.map(sanitize).filter(Boolean),
     source,
     language,
@@ -334,4 +345,241 @@ function shuffle<T>(items: T[]): T[] {
     [list[i], list[j]] = [list[j], list[i]];
   }
   return list;
+}
+
+/**
+ * Remove the term from the definition to make the game more challenging.
+ * Replaces occurrences of the term with placeholders like "denna", "det", "detta", etc.
+ */
+function removeTermFromDefinition(term: string, definition: string): string {
+  if (!term || !definition) return definition;
+
+  // Normalize for comparison (case-insensitive)
+  const termLower = term.toLowerCase().trim();
+  const termWords = termLower.split(/\s+/);
+
+  // Create regex patterns for the term
+  // Match whole word(s) with word boundaries
+  const patterns: RegExp[] = [];
+
+  // Pattern for full term
+  const escapedTerm = termWords.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s+');
+  patterns.push(new RegExp(`\\b${escapedTerm}(en|et|ar|arna|ens|ets)?\\b`, 'gi'));
+
+  // Pattern for each significant word in multi-word terms (longer than 3 chars)
+  termWords.forEach(word => {
+    if (word.length > 3) {
+      const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      patterns.push(new RegExp(`\\b${escaped}(en|et|ar|arna|ens|ets)?\\b`, 'gi'));
+    }
+  });
+
+  let result = definition;
+
+  // Replace occurrences with appropriate placeholders
+  patterns.forEach((pattern, index) => {
+    result = result.replace(pattern, (_match, suffix) => {
+      // Determine gender/form from suffix or use neutral
+      const s = suffix || '';
+
+      // Common Swedish placeholder words based on context
+      if (index === 0) { // Full term match
+        if (s.includes('en')) return '[...]en'; // -en ending → definite common gender
+        if (s.includes('et')) return '[...]et'; // -et ending → definite neuter gender
+        if (s.includes('ar') || s.includes('arna')) return '[...]'; // plural
+        return '[...]'; // Default placeholder
+      }
+
+      // For partial matches (individual words), use contextual replacements
+      return '[...]';
+    });
+  });
+
+  // Clean up multiple consecutive placeholders
+  result = result.replace(/(\[\.\.\.]\s*)+/g, '[...] ');
+
+  // Clean up leading/trailing spaces
+  result = result.trim();
+
+  return result;
+}
+
+// ============================================================================
+// Whack-a-Term Game Content Preparation
+// ============================================================================
+
+export interface WhackATermConfig {
+  materialId: string | null;
+  scope: GameScopeMode;
+  selectedMaterialIds: string[];
+  includeAllMaterials: boolean;
+  language: LanguageCode;
+  generatedTopicHint?: string;
+}
+
+export async function prepareWhackATermContent(
+  materials: Material[],
+  config: WhackATermConfig
+): Promise<{
+  terms: any[];
+  source: 'existing' | 'generated';
+  materialIds: string[];
+  language: LanguageCode;
+  timestamp: number;
+} | null> {
+  const {
+    materialId,
+    scope,
+    selectedMaterialIds,
+    includeAllMaterials,
+    language,
+    generatedTopicHint = '',
+  } = config;
+
+  let materialsToUse: Material[] = [];
+
+  // Determine which materials to use
+  if (materialId) {
+    const material = materials.find((m) => m.id === materialId);
+    if (material) {
+      materialsToUse = [material];
+    }
+  } else if (scope === 'single-material' && selectedMaterialIds.length > 0) {
+    const material = materials.find((m) => m.id === selectedMaterialIds[0]);
+    if (material) {
+      materialsToUse = [material];
+    }
+  } else if (scope === 'multi-material') {
+    if (includeAllMaterials || selectedMaterialIds.length === 0) {
+      materialsToUse = materials;
+    } else {
+      materialsToUse = materials.filter((m) =>
+        selectedMaterialIds.includes(m.id)
+      );
+    }
+  } else if (scope === 'generated') {
+    // For generated content, we'll use AI to create terms
+    if (generatedTopicHint.trim().length < 3) {
+      return null;
+    }
+
+    // Generate concepts using AI
+    try {
+      const grade = useAppStore.getState().user?.grade || 9;
+      const concepts = await generateConcepts(generatedTopicHint.trim(), {
+        count: 15,
+        grade,
+        language,
+      });
+
+      if (!concepts || concepts.length === 0) {
+        return null;
+      }
+
+      const terms = concepts.map((concept) => ({
+        term: sanitize(concept.term),
+        definition: removeTermFromDefinition(
+          sanitize(concept.term),
+          sanitize(concept.definition)
+        ),
+        examples: concept.examples?.map(sanitize) || [],
+        source: 'generated' as const,
+        language,
+        distractors: concepts
+          .filter((c) => c.term !== concept.term)
+          .map((c) => sanitize(c.term))
+          .slice(0, 6),
+      }));
+
+      return {
+        terms,
+        source: 'generated',
+        materialIds: [],
+        language,
+        timestamp: Date.now(),
+      };
+    } catch (error) {
+      console.error('Failed to generate concepts:', error);
+      return null;
+    }
+  }
+
+  if (materialsToUse.length === 0) {
+    return null;
+  }
+
+  // Extract terms from materials
+  const allTerms: any[] = [];
+
+  for (const material of materialsToUse) {
+    // From flashcards
+    if (material.flashcards && material.flashcards.length > 0) {
+      material.flashcards.forEach((card) => {
+        const term = sanitize(card.front);
+        const definition = sanitize(card.back);
+        allTerms.push({
+          term,
+          definition: removeTermFromDefinition(term, definition),
+          examples: [],
+          source: 'flashcard',
+          language,
+          distractors: [],
+        });
+      });
+    }
+
+    // From glossary
+    if (material.glossary && material.glossary.length > 0) {
+      material.glossary.forEach((entry) => {
+        const term = sanitize(entry.term);
+        const definition = sanitize(entry.definition);
+        allTerms.push({
+          term,
+          definition: removeTermFromDefinition(term, definition),
+          examples: entry.example ? [sanitize(entry.example)] : [],
+          source: 'glossary',
+          language,
+          distractors: [],
+        });
+      });
+    }
+
+    // From concepts
+    if (material.concepts && material.concepts.length > 0) {
+      material.concepts.forEach((concept) => {
+        const term = sanitize(concept.term);
+        const definition = sanitize(concept.definition);
+        allTerms.push({
+          term,
+          definition: removeTermFromDefinition(term, definition),
+          examples: concept.examples?.map(sanitize) || [],
+          source: 'concept',
+          language,
+          distractors: [],
+        });
+      });
+    }
+  }
+
+  if (allTerms.length === 0) {
+    return null;
+  }
+
+  // Create distractor pool for each term
+  const termsWithDistractors = allTerms.map((term) => ({
+    ...term,
+    distractors: allTerms
+      .filter((t) => t.term !== term.term)
+      .map((t) => t.term)
+      .sort(() => Math.random() - 0.5)
+      .slice(0, 10), // Keep top 10 potential distractors
+  }));
+
+  return {
+    terms: termsWithDistractors,
+    source: 'existing',
+    materialIds: materialsToUse.map((m) => m.id),
+    language,
+    timestamp: Date.now(),
+  };
 }

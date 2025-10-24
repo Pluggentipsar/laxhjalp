@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 
 interface Position {
   x: number;
@@ -33,7 +34,8 @@ interface BokehCircle {
 }
 
 interface SnakeCanvasProps {
-  gridSize: number;
+  gridWidth: number;
+  gridHeight: number;
   snake: Position[];
   tokens: Token[];
   isPlaying: boolean;
@@ -42,6 +44,7 @@ interface SnakeCanvasProps {
   onIncorrect?: (x: number, y: number) => void;
   fullscreen?: boolean;
   onFullscreenToggle?: () => void;
+  currentDefinition?: string; // Definition to show in fullscreen
 }
 
 // Export particle spawner
@@ -66,7 +69,7 @@ export function useParticleSpawner() {
   return { particlesRef, spawnParticles };
 }
 
-const CELL_SIZE = 32;
+const CELL_SIZE = 40; // Increased from 32 for better visibility
 const PARTICLE_COUNT = 30;
 
 const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
@@ -82,12 +85,22 @@ const createBokeh = (): BokehCircle[] => {
   }));
 };
 
-export function SnakeCanvas({ gridSize, snake, tokens, isPlaying, shake = 0, onCorrect, onIncorrect, fullscreen = false, onFullscreenToggle }: SnakeCanvasProps) {
+export function SnakeCanvas({ gridWidth, gridHeight, snake, tokens, isPlaying: _isPlaying, shake = 0, onCorrect, onIncorrect, fullscreen = false, onFullscreenToggle, currentDefinition }: SnakeCanvasProps) {
+  // Note: isPlaying is available as _isPlaying if needed for future enhancements
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const particlesRef = useRef<Particle[]>([]);
   const bokehRef = useRef<BokehCircle[]>(createBokeh());
   const lastFrameRef = useRef(0);
+  const snakeRef = useRef(snake);
+  const tokensRef = useRef(tokens);
+
+  // Update refs when props change
+  useEffect(() => {
+    snakeRef.current = snake;
+    tokensRef.current = tokens;
+    // console.log('[SnakeCanvas] Updated refs - snake:', snake.length, 'tokens:', tokens.length);
+  }, [snake, tokens]);
 
   // Spawn particles effect (used by game logic via callbacks)
   const spawnParticles = useCallback((x: number, y: number, color: string) => {
@@ -121,23 +134,22 @@ export function SnakeCanvas({ gridSize, snake, tokens, isPlaying, shake = 0, onC
 
     const resize = () => {
       if (fullscreen) {
-        // Fullscreen mode - use window size
+        // Fullscreen mode - use window size and maintain aspect ratio
         const maxWidth = window.innerWidth;
         const maxHeight = window.innerHeight;
-        const cellSize = Math.min(
-          Math.floor(maxWidth / gridSize),
-          Math.floor(maxHeight / gridSize)
-        );
-        const width = gridSize * cellSize;
-        const height = gridSize * cellSize;
+        const cellSizeWidth = Math.floor(maxWidth / gridWidth);
+        const cellSizeHeight = Math.floor(maxHeight / gridHeight);
+        const cellSize = Math.min(cellSizeWidth, cellSizeHeight);
+        const width = gridWidth * cellSize;
+        const height = gridHeight * cellSize;
         canvas.width = width;
         canvas.height = height;
         canvas.style.width = `${width}px`;
         canvas.style.height = `${height}px`;
       } else {
-        // Normal mode
-        const width = gridSize * CELL_SIZE;
-        const height = gridSize * CELL_SIZE;
+        // Normal mode - larger canvas for better visibility
+        const width = gridWidth * CELL_SIZE;
+        const height = gridHeight * CELL_SIZE;
         canvas.width = width;
         canvas.height = height;
         canvas.style.width = `${width}px`;
@@ -148,13 +160,15 @@ export function SnakeCanvas({ gridSize, snake, tokens, isPlaying, shake = 0, onC
     resize();
     window.addEventListener('resize', resize);
     return () => window.removeEventListener('resize', resize);
-  }, [gridSize, fullscreen]);
+  }, [gridWidth, gridHeight, fullscreen]);
 
   // Render loop
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
-    if (!ctx || !canvas) return;
+    if (!ctx || !canvas) {
+      return;
+    }
 
     let animationId: number;
 
@@ -163,7 +177,11 @@ export function SnakeCanvas({ gridSize, snake, tokens, isPlaying, shake = 0, onC
       lastFrameRef.current = timestamp;
 
       // Calculate current cell size based on canvas size
-      const currentCellSize = canvas.width / gridSize;
+      if (canvas.width === 0 || canvas.height === 0 || gridWidth === 0) {
+        animationId = requestAnimationFrame(render);
+        return;
+      }
+      const currentCellSize = canvas.width / gridWidth;
 
       // Clear and draw background
       drawBackground(ctx, canvas.width, canvas.height, currentCellSize);
@@ -180,10 +198,10 @@ export function SnakeCanvas({ gridSize, snake, tokens, isPlaying, shake = 0, onC
       }
 
       // Draw tokens (food)
-      drawTokens(ctx, tokens, currentCellSize);
+      drawTokens(ctx, tokensRef.current, currentCellSize);
 
       // Draw snake
-      drawSnake(ctx, snake, currentCellSize);
+      drawSnake(ctx, snakeRef.current, currentCellSize);
 
       // Draw particles
       drawParticles(ctx, particlesRef.current, dt);
@@ -197,14 +215,29 @@ export function SnakeCanvas({ gridSize, snake, tokens, isPlaying, shake = 0, onC
 
     animationId = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animationId);
-  }, [gridSize, snake, tokens, isPlaying, shake]);
+  }, [gridWidth, shake]);
 
-  return (
+  // Handle escape key for fullscreen
+  useEffect(() => {
+    if (!fullscreen || !onFullscreenToggle) return;
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onFullscreenToggle();
+      }
+    };
+
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [fullscreen, onFullscreenToggle]);
+
+  const canvasElement = (
     <div
       ref={containerRef}
       className={`relative rounded-2xl overflow-hidden ring-1 ring-white/10 shadow-2xl bg-gradient-to-br from-slate-900 to-slate-950 ${
-        fullscreen ? 'fixed inset-0 z-50 rounded-none' : ''
+        fullscreen ? 'flex items-center justify-center' : ''
       }`}
+      style={fullscreen ? { width: '100vw', height: '100vh' } : undefined}
     >
       <canvas
         ref={canvasRef}
@@ -215,15 +248,15 @@ export function SnakeCanvas({ gridSize, snake, tokens, isPlaying, shake = 0, onC
       {onFullscreenToggle && (
         <button
           onClick={onFullscreenToggle}
-          className="absolute top-4 right-4 p-2 rounded-lg bg-black/50 hover:bg-black/70 text-white/80 hover:text-white transition-all backdrop-blur"
-          title={fullscreen ? 'Avsluta helskärm' : 'Helskärm'}
+          className="absolute top-4 right-4 p-3 rounded-lg bg-black/60 hover:bg-black/80 text-white/90 hover:text-white transition-all backdrop-blur-sm shadow-lg z-10"
+          title={fullscreen ? 'Avsluta helskärm (ESC)' : 'Helskärm'}
         >
           {fullscreen ? (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           ) : (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
             </svg>
           )}
@@ -231,6 +264,40 @@ export function SnakeCanvas({ gridSize, snake, tokens, isPlaying, shake = 0, onC
       )}
     </div>
   );
+
+  // Render fullscreen using Portal
+  if (fullscreen) {
+    return createPortal(
+      <div className="fixed inset-0 z-[9999] bg-slate-950 flex flex-col items-center justify-center p-8">
+        {/* Definition prompt at top */}
+        {currentDefinition && (
+          <div className="mb-6 max-w-4xl w-full">
+            <div className="bg-gradient-to-br from-primary-500/20 to-primary-600/10 border-2 border-primary-400/50 rounded-xl p-6 shadow-2xl backdrop-blur-sm">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary-500 text-white shadow-lg">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                </div>
+                <p className="text-lg font-bold uppercase tracking-wide text-primary-300">
+                  Hitta begreppet som matchar:
+                </p>
+              </div>
+              <p className="text-xl font-medium text-white leading-relaxed">
+                {currentDefinition}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Canvas */}
+        {canvasElement}
+      </div>,
+      document.body
+    );
+  }
+
+  return canvasElement;
 }
 
 // Drawing functions
@@ -348,7 +415,7 @@ function drawTokens(ctx: CanvasRenderingContext2D, tokens: Token[], cellSize: nu
   for (const token of tokens) {
     const x = token.position.x * cellSize + cellSize / 2;
     const y = token.position.y * cellSize + cellSize / 2;
-    const r = cellSize * 0.45;
+    const r = cellSize * 0.4; // Slightly smaller to give more room for text
 
     ctx.save();
 
@@ -386,37 +453,40 @@ function drawTokens(ctx: CanvasRenderingContext2D, tokens: Token[], cellSize: nu
 
     ctx.shadowBlur = 0;
 
-    // Text label
-    const maxWidth = cellSize * 2.5;
-    const layout = layoutText(ctx, token.term, maxWidth, 3, Math.floor(cellSize * 0.8));
+    // Text label - constrained to fit within cell to prevent overflow
+    const maxWidth = cellSize * 0.95; // Keep text within cell bounds
+    const startFontSize = Math.min(12, Math.floor(cellSize * 0.3)); // Smaller starting size
+    const layout = layoutText(ctx, token.term, maxWidth, 2, startFontSize); // Max 2 lines
 
     if (layout.lines.length > 0) {
       const { fontSize, lines, lineWidths } = layout;
-      const padX = 8;
-      const padY = 5;
-      const gap = 2;
+      const padX = 4; // Minimal padding
+      const padY = 3; // Minimal padding
+      const gap = 1;
       const chipW = Math.max(...lineWidths, 0) + padX * 2;
       const chipH = fontSize * lines.length + padY * 2 + (lines.length - 1) * gap;
 
-      // Background chip
-      drawRoundedRect(ctx, x - chipW / 2, y - chipH / 2, chipW, chipH, 8, 'rgba(0, 0, 0, 0.75)');
+      // Background chip - ensure it stays within cell bounds
+      const chipX = Math.max(chipW / 2, Math.min(x, cellSize * token.position.x + cellSize - chipW / 2));
+      const chipY = Math.max(chipH / 2, Math.min(y, cellSize * token.position.y + cellSize - chipH / 2));
+      drawRoundedRect(ctx, chipX - chipW / 2, chipY - chipH / 2, chipW, chipH, 6, 'rgba(0, 0, 0, 0.8)');
 
       // Text
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.font = `800 ${fontSize}px system-ui, -apple-system, sans-serif`;
+      ctx.font = `700 ${fontSize}px system-ui, -apple-system, sans-serif`;
 
       for (let i = 0; i < lines.length; i++) {
-        const ly = y - chipH / 2 + padY + fontSize / 2 + i * (fontSize + gap);
+        const ly = chipY - chipH / 2 + padY + fontSize / 2 + i * (fontSize + gap);
 
-        // Text outline
-        ctx.lineWidth = Math.max(2, fontSize / 6);
+        // Text outline - thinner for small text
+        ctx.lineWidth = Math.max(1.5, fontSize / 8);
         ctx.strokeStyle = 'rgba(0, 0, 0, 0.9)';
-        ctx.strokeText(lines[i], x, ly);
+        ctx.strokeText(lines[i], chipX, ly);
 
         // Text fill
         ctx.fillStyle = '#ffffff';
-        ctx.fillText(lines[i], x, ly);
+        ctx.fillText(lines[i], chipX, ly);
       }
     }
 
@@ -481,10 +551,11 @@ function layoutText(
   startSize: number
 ): { fontSize: number; lines: string[]; lineWidths: number[] } {
   text = String(text || '').trim();
-  if (!text) return { fontSize: 14, lines: [''], lineWidths: [0] };
+  if (!text) return { fontSize: 10, lines: [''], lineWidths: [0] };
 
-  for (let fontSize = startSize; fontSize >= 10; fontSize -= 2) {
-    ctx.font = `800 ${fontSize}px system-ui, -apple-system, sans-serif`;
+  // Try progressively smaller font sizes
+  for (let fontSize = startSize; fontSize >= 8; fontSize -= 1) {
+    ctx.font = `700 ${fontSize}px system-ui, -apple-system, sans-serif`; // Changed to 700 weight
     const lines: string[] = [];
     const widths: number[] = [];
     const words = text.split(/\s+/);
@@ -498,11 +569,26 @@ function layoutText(
       if (testWidth <= maxW) {
         current = testLine;
       } else {
-        if (current) {
-          lines.push(current);
-          widths.push(ctx.measureText(current).width);
+        // If single word is too long, try to fit it anyway or truncate
+        if (!current && word.length > 0) {
+          const wordWidth = ctx.measureText(word).width;
+          if (wordWidth > maxW && word.length > 3) {
+            // Truncate long word
+            let truncated = word;
+            while (ctx.measureText(truncated + '...').width > maxW && truncated.length > 1) {
+              truncated = truncated.slice(0, -1);
+            }
+            current = truncated + '...';
+          } else {
+            current = word;
+          }
+        } else {
+          if (current) {
+            lines.push(current);
+            widths.push(ctx.measureText(current).width);
+          }
+          current = word;
         }
-        current = word;
       }
 
       if (lines.length >= maxLines) break;
@@ -513,15 +599,18 @@ function layoutText(
       widths.push(ctx.measureText(current).width);
     }
 
-    if (lines.length <= maxLines) {
+    // Check if all lines fit
+    if (lines.length <= maxLines && lines.every(line => ctx.measureText(line).width <= maxW)) {
       return { fontSize, lines, lineWidths: widths };
     }
   }
 
-  // Fallback
-  const fontSize = 10;
-  ctx.font = `800 ${fontSize}px system-ui, -apple-system, sans-serif`;
-  const lines = [text.substring(0, 20) + (text.length > 20 ? '...' : '')];
+  // Fallback - very small text
+  const fontSize = 8;
+  ctx.font = `700 ${fontSize}px system-ui, -apple-system, sans-serif`;
+  const maxChars = Math.floor(maxW / (fontSize * 0.6));
+  const truncated = text.length > maxChars ? text.substring(0, maxChars - 3) + '...' : text;
+  const lines = [truncated];
   const widths = [ctx.measureText(lines[0]).width];
   return { fontSize, lines, lineWidths: widths };
 }

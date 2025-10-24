@@ -452,3 +452,276 @@ export interface ExplainSelectionResponse {
   explanation: string;
   example?: string;
 }
+
+// Subject Hubs - Ämnesspecifika sektioner
+export type SubjectHub =
+  | 'svenska'
+  | 'engelska'
+  | 'matematik'
+  | 'so'
+  | 'no'
+  | 'bild';
+
+export type AgeGroup = '1-3' | '4-6' | '7-9';
+
+export interface SubjectActivity {
+  id: string;
+  subjectHub: SubjectHub;
+  category: string;
+  name: string;
+  tagline: string;
+  description: string;
+  ageGroups: AgeGroup[];
+  icon: string;
+  status: 'available' | 'coming-soon';
+  componentPath?: string;
+  requiredMaterials?: boolean;
+  estimatedDuration?: string;
+  difficulty?: Difficulty;
+  tags?: string[];
+}
+
+export interface SubjectCategory {
+  id: string;
+  name: string;
+  description: string;
+  icon?: string;
+  activities: SubjectActivity[];
+  ageSpecific: boolean;
+}
+
+export interface SubjectHubDefinition {
+  id: SubjectHub;
+  name: string;
+  description: string;
+  icon: string;
+  gradient: string;
+  categories: SubjectCategory[];
+}
+
+export interface SubjectSession {
+  id: string;
+  subjectHub: SubjectHub;
+  activityId: string;
+  ageGroup: AgeGroup;
+  startedAt: Date;
+  endedAt?: Date;
+  durationSeconds: number;
+  score?: number;
+  correctAnswers?: number;
+  totalQuestions?: number;
+  xpEarned: number;
+  materialId?: string;
+}
+
+// Pedagogical Taxonomies
+export type SOLOLevel =
+  | 'prestructural'     // Förstår inte, gissar
+  | 'unistructural'     // En aspekt i taget
+  | 'multistructural'   // Flera aspekter, ej sammankopplade
+  | 'relational'        // Ser samband mellan aspekter
+  | 'extended-abstract'; // Generaliserar till nya situationer
+
+export type BloomLevel =
+  | 'remember'     // Komma ihåg fakta
+  | 'understand'   // Förstå koncept
+  | 'apply'        // Tillämpa i nya situationer
+  | 'analyze'      // Bryta ner problem
+  | 'evaluate'     // Bedöma strategier
+  | 'create';      // Skapa egna problem
+
+// Activity Questions with Pedagogical Support
+export interface ActivityQuestion {
+  id: string;
+  activityId: string;
+  question: string;
+  questionType: 'multiple-choice' | 'fill-blank' | 'open-ended' | 'visual-select' | 'number-input';
+  correctAnswer: string | number | string[];
+  options?: string[] | number[]; // För multiple-choice
+  visualOptions?: { id: string; image?: string; label: string; value: number | string }[];
+  explanation?: string;
+  hint1?: string;
+  hint2?: string;
+  hint3?: string;
+  difficulty: Difficulty;
+  conceptArea: string;
+  ageGroup: AgeGroup;
+
+  // Taxonomi
+  soloLevel: SOLOLevel;
+  bloomLevel: BloomLevel;
+
+  // Scaffolding
+  visualSupport?: boolean; // Visa bilder/diagram
+  showNumberLine?: boolean; // Visa talinje
+  showConcreteObjects?: boolean; // Visa konkreta objekt (äpplen, etc)
+  showWorkingExample?: boolean; // Visa lösningsexempel
+
+  // Progression
+  prerequisiteQuestions?: string[];
+  unlockQuestions?: string[];
+
+  // Kontext
+  realWorldContext?: string;
+  personalizationHint?: string; // T.ex. "use_student_interests"
+
+  // Metakognition
+  reflectionPrompt?: string;
+  strategyPrompt?: string;
+}
+
+// Student's Attempt at a Question
+export interface ActivityAttempt {
+  id: string;
+  userId: string;
+  sessionId: string;
+  activityId: string;
+  subjectHub: SubjectHub;
+  ageGroup: AgeGroup;
+  questionId: string;
+  questionConceptArea: string;
+
+  // Answer data
+  userAnswer: string | number | string[];
+  correctAnswer: string | number | string[];
+  isCorrect: boolean;
+
+  // Timing
+  timestamp: Date;
+  timeSpent: number; // millisekunder
+
+  // Support used
+  hintsUsed: number;
+  scaffoldingUsed: string[]; // ['visualSupport', 'numberLine']
+
+  // Taxonomic levels
+  soloLevel: SOLOLevel;
+  bloomLevel: BloomLevel;
+
+  // AI feedback (för open-ended)
+  aiFeedback?: string;
+  aiConfidence?: number; // 0-1
+}
+
+// Mistakes to Review (Spaced Repetition)
+export interface ActivityMistake {
+  id: string;
+  userId: string;
+  activityId: string;
+  subjectHub: SubjectHub;
+  questionId: string;
+  conceptArea: string;
+
+  // Question data
+  question: string;
+  userAnswer: string | number;
+  correctAnswer: string | number;
+
+  // Spaced repetition
+  mistakeCount: number;
+  lastMistakeAt: Date;
+  needsReview: boolean;
+  nextReviewAt?: Date;
+  interval: number; // Dagar till nästa repetition
+  easeFactor: number; // 2.5 default (SM-2 algorithm)
+
+  // Taxonomic context
+  soloLevelAtMistake: SOLOLevel;
+  bloomLevelAtMistake: BloomLevel;
+
+  // Feedback
+  aiFeedback?: string;
+  personalizedExplanation?: string;
+}
+
+// Student's Cognitive Profile
+export interface StudentCognitiveProfile {
+  userId: string;
+  subjectHub: SubjectHub;
+  lastUpdated: Date;
+
+  // Concept mastery levels
+  conceptLevels: {
+    [conceptArea: string]: {
+      soloLevel: SOLOLevel;
+      bloomLevel: BloomLevel;
+      confidence: number; // 0-1
+      lastAssessment: Date;
+      totalAttempts: number;
+      successRate: number; // 0-1
+    };
+  };
+
+  // Learning preferences
+  preferredScaffolding: {
+    visualLearner: number; // 0-1
+    needsConcreteMaterials: number;
+    needsWorkingExamples: number;
+    prefersFastPace: number;
+    strugglesWithAbstraction: number;
+  };
+
+  // Metacognitive skills
+  metacognitionLevel: {
+    selfReflection: number;
+    strategyAwareness: number;
+    errorDetection: number;
+  };
+
+  // Zone of Proximal Development
+  currentZPD: {
+    independentLevel: SOLOLevel;
+    assistedLevel: SOLOLevel;
+    targetLevel: SOLOLevel;
+  };
+
+  // Interests for personalization
+  interests?: string[];
+}
+
+// Enhanced Session with Pedagogical Tracking
+export interface PedagogicalSession extends SubjectSession {
+  attempts: ActivityAttempt[];
+  mistakesMade: string[]; // IDs to ActivityMistake
+
+  // Pedagogical journey
+  pedagogicalJourney: {
+    startSOLOLevel: SOLOLevel;
+    endSOLOLevel: SOLOLevel;
+    soloLevelProgression: SOLOLevel[];
+    bloomLevelsEngaged: BloomLevel[];
+    scaffoldingUsed: string[];
+    hintsUsedTotal: number;
+
+    // Metacognitive reflections
+    metacognitiveReflections?: {
+      question: string;
+      reflection: string;
+      timestamp: Date;
+    }[];
+
+    // Breakthrough moments
+    breakthroughMoments?: {
+      conceptArea: string;
+      description: string;
+      fromLevel: SOLOLevel;
+      toLevel: SOLOLevel;
+      timestamp: Date;
+    }[];
+  };
+
+  // Concept areas covered
+  conceptsStruggled: string[];
+  conceptsMastered: string[];
+  conceptsNeedReview: string[];
+
+  // Adaptive difficulty tracking
+  difficultyPath: {
+    questionId: string;
+    difficulty: Difficulty;
+    soloLevel: SOLOLevel;
+    bloomLevel: BloomLevel;
+    result: 'correct' | 'incorrect';
+    adjustment: 'increase' | 'decrease' | 'maintain';
+  }[];
+}
