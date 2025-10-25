@@ -25,6 +25,7 @@ import {
   X,
   StickyNote,
   Loader2,
+  RotateCcw,
 } from 'lucide-react';
 import { MainLayout } from '../components/layout/MainLayout';
 import { Card } from '../components/common/Card';
@@ -34,7 +35,10 @@ import { PersonalizedExamplesModal } from '../components/common/PersonalizedExam
 import { ReadingModeToolbar } from '../components/reading/ReadingModeToolbar';
 import { ReadingRuler } from '../components/reading/ReadingRuler';
 import { NotesSection } from '../components/material/NotesSection';
+import { CrosswordGame } from '../components/games/CrosswordGame';
 import { useAppStore } from '../store/appStore';
+import { generateCrossword } from '../utils/crosswordGenerator';
+import type { CrosswordGrid } from '../types/crossword';
 import {
   generateFlashcards,
   generateQuestions,
@@ -164,7 +168,6 @@ export function MaterialDetailPage() {
   const materials = useAppStore((state) => state.materials);
   const loadMaterials = useAppStore((state) => state.loadMaterials);
   const updateMaterial = useAppStore((state) => state.updateMaterial);
-  const addMaterial = useAppStore((state) => state.addMaterial);
   const setError = useAppStore((state) => state.setError);
   const user = useAppStore((state) => state.user);
 
@@ -191,14 +194,18 @@ export function MaterialDetailPage() {
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [nextSteps, setNextSteps] = useState<NextStepsResponse | null>(null);
   const [isGeneratingNextSteps, setIsGeneratingNextSteps] = useState(false);
+  const [crossword, setCrossword] = useState<CrosswordGrid | null>(null);
+  const [isGeneratingCrossword, setIsGeneratingCrossword] = useState(false);
   const contentRef = useRef<HTMLDivElement | null>(null);
   const flashcardsRef = useRef<HTMLDivElement | null>(null);
   const quizRef = useRef<HTMLDivElement | null>(null);
   const conceptsRef = useRef<HTMLDivElement | null>(null);
+  const crosswordRef = useRef<HTMLDivElement | null>(null);
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     flashcards: false,
     quiz: false,
     concepts: false,
+    crossword: false,
   });
   const [readingMode, setReadingMode] = useState<ReadingModeSettings>({
     active: false,
@@ -791,6 +798,52 @@ export function MaterialDetailPage() {
       setError('Kunde inte generera ny sektion. Försök igen.');
     } finally {
       setIsGeneratingNextSteps(false);
+    }
+  };
+
+  const handleGenerateCrossword = async () => {
+    if (!material) return;
+
+    console.log('Generating crossword for material:', material.title);
+    setIsGeneratingCrossword(true);
+
+    try {
+      // Check if we have concepts, if not generate them first
+      let conceptsToUse = material.concepts || [];
+
+      if (conceptsToUse.length === 0) {
+        console.log('No concepts found, generating them first...');
+        const generatedConcepts = await generateConcepts(material.content, { grade });
+        conceptsToUse = generatedConcepts;
+
+        // Save the concepts to the material
+        await updateMaterial(material.id, {
+          concepts: generatedConcepts,
+          updatedAt: new Date(),
+        });
+      }
+
+      // Generate the crossword from concepts
+      const generatedCrossword = generateCrossword(conceptsToUse);
+
+      if (!generatedCrossword) {
+        setError('Kunde inte skapa ett korsord från begreppen. Försök lägga till fler begrepp.');
+        return;
+      }
+
+      setCrossword(generatedCrossword);
+      setOpenSections((prev) => ({ ...prev, crossword: true }));
+
+      // Scroll to crossword section
+      setTimeout(() => {
+        crosswordRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+
+    } catch (error) {
+      console.error('Crossword generation error', error);
+      setError('Kunde inte generera korsord. Försök igen.');
+    } finally {
+      setIsGeneratingCrossword(false);
     }
   };
 
@@ -2285,7 +2338,7 @@ export function MaterialDetailPage() {
       {/* Additional Sections - "Läs mer" content */}
       {material?.additionalSections && material.additionalSections.length > 0 && (
         <div className="space-y-4 mt-6">
-          {material.additionalSections.map((section, index) => {
+          {material.additionalSections.map((section) => {
             const difficultyConfig = {
               easier: { icon: '📘', color: 'from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20', border: 'border-l-4 border-blue-400', badge: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' },
               same: { icon: '📗', color: 'from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20', border: 'border-l-4 border-green-400', badge: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' },
@@ -2335,7 +2388,9 @@ export function MaterialDetailPage() {
 
                 {!section.collapsed && (
                   <div className="prose dark:prose-invert max-w-none">
-                    <MarkdownRenderer value={section.content} />
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {section.content}
+                    </ReactMarkdown>
                   </div>
                 )}
               </Card>
@@ -2346,9 +2401,9 @@ export function MaterialDetailPage() {
 
       {/* Next Steps Section */}
       <Card className="mt-8 space-y-4 border-t-4 border-gradient-to-r from-green-500 to-teal-500">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-teal-600 rounded-xl flex items-center justify-center shadow-md">
+            <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-teal-600 rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
               <Lightbulb className="h-6 w-6 text-white" />
             </div>
             <div>
@@ -2364,7 +2419,7 @@ export function MaterialDetailPage() {
             <Button
               onClick={handleGenerateNextSteps}
               isLoading={isGeneratingNextSteps}
-              className="bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white"
+              className="bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white w-full sm:w-auto"
             >
               <Sparkles className="mr-2 h-4 w-4" />
               Visa nästa steg
