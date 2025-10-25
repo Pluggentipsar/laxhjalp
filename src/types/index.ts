@@ -27,7 +27,7 @@ export type MaterialType = 'photo' | 'pdf' | 'text' | 'voice' | 'link';
 
 export type StudyMode = 'flashcards' | 'quiz' | 'chat' | 'mindmap' | 'read';
 
-export type GameType = 'snake' | 'memory' | 'whack' | 'time-attack' | 'concept-builder' | 'boss';
+export type GameType = 'snake' | 'memory' | 'whack' | 'time-attack' | 'concept-builder' | 'boss' | 'crossword';
 
 export type GameScopeMode = 'single-material' | 'multi-material' | 'generated';
 

@@ -14,6 +14,7 @@ import { QuizStudyPage } from './pages/study/QuizStudyPage';
 import { ChatModeHub } from './pages/study/ChatModeHub';
 import { ChatStudyPage } from './pages/study/ChatStudyPage';
 import { ConceptExplorerPage } from './pages/study/ConceptExplorerPage';
+import { CrosswordPage } from './pages/study/CrosswordPage';
 import { SnakeGamePage } from './pages/study/SnakeGamePage';
 import { WhackATermPage } from './pages/study/WhackATermPage';
 import { GamesHubPage } from './pages/GamesHubPage';
@@ -121,6 +122,10 @@ function AppContent() {
       <Route
         path="/study/concepts/:materialId"
         element={<ConceptExplorerPage />}
+      />
+      <Route
+        path="/study/material/:materialId/crossword"
+        element={<CrosswordPage />}
       />
       <Route
         path="/study/material/:materialId/game/snake"

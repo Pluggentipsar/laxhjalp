@@ -25,7 +25,6 @@ import {
   X,
   StickyNote,
   Loader2,
-  RotateCcw,
 } from 'lucide-react';
 import { MainLayout } from '../components/layout/MainLayout';
 import { Card } from '../components/common/Card';
@@ -35,10 +34,7 @@ import { PersonalizedExamplesModal } from '../components/common/PersonalizedExam
 import { ReadingModeToolbar } from '../components/reading/ReadingModeToolbar';
 import { ReadingRuler } from '../components/reading/ReadingRuler';
 import { NotesSection } from '../components/material/NotesSection';
-import { CrosswordGame } from '../components/games/CrosswordGame';
 import { useAppStore } from '../store/appStore';
-import { generateCrossword } from '../utils/crosswordGenerator';
-import type { CrosswordGrid } from '../types/crossword';
 import {
   generateFlashcards,
   generateQuestions,
@@ -194,18 +190,14 @@ export function MaterialDetailPage() {
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [nextSteps, setNextSteps] = useState<NextStepsResponse | null>(null);
   const [isGeneratingNextSteps, setIsGeneratingNextSteps] = useState(false);
-  const [crossword, setCrossword] = useState<CrosswordGrid | null>(null);
-  const [isGeneratingCrossword, setIsGeneratingCrossword] = useState(false);
   const contentRef = useRef<HTMLDivElement | null>(null);
   const flashcardsRef = useRef<HTMLDivElement | null>(null);
   const quizRef = useRef<HTMLDivElement | null>(null);
   const conceptsRef = useRef<HTMLDivElement | null>(null);
-  const crosswordRef = useRef<HTMLDivElement | null>(null);
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     flashcards: false,
     quiz: false,
     concepts: false,
-    crossword: false,
   });
   const [readingMode, setReadingMode] = useState<ReadingModeSettings>({
     active: false,
@@ -798,52 +790,6 @@ export function MaterialDetailPage() {
       setError('Kunde inte generera ny sektion. Försök igen.');
     } finally {
       setIsGeneratingNextSteps(false);
-    }
-  };
-
-  const handleGenerateCrossword = async () => {
-    if (!material) return;
-
-    console.log('Generating crossword for material:', material.title);
-    setIsGeneratingCrossword(true);
-
-    try {
-      // Check if we have concepts, if not generate them first
-      let conceptsToUse = material.concepts || [];
-
-      if (conceptsToUse.length === 0) {
-        console.log('No concepts found, generating them first...');
-        const generatedConcepts = await generateConcepts(material.content, { grade });
-        conceptsToUse = generatedConcepts;
-
-        // Save the concepts to the material
-        await updateMaterial(material.id, {
-          concepts: generatedConcepts,
-          updatedAt: new Date(),
-        });
-      }
-
-      // Generate the crossword from concepts
-      const generatedCrossword = generateCrossword(conceptsToUse);
-
-      if (!generatedCrossword) {
-        setError('Kunde inte skapa ett korsord från begreppen. Försök lägga till fler begrepp.');
-        return;
-      }
-
-      setCrossword(generatedCrossword);
-      setOpenSections((prev) => ({ ...prev, crossword: true }));
-
-      // Scroll to crossword section
-      setTimeout(() => {
-        crosswordRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 100);
-
-    } catch (error) {
-      console.error('Crossword generation error', error);
-      setError('Kunde inte generera korsord. Försök igen.');
-    } finally {
-      setIsGeneratingCrossword(false);
     }
   };
 

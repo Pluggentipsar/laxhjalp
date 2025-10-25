@@ -448,6 +448,13 @@ export function GamesHubPage() {
       handlePlaySnake(gamePreferences.sourceMode);
     } else if (definition.id === 'whack') {
       handlePlayWhack(gamePreferences.sourceMode);
+    } else if (definition.id === 'crossword') {
+      const materialId = ensureSingleMaterialSelection();
+      if (!materialId) {
+        alert('Välj ett material innan du startar Korsord.');
+        return;
+      }
+      navigate(`/study/material/${materialId}/crossword`);
     } else {
       alert('Spelet är inte implementerat än.');
     }

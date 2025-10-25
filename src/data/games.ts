@@ -41,6 +41,23 @@ export const GAME_DEFINITIONS: GameDefinition[] = [
     tags: ['Tempo', 'Adaptivt'],
   },
   {
+    id: 'crossword',
+    name: 'Korsord',
+    tagline: 'Lös korsord från begrepp',
+    description:
+      'Generera och lös ett korsord baserat på dina begrepp. Perfekt för att repetera definitioner på ett roligt sätt.',
+    status: 'available',
+    focus: ['begrepp', 'minne', 'ordförståelse'],
+    supports: {
+      scope: ['single-material'],
+      multiplayer: false,
+    },
+    averageDuration: '10 min',
+    difficulty: 'easy',
+    icon: 'Grid3x3',
+    tags: ['Pussel', 'Lugnt tempo'],
+  },
+  {
     id: 'memory',
     name: 'Parjakt',
     tagline: 'Matcha par',
