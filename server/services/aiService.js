@@ -284,62 +284,36 @@ export async function generateConcepts(content, options = {}) {
 **Exempel (Målterm: Civilisation):** "Ett organiserat samhälle med hög kulturell och teknologisk utveckling, ofta kännetecknat av städer, lagar och skriftspråk."`;
   }
 
-  const prompt = `# ROLL OCH UPPGIFT
-Du är en expertpedagog och lexikograf specialiserad på att förklara begrepp på ett pedagogiskt sätt. Din uppgift är att identifiera och generera beskrivningar för viktiga måltermer från texten. Beskrivningarna ska användas i pedagogiska spel (t.ex. korsord, flashcards, gissa ordet).
+  const prompt = `Du ska identifiera de ${count} viktigaste begreppen från texten och förklara dem för elever i årskurs ${grade} (${levelDescription}).
 
-# KRITISK REGEL: TABU-REGELN
-Det är ABSOLUT FÖRBJUDET att använda måltermen (eller någon böjning/variant av den) i din beskrivning. Du måste beskriva VAD termen betyder, dess funktion eller dess egenskaper, utan att namnge den.
+${topicSection}${baseMaterial}
 
----
+VIKTIGT - TABU-REGELN:
+Använd ALDRIG själva begreppet/termen i förklaringen. Beskriv VAD det är utan att nämna ordet.
 
-# INPUT
-${topicSection}Identifiera de ${count} viktigaste begreppen/termerna och förklara dem.
-
-**MÅLGRUPPSNIVÅ:** ${targetLevel} - ${levelDescription}
-
-**KONTEXT:**
-${baseMaterial}
-
----
-
-# RIKTLINJER FÖR ${targetLevel}
-
+Riktlinjer för ${targetLevel}:
 ${levelGuidelines}
 
----
-
-# OUTPUT-FORMAT
-Leverera resultatet som ett JSON-objekt med följande struktur:
+Returnera JSON med denna struktur:
 {
   "concepts": [
     {
-      "term": "Måltermen (det viktiga ordet/begreppet)",
-      "definition": "Beskrivning som följer TABU-REGELN och nivåriktlinjerna",
-      "examples": ["Exempel 1", "Exempel 2"]
+      "term": "Det viktiga begreppet/ordet",
+      "definition": "Förklaring som INTE nämner termen",
+      "examples": ["Konkret exempel 1", "Konkret exempel 2"]
     }
   ]
 }
 
----
+Exempel på KORREKTA förklaringar (följer TABU-regeln):
+- Term: "Fotosyntesen" → Definition: "Processen där växter använder solljus för att skapa mat och syre från koldioxid och vatten"
+- Term: "Cykel" → Definition: "Ett fordon med två hjul där man trampar på pedaler för att åka framåt"
 
-# KRITISKA REGLER
-1. **TABU-REGELN**: Använd ALDRIG måltermen eller böjningar av den i beskrivningen
-2. Skriv på ${languageLabel}
-3. Välj verkligen centrala begrepp från texten/temat
-4. Följ stil- och syntaxriktlinjerna för ${targetLevel}
-5. Ge 1-3 konkreta exempel per begrepp (kan utelämnas för abstrakta begrepp)
+Exempel på FELAKTIGA förklaringar (bryter mot TABU-regeln):
+- Term: "Fotosyntesen" → Definition: "Fotosyntesen är när växter..." ❌
+- Term: "Cykel" → Definition: "En cykel är ett fordon..." ❌
 
----
-
-# EXEMPEL PÅ KORREKT FORMAT
-
-**BRA beskrivningar (följer TABU-REGELN):**
-- Term: "Fotosyntesen" → Definition: "Den process där växter omvandlar solljus, koldioxid och vatten till mat och syre"
-- Term: "Demokrati" → Definition: "Ett styrelseskick där folket bestämmer genom att rösta på sina ledare"
-
-**DÅLIGA beskrivningar (bryter mot TABU-REGELN):**
-- Term: "Fotosyntesen" → Definition: "Fotosyntesen är processen där..." ❌
-- Term: "Demokrati" → Definition: "Demokrati betyder att..." ❌`;
+Skapa nu ${count} viktiga begrepp från texten med förklaringar som följer TABU-regeln och passar ${targetLevel}.`;
 
 
   const maxAttempts = 2;
