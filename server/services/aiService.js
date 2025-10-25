@@ -254,39 +254,93 @@ export async function generateConcepts(content, options = {}) {
       ? `TEXT:\n${content}`
       : 'Ingen källtext finns. Skapa begrepp som passar temat och årskursen.';
 
-  const prompt = `Du är en expert på att identifiera och förklara viktiga begrepp för elever i årskurs ${grade}.
+  // Mappa årskurs till pedagogisk nivå
+  let targetLevel = 'Nivå 2';
+  let levelDescription = 'Mellanstadiet (Motsvarande ÅK 6 / 11-13 år)';
+  let levelGuidelines = `
+**Stil:** Informativ och beskrivande. Tydlig och objektiv.
+**Fokus:** Funktion, syfte och kategorisering. Förklara enkla samband.
+**Syntax:** Tydliga meningar, kan innehålla bisatser för att förklara samband.
+**Exempel (Målterm: Boktryckarkonst):** "En teknik för att massproducera texter genom att pressa bokstäver mot papper. Det gjorde att böcker blev billigare."
+**Exempel (Målterm: Amiral):** "En hög militär ledare som bestämmer över en flotta av krigsskepp."`;
 
-${topicSection}Identifiera de ${count} viktigaste begreppen och förklara dem på ett sätt som är lämpligt för årskurs ${grade}.
+  if (grade <= 3) {
+    targetLevel = 'Nivå 1';
+    levelDescription = 'Lågstadiet (Motsvarande ÅK 3 / 8-10 år)';
+    levelGuidelines = `
+**Stil:** Mycket enkel, konkret och relaterbar. Använd jämförelser med saker eleven känner till.
+**Fokus:** Vad gör saken? Hur ser den ut? Vad används den till?
+**Syntax:** Korta meningar. Huvudsakligen huvudsatser.
+**Exempel (Målterm: Cykel):** "Ett fordon med två hjul. Man sitter på en sadel och trampar på pedaler för att åka framåt."
+**Exempel (Målterm: Modig):** "När man vågar göra något fast man tycker att det är lite läskigt."`;
+  } else if (grade >= 7) {
+    targetLevel = 'Nivå 3';
+    levelDescription = 'Högstadiet (Motsvarande ÅK 9 / 14-16 år)';
+    levelGuidelines = `
+**Stil:** Exakt, analytisk och nyanserad. Kan beskriva abstrakta koncept.
+**Fokus:** Teoretiska definitioner, implikationer och roll i ett större system.
+**Syntax:** Komplex och varierad. Användning av exakta facktermer (förutom måltermen själv).
+**Exempel (Målterm: Singularitet):** "En hypotetisk framtida tidpunkt då den teknologiska utvecklingen accelererar bortom mänsklig kontroll och förståelse, ofta kopplat till maskinintelligens."
+**Exempel (Målterm: Civilisation):** "Ett organiserat samhälle med hög kulturell och teknologisk utveckling, ofta kännetecknat av städer, lagar och skriftspråk."`;
+  }
 
+  const prompt = `# ROLL OCH UPPGIFT
+Du är en expertpedagog och lexikograf specialiserad på att förklara begrepp på ett pedagogiskt sätt. Din uppgift är att identifiera och generera beskrivningar för viktiga måltermer från texten. Beskrivningarna ska användas i pedagogiska spel (t.ex. korsord, flashcards, gissa ordet).
+
+# KRITISK REGEL: TABU-REGELN
+Det är ABSOLUT FÖRBJUDET att använda måltermen (eller någon böjning/variant av den) i din beskrivning. Du måste beskriva VAD termen betyder, dess funktion eller dess egenskaper, utan att namnge den.
+
+---
+
+# INPUT
+${topicSection}Identifiera de ${count} viktigaste begreppen/termerna och förklara dem.
+
+**MÅLGRUPPSNIVÅ:** ${targetLevel} - ${levelDescription}
+
+**KONTEXT:**
 ${baseMaterial}
 
-Returnera ett JSON-objekt med denna struktur:
+---
+
+# RIKTLINJER FÖR ${targetLevel}
+
+${levelGuidelines}
+
+---
+
+# OUTPUT-FORMAT
+Leverera resultatet som ett JSON-objekt med följande struktur:
 {
   "concepts": [
     {
-      "term": "Begreppet",
-      "definition": "En beskrivning som INTE nämner själva begreppet",
+      "term": "Måltermen (det viktiga ordet/begreppet)",
+      "definition": "Beskrivning som följer TABU-REGELN och nivåriktlinjerna",
       "examples": ["Exempel 1", "Exempel 2"]
     }
   ]
 }
 
-VIKTIGA REGLER:
-- Skriv på ${languageLabel}
-- Välj verkligen centrala begrepp kopplade till temat
-- Ge tydliga definitioner med enkelt språk för årskurs ${grade}
-- **ANVÄND ALDRIG SJÄLVA BEGREPPET I DEFINITIONEN** - beskriv vad det är utan att nämna ordet
-- Ge 1-3 konkreta exempel per begrepp
-- Förklara abstrakta begrepp med vardagliga liknelser
+---
 
-Exempel på BRA definitioner (som INTE nämner termen):
-- Term: "Industriella revolutionen" → Definition: "Ett samhällsomvandlande skifte där produktionen gick från hantverk till fabriker"
-- Term: "Ångmaskin" → Definition: "En maskin som utnyttjade ånga för att skapa rörelse och driva fabriker och tåg"
-- Term: "Urbanisering" → Definition: "Den process där människor flyttar från landsbygden till städer för att arbeta"
+# KRITISKA REGLER
+1. **TABU-REGELN**: Använd ALDRIG måltermen eller böjningar av den i beskrivningen
+2. Skriv på ${languageLabel}
+3. Välj verkligen centrala begrepp från texten/temat
+4. Följ stil- och syntaxriktlinjerna för ${targetLevel}
+5. Ge 1-3 konkreta exempel per begrepp (kan utelämnas för abstrakta begrepp)
 
-Exempel på DÅLIGA definitioner (använder termen):
+---
+
+# EXEMPEL PÅ KORREKT FORMAT
+
+**BRA beskrivningar (följer TABU-REGELN):**
+- Term: "Fotosyntesen" → Definition: "Den process där växter omvandlar solljus, koldioxid och vatten till mat och syre"
+- Term: "Demokrati" → Definition: "Ett styrelseskick där folket bestämmer genom att rösta på sina ledare"
+
+**DÅLIGA beskrivningar (bryter mot TABU-REGELN):**
 - Term: "Fotosyntesen" → Definition: "Fotosyntesen är processen där..." ❌
-- Term: "Derivata" → Definition: "En derivata är..." ❌`;
+- Term: "Demokrati" → Definition: "Demokrati betyder att..." ❌`;
+
 
   const maxAttempts = 2;
   let lastError = null;
@@ -299,7 +353,7 @@ Exempel på DÅLIGA definitioner (använder termen):
           {
             role: 'system',
             content:
-              'Du är en pedagogisk expert som förklarar begrepp för svenska elever. Du returnerar alltid välformaterad JSON.'
+              'Du är en expertpedagog och lexikograf som skapar pedagogiska beskrivningar av begrepp. Du följer ALLTID TABU-REGELN: använd aldrig måltermen i beskrivningen. Du returnerar alltid välformaterad JSON.'
           },
           {
             role: 'user',
