@@ -70,6 +70,7 @@ function getMaxTokenOptions(value) {
 }
 
 function getTemperatureOptions(value) {
+  // Azure gpt-5-mini stöder inte temperature, använd bara default
   if (useAzure) {
     return {};
   }
@@ -249,10 +250,19 @@ export async function generateConcepts(content, options = {}) {
   const languageLabel =
     language === 'sv' ? 'svenska' : language === 'en' ? 'engelska' : language === 'es' ? 'spanska' : language;
   const topicSection = topicHint ? `Fokusera på följande tema/område: ${topicHint.trim()}.\n\n` : '';
-  const baseMaterial =
-    content && content.trim().length > 0
-      ? `TEXT:\n${content}`
-      : 'Ingen källtext finns. Skapa begrepp som passar temat och årskursen.';
+
+  // Begränsa texten till max 4000 tecken för att undvika token-limits
+  const MAX_CONTENT_LENGTH = 4000;
+  let truncatedContent = content && content.trim().length > 0 ? content.trim() : '';
+
+  if (truncatedContent.length > MAX_CONTENT_LENGTH) {
+    truncatedContent = truncatedContent.slice(0, MAX_CONTENT_LENGTH) + '...';
+    console.log(`[generateConcepts] Innehåll trunkerat från ${content.length} till ${MAX_CONTENT_LENGTH} tecken`);
+  }
+
+  const baseMaterial = truncatedContent.length > 0
+    ? `TEXT:\n${truncatedContent}`
+    : 'Ingen källtext finns. Skapa begrepp som passar temat och årskursen.';
 
   // Mappa årskurs till pedagogisk nivå
   let targetLevel = 'Nivå 2';
@@ -284,36 +294,33 @@ export async function generateConcepts(content, options = {}) {
 **Exempel (Målterm: Civilisation):** "Ett organiserat samhälle med hög kulturell och teknologisk utveckling, ofta kännetecknat av städer, lagar och skriftspråk."`;
   }
 
-  const prompt = `Du ska identifiera de ${count} viktigaste begreppen från texten och förklara dem för elever i årskurs ${grade} (${levelDescription}).
+  const prompt = `Du ska identifiera de ${count} viktigaste begreppen från texten och förklara dem för elever i årskurs ${grade}.
 
-${topicSection}${baseMaterial}
+${baseMaterial}
 
 VIKTIGT - TABU-REGELN:
-Använd ALDRIG själva begreppet/termen i förklaringen. Beskriv VAD det är utan att nämna ordet.
+Använd ALDRIG själva begreppet i förklaringen. Förklara VAD det är utan att nämna ordet.
 
-Riktlinjer för ${targetLevel}:
 ${levelGuidelines}
 
-Returnera JSON med denna struktur:
+Returnera JSON:
 {
   "concepts": [
     {
-      "term": "Det viktiga begreppet/ordet",
-      "definition": "Förklaring som INTE nämner termen",
-      "examples": ["Konkret exempel 1", "Konkret exempel 2"]
+      "term": "Begreppet",
+      "definition": "Förklaring utan att nämna termen",
+      "examples": ["Exempel 1", "Exempel 2"]
     }
   ]
 }
 
-Exempel på KORREKTA förklaringar (följer TABU-regeln):
-- Term: "Fotosyntesen" → Definition: "Processen där växter använder solljus för att skapa mat och syre från koldioxid och vatten"
-- Term: "Cykel" → Definition: "Ett fordon med två hjul där man trampar på pedaler för att åka framåt"
+Exempel KORREKT:
+- Term: "Fotosyntesen" → Definition: "Processen där växter använder solljus för att skapa mat och syre"
 
-Exempel på FELAKTIGA förklaringar (bryter mot TABU-regeln):
-- Term: "Fotosyntesen" → Definition: "Fotosyntesen är när växter..." ❌
-- Term: "Cykel" → Definition: "En cykel är ett fordon..." ❌
+Exempel FELAKTIGT:
+- Term: "Fotosyntesen" → Definition: "Fotosyntesen är..." ❌
 
-Skapa nu ${count} viktiga begrepp från texten med förklaringar som följer TABU-regeln och passar ${targetLevel}.`;
+Skapa ${count} begrepp med förklaringar som följer TABU-regeln.`;
 
 
   const maxAttempts = 2;
@@ -321,13 +328,17 @@ Skapa nu ${count} viktiga begrepp från texten med förklaringar som följer TAB
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
+      console.log(`[generateConcepts] Försök ${attempt}/${maxAttempts}`);
+      console.log(`[generateConcepts] Prompt längd: ${prompt.length} tecken`);
+      console.log(`[generateConcepts] Model: ${getModelName()}`);
+
       const completion = await client.chat.completions.create({
         model: getModelName(),
         messages: [
           {
             role: 'system',
             content:
-              'Du är en expertpedagog och lexikograf som skapar pedagogiska beskrivningar av begrepp. Du följer ALLTID TABU-REGELN: använd aldrig måltermen i beskrivningen. Du returnerar alltid välformaterad JSON.'
+              'Du är en expertpedagog som skapar pedagogiska beskrivningar av begrepp. TABU-REGEL: Använd aldrig måltermen i beskrivningen. Returnera alltid JSON.'
           },
           {
             role: 'user',
@@ -339,16 +350,37 @@ Skapa nu ${count} viktiga begrepp från texten med förklaringar som följer TAB
         ...getMaxTokenOptions(2000)
       });
 
-      const result = safeParseJson(
-        completion.choices?.[0]?.message?.content,
-        `Koncept (försök ${attempt})`
-      );
+      console.log('[generateConcepts] AI-svar mottaget');
+      console.log('[generateConcepts] Completion full object:', JSON.stringify(completion, null, 2));
+
+      const rawContent = completion.choices?.[0]?.message?.content;
+      const finishReason = completion.choices?.[0]?.finish_reason;
+
+      console.log('[generateConcepts] Rå innehåll längd:', rawContent?.length);
+      console.log('[generateConcepts] Finish reason:', finishReason);
+
+      // Om Azure returnerar tomt innehåll, kan det vara content filtering
+      if (!rawContent || rawContent.trim().length === 0) {
+        console.error('[generateConcepts] Azure returnerade tomt innehåll!');
+        console.error('[generateConcepts] Finish reason:', finishReason);
+        console.error('[generateConcepts] Choices array:', JSON.stringify(completion.choices, null, 2));
+
+        if (finishReason === 'content_filter') {
+          throw new Error('Azure OpenAI blockerade svaret pga content filtering. Textinnehållet kan innehålla känsligt material.');
+        }
+
+        throw new Error(`Azure OpenAI returnerade tomt svar. Finish reason: ${finishReason}. Kontrollera deployment.`);
+      }
+
+      const result = safeParseJson(rawContent, `Koncept (försök ${attempt})`);
+      console.log('[generateConcepts] JSON parsed, concepts:', result?.concepts?.length);
 
       if (!Array.isArray(result?.concepts)) {
+        console.error('[generateConcepts] Svaret saknade concepts array:', result);
         throw new Error('Svaret saknade fältet "concepts".');
       }
 
-      return result.concepts.map((concept) => ({
+      const mappedConcepts = result.concepts.map((concept) => ({
         id: crypto.randomUUID(),
         materialId: '',
         term: concept.term,
@@ -356,11 +388,15 @@ Skapa nu ${count} viktiga begrepp från texten med förklaringar som följer TAB
         examples: concept.examples || [],
         relatedConcepts: []
       }));
+
+      console.log('[generateConcepts] Framgång! Returnerar', mappedConcepts.length, 'begrepp');
+      return mappedConcepts;
     } catch (error) {
       lastError = error;
-      console.warn(`AI-generering begrepp försök ${attempt}/${maxAttempts} misslyckades:`, error);
+      console.error(`[generateConcepts] Försök ${attempt}/${maxAttempts} misslyckades:`, error.message);
+      console.error('[generateConcepts] Stack:', error.stack);
       if (attempt === maxAttempts) {
-        console.error('AI-generering concepts fel (slutligt):', error);
+        console.error('[generateConcepts] Alla försök misslyckades');
         throw new Error(`Kunde inte generera begrepp efter flera försök: ${error.message}`);
       }
     }
