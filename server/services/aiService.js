@@ -84,38 +84,73 @@ export async function generateFlashcards(content, options = {}) {
   const { count = 10, difficulty = 'medium', grade = 5 } = options;
   const client = getOpenAIClient();
 
-  const difficultyPrompts = {
-    easy: 'enkla och grundläggande',
-    medium: 'lagom utmanande',
-    hard: 'avancerade och djupgående'
-  };
+  // Mappa årskurs till pedagogisk nivå
+  let targetLevel = 'Nivå 2';
+  let levelDescription = 'Mellanstadiet (Motsvarande ÅK 6 / 11-13 år)';
+  let levelGuidelines = `
+**Fokus:** Processer, orsaker, definitioner och jämförelser. Hur fungerar det? Varför hände det?
+**Frågetyper:** Frågor som kräver förståelse för samband.
+**Svar:** Tydliga och informativa svar. Kan bestå av 1-3 meningar.
+**Exempel:**
+- F: Vad var den stora fördelen med Gutenbergs teknik med "lösa bokstavstyper"?
+- S: Typerna kunde kombineras och återanvändas för att trycka vilka sidor som helst, om och om igen.`;
 
-  const prompt = `Du är en expert på att skapa studiematerial för svenska elever i årskurs ${grade}.
+  if (grade <= 3) {
+    targetLevel = 'Nivå 1';
+    levelDescription = 'Lågstadiet (Motsvarande ÅK 3 / 8-10 år)';
+    levelGuidelines = `
+**Fokus:** Konkreta fakta, identifikation och sekvenser. Vem, vad, var, när.
+**Frågetyper:** Enkla och direkta frågor.
+**Svar:** Korta, enkla meningar eller bara nyckelordet.
+**Exempel:**
+- F: Vad kallas den svåra backen som Erik vill cykla nerför?
+- S: Djävulsbacken.`;
+  } else if (grade >= 7) {
+    targetLevel = 'Nivå 3';
+    levelDescription = 'Högstadiet (Motsvarande ÅK 9 / 14-16 år)';
+    levelGuidelines = `
+**Fokus:** Analys, komplexa koncept, konsekvenser och olika perspektiv.
+**Frågetyper:** Komplexa frågor som kräver syntes av information. "Vad innebär?", "Vilka argument finns?".
+**Svar:** Nyanserade, exakta och kompletta svar. Använder akademiskt språk och relevanta facktermer.
+**Exempel:**
+- F: Vad menas med begreppet "singulariteten" i kontexten av AI?
+- S: Det är tidpunkten när datorer blir smartare än människor och själva kan skapa ännu smartare maskiner, vilket potentiellt leder till en utveckling vi inte kan kontrollera.`;
+  }
 
-Skapa ${count} flashcards från följande text. Flashcards ska vara ${difficultyPrompts[difficulty]} och anpassade för årskurs ${grade}.
+  // Begränsa texten
+  const MAX_CONTENT_LENGTH = 4000;
+  let truncatedContent = content.trim();
+  if (truncatedContent.length > MAX_CONTENT_LENGTH) {
+    truncatedContent = truncatedContent.slice(0, MAX_CONTENT_LENGTH) + '...';
+  }
 
-TEXT:
-${content}
+  const prompt = `Du är en expertpedagog specialiserad på studieteknik och active recall. Skapa ${count} högkvalitativa flashcards från texten.
 
-Returnera ett JSON-objekt med denna struktur:
+KÄLLTEXT:
+${truncatedContent}
+
+MÅLGRUPPSNIVÅ: ${targetLevel} - ${levelDescription}
+
+GRUNDLÄGGANDE PRINCIPER:
+1. Atomicitet: Varje kort fokuserar på ETT specifikt faktum eller koncept
+2. Active Recall: Formulera frågor så eleven måste tänka aktivt
+3. Tydlighet & Koncision: Entydiga frågor och korrekta, koncisa svar
+
+RIKTLINJER FÖR ${targetLevel}:
+${levelGuidelines}
+
+Returnera JSON:
 {
   "flashcards": [
     {
-      "front": "Frågan eller termen",
-      "back": "Svaret eller definitionen",
-      "type": "term-definition",
-      "difficulty": "${difficulty}"
+      "front": "Frågan",
+      "back": "Svaret",
+      "type": "term-definition"
     }
   ]
 }
 
-Regler:
-- Skriv på svenska
-- Använd tydligt och enkelt språk anpassat för årskurs ${grade}
-- Fokusera på viktiga koncept och fakta
-- Variera mellan olika typer av frågor
-- Ge koncisa men kompletta svar
-- Undvik för långa svar (max 2-3 meningar)`;
+Alla svar MÅSTE ha stöd i källtexten.`;
 
   try {
     const completion = await client.chat.completions.create({
@@ -123,7 +158,7 @@ Regler:
       messages: [
         {
           role: 'system',
-          content: 'Du är en pedagogisk expert som skapar studiematerial för svenska elever. Du returnerar alltid välformaterad JSON.'
+          content: 'Du är en expertpedagog specialiserad på active recall och flashcard-design. Du skapar atomära, tydliga frågor anpassade för målgruppen. Returnera alltid JSON.'
         },
         {
           role: 'user',
@@ -132,7 +167,7 @@ Regler:
       ],
       response_format: { type: 'json_object' },
       ...getTemperatureOptions(0.7),
-      ...getMaxTokenOptions(2000)
+      ...getMaxTokenOptions(16000)
     });
 
     const result = safeParseJson(
@@ -347,7 +382,8 @@ Skapa ${count} begrepp med förklaringar som följer TABU-regeln.`;
         ],
         response_format: { type: 'json_object' },
         ...getTemperatureOptions(0.7),
-        ...getMaxTokenOptions(2000)
+        // GPT-5-mini använder reasoning tokens - behöver mycket högre limit
+        ...getMaxTokenOptions(16000)
       });
 
       console.log('[generateConcepts] AI-svar mottaget');
