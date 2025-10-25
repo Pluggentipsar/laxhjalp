@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { updateUserProfile } from '../services/authService';
+import { BackgroundSelector } from '../components/profile/BackgroundSelector';
+import type { BackgroundSettings } from '../types';
 
 export function ProfilePage() {
   const user = useAppStore((state) => state.user);
@@ -73,6 +75,31 @@ export function ProfilePage() {
       await refreshUserProfile();
     } catch (error) {
       console.error('Error removing interest:', error);
+    }
+  };
+
+  const handleBackgroundChange = async (background: BackgroundSettings) => {
+    if (!currentUser) return;
+
+    try {
+      // Update in Firestore
+      await updateUserProfile(currentUser.uid, {
+        settings: {
+          ...user.settings,
+          background,
+        },
+      });
+
+      // Update local state
+      updateUser({
+        settings: {
+          ...user.settings,
+          background,
+        },
+      });
+      await refreshUserProfile();
+    } catch (error) {
+      console.error('Error updating background:', error);
     }
   };
 
@@ -228,6 +255,12 @@ export function ProfilePage() {
             </div>
           </Card>
         </div>
+
+        {/* Bakgrund */}
+        <BackgroundSelector
+          currentBackground={user.settings.background}
+          onBackgroundChange={handleBackgroundChange}
+        />
 
         {/* Mål */}
         <div>

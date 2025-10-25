@@ -24,6 +24,7 @@ import {
   BookOpen,
   X,
   StickyNote,
+  Loader2,
 } from 'lucide-react';
 import { MainLayout } from '../components/layout/MainLayout';
 import { Card } from '../components/common/Card';
@@ -44,10 +45,13 @@ import {
   generatePersonalizedExplanation,
   generatePersonalizedExamples,
   generateSummary,
+  generateNextSteps,
+  generateMaterial,
   type ExplainSelectionResponse,
   type PersonalizedExplanationResponse,
   type PersonalizedExamplesResponse,
   type SummaryResponse,
+  type NextStepsResponse,
 } from '../services/aiService';
 import type { Difficulty, GenerationLogEntry, GlossaryEntry, Material, Note } from '../types';
 
@@ -160,6 +164,7 @@ export function MaterialDetailPage() {
   const materials = useAppStore((state) => state.materials);
   const loadMaterials = useAppStore((state) => state.loadMaterials);
   const updateMaterial = useAppStore((state) => state.updateMaterial);
+  const addMaterial = useAppStore((state) => state.addMaterial);
   const setError = useAppStore((state) => state.setError);
   const user = useAppStore((state) => state.user);
 
@@ -184,6 +189,8 @@ export function MaterialDetailPage() {
   const [isGeneratingExamples, setIsGeneratingExamples] = useState(false);
   const [summary, setSummary] = useState<SummaryResponse | null>(null);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const [nextSteps, setNextSteps] = useState<NextStepsResponse | null>(null);
+  const [isGeneratingNextSteps, setIsGeneratingNextSteps] = useState(false);
   const contentRef = useRef<HTMLDivElement | null>(null);
   const flashcardsRef = useRef<HTMLDivElement | null>(null);
   const quizRef = useRef<HTMLDivElement | null>(null);
@@ -270,6 +277,7 @@ export function MaterialDetailPage() {
     const handleMouseDown = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       mouseDownInContent = !!target.closest('[data-content-area]');
+      console.log('[Selection] MouseDown in content:', mouseDownInContent);
     };
 
     const handleGlobalMouseUp = (e: MouseEvent) => {
@@ -283,6 +291,7 @@ export function MaterialDetailPage() {
 
       // Don't interfere if clicking on buttons or interactive elements
       if (target.closest('button') || target.closest('a') || target.closest('[role="button"]')) {
+        mouseDownInContent = false;
         return;
       }
 
@@ -290,6 +299,7 @@ export function MaterialDetailPage() {
       if (!mouseDownInContent) {
         // Clear menu if clicking outside content area
         setSelectionMenu(null);
+        mouseDownInContent = false;
         return;
       }
 
@@ -300,6 +310,7 @@ export function MaterialDetailPage() {
         // Check if selection still exists and is valid
         if (!selection || selection.rangeCount === 0) {
           setSelectionMenu(null);
+          mouseDownInContent = false;
           return;
         }
 
@@ -308,6 +319,7 @@ export function MaterialDetailPage() {
         // Check for valid text length
         if (!text || text.length === 0 || text.length > 600) {
           setSelectionMenu(null);
+          mouseDownInContent = false;
           return;
         }
 
@@ -315,6 +327,7 @@ export function MaterialDetailPage() {
         const range = selection.getRangeAt(0);
         if (!range || range.collapsed) {
           setSelectionMenu(null);
+          mouseDownInContent = false;
           return;
         }
 
@@ -322,6 +335,7 @@ export function MaterialDetailPage() {
         const rect = range.getBoundingClientRect();
         if (!rect || (rect.width === 0 && rect.height === 0)) {
           setSelectionMenu(null);
+          mouseDownInContent = false;
           return;
         }
 
@@ -341,9 +355,9 @@ export function MaterialDetailPage() {
           top: menuTop,
           left: menuLeft,
         });
-      }, 100); // Increased to 100ms for even more stability
 
-      mouseDownInContent = false;
+        mouseDownInContent = false;
+      }, 100); // Increased to 100ms for even more stability
     };
 
     document.addEventListener('mousedown', handleMouseDown);
@@ -715,6 +729,67 @@ export function MaterialDetailPage() {
       setError('Kunde inte generera sammanfattning.');
     } finally {
       setIsGeneratingSummary(false);
+    }
+  };
+
+  const handleGenerateNextSteps = async () => {
+    if (!material) return;
+
+    console.log('Generating next steps for material:', material.title);
+    setIsGeneratingNextSteps(true);
+    try {
+      const result = await generateNextSteps(displayedContent, grade);
+      console.log('Generated next steps:', result);
+      setNextSteps(result);
+    } catch (error) {
+      console.error('Next steps error', error);
+      setError('Kunde inte generera nästa steg.');
+    } finally {
+      setIsGeneratingNextSteps(false);
+    }
+  };
+
+  const handleGenerateMaterialFromNextStep = async (topic: string, difficulty: 'easier' | 'same' | 'harder', title: string) => {
+    if (!material) return;
+
+    console.log('[MaterialDetailPage] Adding section from next step:', topic, difficulty);
+    setIsGeneratingNextSteps(true);
+
+    try {
+      const result = await generateMaterial(topic, grade, difficulty);
+      console.log('[MaterialDetailPage] Got result:', result);
+
+      // Skapa ny sektion istället för nytt material
+      const newSection = {
+        id: crypto.randomUUID(),
+        title: title,
+        content: result.content,
+        type: 'next-step' as const,
+        difficulty: difficulty,
+        addedAt: new Date(),
+        collapsed: false,
+      };
+
+      // Lägg till sektionen till befintligt material
+      const currentSections = material.additionalSections || [];
+      await updateMaterial(material.id, {
+        additionalSections: [...currentSections, newSection],
+      });
+
+      // Scrolla ner till den nya sektionen
+      setTimeout(() => {
+        const sectionElement = document.getElementById(`section-${newSection.id}`);
+        if (sectionElement) {
+          sectionElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
+
+      console.log('[MaterialDetailPage] Section added successfully');
+    } catch (error) {
+      console.error('[MaterialDetailPage] Error generating section from next step:', error);
+      setError('Kunde inte generera ny sektion. Försök igen.');
+    } finally {
+      setIsGeneratingNextSteps(false);
     }
   };
 
@@ -1842,7 +1917,7 @@ export function MaterialDetailPage() {
         </div>
 
         {explainResult && (
-          <Card className="space-y-2 border-l-4 border-primary-500 bg-primary-50 dark:bg-primary-900/10 relative">
+          <Card className="space-y-2 border-l-4 border-primary-500 bg-primary-50 dark:bg-primary-900/10 relative" data-content-area>
             <button
               onClick={() => setExplainResult(null)}
               className="absolute top-2 right-2 p-1 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
@@ -2179,7 +2254,7 @@ export function MaterialDetailPage() {
 
       {/* Personalized Explanation Result */}
       {personalizedResult && (
-        <Card className="space-y-3 border-l-4 border-pink-500 bg-gradient-to-r from-pink-50 to-purple-50 dark:from-pink-900/10 dark:to-purple-900/10">
+        <Card className="space-y-3 border-l-4 border-pink-500 bg-gradient-to-r from-pink-50 to-purple-50 dark:from-pink-900/10 dark:to-purple-900/10" data-content-area>
           <div className="flex items-center gap-2">
             <Heart className="h-5 w-5 text-pink-500" />
             <h3 className="text-base font-semibold text-gray-900 dark:text-white">
@@ -2205,6 +2280,143 @@ export function MaterialDetailPage() {
           )}
         </Card>
       )}
+
+      {/* Additional Sections - "Läs mer" content */}
+      {material?.additionalSections && material.additionalSections.length > 0 && (
+        <div className="space-y-4 mt-6">
+          {material.additionalSections.map((section, index) => {
+            const difficultyConfig = {
+              easier: { icon: '📘', color: 'from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20', border: 'border-l-4 border-blue-400', badge: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' },
+              same: { icon: '📗', color: 'from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20', border: 'border-l-4 border-green-400', badge: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' },
+              harder: { icon: '📕', color: 'from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20', border: 'border-l-4 border-orange-400', badge: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300' },
+            };
+            const config = difficultyConfig[section.difficulty];
+
+            return (
+              <Card
+                key={section.id}
+                id={`section-${section.id}`}
+                className={`bg-gradient-to-r ${config.color} ${config.border} transition-all`}
+                data-content-area
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">{config.icon}</span>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                          {section.title}
+                        </h3>
+                        <span className={`text-xs px-2 py-1 rounded-full ${config.badge}`}>
+                          {section.difficulty === 'easier' && 'Enklare nivå'}
+                          {section.difficulty === 'same' && 'Samma nivå'}
+                          {section.difficulty === 'harder' && 'Fördjupning'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Tillagd {new Date(section.addedAt).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const updatedSections = material.additionalSections!.map((s) =>
+                        s.id === section.id ? { ...s, collapsed: !s.collapsed } : s
+                      );
+                      updateMaterial(material.id, { additionalSections: updatedSections });
+                    }}
+                    className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
+                    aria-label={section.collapsed ? 'Visa sektion' : 'Dölj sektion'}
+                  >
+                    {section.collapsed ? <ChevronDown className="h-5 w-5" /> : <ChevronUp className="h-5 w-5" />}
+                  </button>
+                </div>
+
+                {!section.collapsed && (
+                  <div className="prose dark:prose-invert max-w-none">
+                    <MarkdownRenderer value={section.content} />
+                  </div>
+                )}
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Next Steps Section */}
+      <Card className="mt-8 space-y-4 border-t-4 border-gradient-to-r from-green-500 to-teal-500">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-teal-600 rounded-xl flex items-center justify-center shadow-md">
+              <Lightbulb className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                Vill du lära dig mer?
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Upptäck relaterade ämnen och nästa steg
+              </p>
+            </div>
+          </div>
+          {!nextSteps && (
+            <Button
+              onClick={handleGenerateNextSteps}
+              isLoading={isGeneratingNextSteps}
+              className="bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white"
+            >
+              <Sparkles className="mr-2 h-4 w-4" />
+              Visa nästa steg
+            </Button>
+          )}
+        </div>
+
+        {nextSteps && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-700 dark:text-gray-300 italic">
+              {nextSteps.introduction}
+            </p>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              {nextSteps.suggestions.map((suggestion, idx) => {
+                const difficultyConfig = {
+                  easier: { icon: '📘', color: 'from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20', border: 'border-blue-200 dark:border-blue-800' },
+                  same: { icon: '📗', color: 'from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20', border: 'border-green-200 dark:border-green-800' },
+                  harder: { icon: '📕', color: 'from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20', border: 'border-orange-200 dark:border-orange-800' },
+                };
+                const config = difficultyConfig[suggestion.difficulty];
+
+                return (
+                  <button
+                    key={idx}
+                    className={`rounded-lg bg-gradient-to-r ${config.color} border ${config.border} p-4 space-y-2 hover:shadow-lg transition-all cursor-pointer text-left w-full disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105`}
+                    onClick={() => handleGenerateMaterialFromNextStep(suggestion.topic, suggestion.difficulty, suggestion.title)}
+                    disabled={isGeneratingNextSteps}
+                  >
+                    <div className="flex items-start gap-2">
+                      <span className="text-2xl">{config.icon}</span>
+                      <div className="flex-1">
+                        <h4 className="text-base font-semibold text-gray-900 dark:text-white">
+                          {suggestion.title}
+                        </h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                          {suggestion.description}
+                        </p>
+                        {isGeneratingNextSteps && (
+                          <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            Lägger till sektion...
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </Card>
 
       {/* Reading Mode Overlay */}
       {readingMode.active && (

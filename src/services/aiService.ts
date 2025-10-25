@@ -309,6 +309,18 @@ export interface GenerateMaterialResponse {
   suggestedTags: string[];
 }
 
+export interface NextStepSuggestion {
+  title: string;
+  description: string;
+  topic: string;
+  difficulty: 'same' | 'easier' | 'harder';
+}
+
+export interface NextStepsResponse {
+  introduction: string;
+  suggestions: NextStepSuggestion[];
+}
+
 /**
  * Generera personaliserad förklaring baserat på användarens intressen
  */
@@ -440,9 +452,10 @@ export async function generateSummary(
  */
 export async function generateMaterial(
   topic: string,
-  grade: number = 5
+  grade: number = 5,
+  adjustDifficulty: 'easier' | 'same' | 'harder' = 'same'
 ): Promise<GenerateMaterialResponse> {
-  console.log('[aiService] generateMaterial called with topic:', topic);
+  console.log('[aiService] generateMaterial called with topic:', topic, 'difficulty:', adjustDifficulty);
   try {
     const response = await fetch(`${API_BASE_URL}/generate/material`, {
       method: 'POST',
@@ -452,6 +465,7 @@ export async function generateMaterial(
       body: JSON.stringify({
         topic,
         grade,
+        adjustDifficulty,
       }),
     });
 
@@ -471,6 +485,45 @@ export async function generateMaterial(
     console.error('[aiService] Material generering fel, using mock data:', error);
     // Fallback till mock-svar vid fel
     const mockData = mockGenerateMaterial(topic);
+    console.log('[aiService] Mock data:', mockData);
+    return mockData;
+  }
+}
+
+/**
+ * Generera förslag på nästa steg att lära sig
+ */
+export async function generateNextSteps(
+  materialContent: string,
+  grade: number = 7
+): Promise<NextStepsResponse> {
+  console.log('[aiService] generateNextSteps called');
+  try {
+    const response = await fetch(`${API_BASE_URL}/generate/next-steps`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        content: materialContent,
+        grade,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Next Steps API-fel: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log('[aiService] API response:', data);
+    return {
+      introduction: data.introduction,
+      suggestions: data.suggestions || [],
+    };
+  } catch (error) {
+    console.error('[aiService] Next steps fel, using mock data:', error);
+    // Fallback till mock-svar vid fel
+    const mockData = mockNextSteps();
     console.log('[aiService] Mock data:', mockData);
     return mockData;
   }
@@ -703,5 +756,31 @@ function mockGenerateMaterial(topic: string): GenerateMaterialResponse {
     content: `# ${topic}\n\nDetta är ett automatiskt genererat studiematerial om **${topic}**.\n\n## Introduktion\n\nHär kommer en introduktion till ämnet ${topic}. Detta material är skapat för att hjälpa dig förstå grunderna.\n\n## Viktiga punkter\n\n- Punkt 1 om ${topic}\n- Punkt 2 om ${topic}\n- Punkt 3 om ${topic}\n\n## Sammanfattning\n\nNu har du lärt dig mer om ${topic}!`,
     subject: randomSubject,
     suggestedTags: [topic.toLowerCase(), 'lärande', 'studie'],
+  };
+}
+
+function mockNextSteps(): NextStepsResponse {
+  return {
+    introduction: 'Bra jobbat! Nu när du har lärt dig grunderna finns det så mycket mer att upptäcka. Här är några spännande nästa steg:',
+    suggestions: [
+      {
+        title: 'Fördjupa dig i teorin',
+        description: 'Lär dig mer om de underliggande principerna och hur allt hänger ihop. Detta ger dig en djupare förståelse.',
+        topic: 'fördjupning av nuvarande ämne',
+        difficulty: 'harder',
+      },
+      {
+        title: 'Praktiska tillämpningar',
+        description: 'Se hur det du har lärt dig används i verkligheten. Det här gör kunskapen mer konkret och minnesvärd.',
+        topic: 'praktisk tillämpning',
+        difficulty: 'same',
+      },
+      {
+        title: 'Grunderna en gång till',
+        description: 'Repetera de viktigaste koncepten på ett enklare sätt. Ibland behöver man gå tillbaka för att verkligen förstå.',
+        topic: 'grundläggande repetition',
+        difficulty: 'easier',
+      },
+    ],
   };
 }

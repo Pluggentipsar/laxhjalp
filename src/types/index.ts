@@ -138,11 +138,22 @@ export interface Material {
   notes?: Note[];
   simplifiedContent?: string;
   advancedContent?: string;
+  additionalSections?: MaterialSection[]; // "Läs mer"-sektioner
   createdAt: Date;
   updatedAt: Date;
   lastStudied?: Date;
   difficulty?: Difficulty;
   generationHistory?: GenerationLogEntry[];
+}
+
+export interface MaterialSection {
+  id: string;
+  title: string;
+  content: string;
+  type: 'next-step' | 'deepening' | 'simplification';
+  difficulty: 'easier' | 'same' | 'harder';
+  addedAt: Date;
+  collapsed?: boolean; // För att kunna vika ihop sektioner
 }
 
 export interface Folder {
@@ -293,6 +304,7 @@ export interface UserSettings {
   theme: 'light' | 'dark' | 'auto';
   reduceAnimations: boolean;
   emojiSupport: boolean;
+  background?: BackgroundSettings;
 
   // Notiser
   remindersEnabled: boolean;
@@ -302,6 +314,11 @@ export interface UserSettings {
   // Backup
   cloudBackupEnabled: boolean;
   lastBackup?: Date;
+}
+
+export interface BackgroundSettings {
+  type: 'gradient' | 'image' | 'custom';
+  value: string; // Gradient name, image URL, or custom image base64
 }
 
 export interface Badge {

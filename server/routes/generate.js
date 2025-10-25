@@ -12,7 +12,8 @@ import {
   generatePersonalizedExplanation,
   generatePersonalizedExamples,
   generateSummary,
-  generateMaterial
+  generateMaterial,
+  generateNextSteps
 } from '../services/textService.js';
 
 const router = express.Router();
@@ -311,7 +312,7 @@ router.post('/summary', async (req, res, next) => {
  */
 router.post('/material', async (req, res, next) => {
   try {
-    const { topic, grade = 5 } = req.body;
+    const { topic, grade = 5, adjustDifficulty = 'same' } = req.body;
 
     if (!topic || topic.trim().length === 0) {
       return res.status(400).json({ error: 'Inget ämne angivet.' });
@@ -321,7 +322,7 @@ router.post('/material', async (req, res, next) => {
       return res.status(400).json({ error: 'Ämnet är för kort.' });
     }
 
-    const result = await generateMaterial(topic, { grade });
+    const result = await generateMaterial(topic, { grade, adjustDifficulty });
 
     res.json({
       success: true,
@@ -329,6 +330,30 @@ router.post('/material', async (req, res, next) => {
       content: result.content,
       subject: result.subject,
       suggestedTags: result.suggestedTags || [],
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/generate/next-steps
+ * Generera förslag på nästa steg att lära sig
+ */
+router.post('/next-steps', async (req, res, next) => {
+  try {
+    const { content, grade = 7 } = req.body;
+
+    if (!content || content.trim().length < 50) {
+      return res.status(400).json({ error: 'Innehållet är för kort.' });
+    }
+
+    const result = await generateNextSteps(content, { grade });
+
+    res.json({
+      success: true,
+      introduction: result.introduction,
+      suggestions: result.suggestions || [],
     });
   } catch (error) {
     next(error);
