@@ -1107,46 +1107,50 @@ export function MaterialDetailPage() {
                 <Tabs.Content value="personalized-examples">
                   <div data-content-area className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-6 shadow-inner min-h-[320px]">
                     {personalizedExamples ? (
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-2 mb-4">
-                          <Lightbulb className="h-5 w-5 text-orange-500" />
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                            Exempel anpassade för dig
-                          </h3>
-                        </div>
-                        {personalizedExamples.examples.map((example, idx) => (
-                          <div
-                            key={idx}
-                            className="rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200 dark:border-amber-800 p-4 space-y-2"
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-orange-500 text-white text-xs font-bold">
-                                {idx + 1}
-                              </span>
-                              <h4 className="text-base font-semibold text-gray-900 dark:text-white">
-                                {example.title}
-                              </h4>
-                            </div>
-                            <p className="text-sm text-gray-700 dark:text-gray-300">
-                              {example.description}
-                            </p>
-                            <div className="bg-white dark:bg-gray-800 rounded-lg p-3 mt-2">
-                              <p className="text-sm text-gray-600 dark:text-gray-400 italic">
-                                {example.context}
-                              </p>
-                            </div>
+                      <div className="space-y-6">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Lightbulb className="h-5 w-5 text-orange-500" />
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                              Personaliserad version
+                            </h3>
                           </div>
-                        ))}
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            {personalizedExamples.pedagogicalNote}
+                          </p>
+                        </div>
+
+                        <div className="prose dark:prose-invert max-w-none">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {personalizedExamples.personalizedText}
+                          </ReactMarkdown>
+                        </div>
+
+                        {personalizedExamples.usedAnalogies.length > 0 && (
+                          <div className="rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200 dark:border-amber-800 p-4">
+                            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                              Analogier som användes:
+                            </h4>
+                            <ul className="space-y-1">
+                              {personalizedExamples.usedAnalogies.map((analogy, idx) => (
+                                <li key={idx} className="text-sm text-gray-700 dark:text-gray-300 flex items-start gap-2">
+                                  <span className="text-orange-500 flex-shrink-0">•</span>
+                                  <span>{analogy}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="flex flex-col items-center justify-center gap-4 text-center text-gray-500 dark:text-gray-400">
                         <Lightbulb className="h-10 w-10 text-orange-500" />
                         <div>
                           <h3 className="text-base font-medium text-gray-900 dark:text-white">
-                            Inga personaliserade exempel ännu
+                            Ingen personaliserad version ännu
                           </h3>
                           <p className="text-sm">
-                            Skapa exempel baserade på dina intressen för att lättare förstå materialet.
+                            Skapa en version av texten anpassad efter dina intressen med genomgående analogier och exempel.
                           </p>
                         </div>
                         <Button
@@ -1156,7 +1160,7 @@ export function MaterialDetailPage() {
                           className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white"
                         >
                           <Lightbulb className="mr-2 h-4 w-4" />
-                          Skapa personaliserade exempel
+                          Skapa personaliserad version
                         </Button>
                       </div>
                     )}

@@ -257,31 +257,62 @@ export async function generatePersonalizedExamples(
 ) {
   const client = getClient();
 
+  // Mappa årskurs till pedagogisk nivå
+  let targetLevel = 'Nivå 2';
+  let levelDescription = 'Mellanstadiet (Motsvarande ÅK 6 / 11-13 år)';
+  let levelGuidelines = `
+**Språk:** Informativt, beskrivande och tydligt. Fokus på orsak och verkan.
+**Användning av Intressen:** Fokus på system, processer, regler och funktioner. Tydliga analogier som förklarar samband.
+**Exempel:** "Feodalismen kan jämföras med hur en stor Minecraft-server styrs. Kungen är som serverns ägare (Admin)..."`;
+
+  if (grade <= 3) {
+    targetLevel = 'Nivå 1';
+    levelDescription = 'Lågstadiet (Motsvarande ÅK 3 / 8-10 år)';
+    levelGuidelines = `
+**Språk:** Enkelt, konkret, lekfullt och berättande. Korta meningar.
+**Användning av Intressen:** Mycket direkt och visuell. Fokus på enkla scenarier och direkta jämförelser.
+**Exempel:** "Tänk dig att maten är legobitar i olika färger. När du äter kommer de ner i magen, som är en stor fabrik..."`;
+  } else if (grade >= 7) {
+    targetLevel = 'Nivå 3';
+    levelDescription = 'Högstadiet (Motsvarande ÅK 9 / 14-16 år)';
+    levelGuidelines = `
+**Språk:** Analytiskt, nyanserat och akademiskt. Komplex syntax.
+**Användning av Intressen:** Sofistikerade analogier som belyser abstrakta koncept, maktstrukturer, etik, ekonomi.
+**Exempel:** "Den industriella revolutionen kan jämföras med övergången från manuell till automatiserad resurshantering i Minecraft..."`;
+  }
+
   const truncatedMaterial = materialContent.slice(0, 5000);
   const interestsText = interests.length > 0 ? interests.join(', ') : customContext || 'generella exempel';
 
-  const prompt = `Du hjälper en elev i årskurs ${grade} att förstå studiematerial genom personaliserade exempel.
+  const prompt = `Du är en expertpedagog och kreativ skribent specialiserad på differentierad undervisning. Utför en "Makro-personalisering" av texten genom att skriva om HELA texten sammanhängande, där du använder elevens intressen som tematiskt ramverk eller källa till analogier.
 
-STUDIEMATERIAL:
+KÄLLTEXT:
 ${truncatedMaterial}
+
+MÅLGRUPPSNIVÅ: ${targetLevel} - ${levelDescription}
 
 ELEVENS INTRESSEN:
 ${interestsText}
 
 ${customContext ? `EXTRA KONTEXT:\n${customContext}\n` : ''}
 
-Skapa ${count} konkreta exempel som kopplar materialet till elevens intressen. Returnera ett JSON-objekt:
+GRUNDLÄGGANDE PRINCIPER:
+1. Pedagogik Först: Syftet är inlärning. Personaliseringen är ett verktyg, inte självändamål
+2. Faktamässig Korrekthet: Centrala koncept och fakta MÅSTE bevaras
+3. Naturlig Integration: Väv in intressena där de passar. Undvik krystade kopplingar
+4. Undvik Trivialisering: Var försiktig med känsliga ämnen
+
+RIKTLINJER FÖR ${targetLevel}:
+${levelGuidelines}
+
+Returnera JSON:
 {
-  "examples": [
-    {
-      "title": "Kort titel för exemplet",
-      "description": "Detaljerad beskrivning av exemplet",
-      "context": "Hur detta kopplar till elevens intresse"
-    }
-  ]
+  "personalizedText": "Den omskrivna, sammanhängande texten med personalisering",
+  "usedAnalogies": ["Analogi 1 som användes", "Analogi 2 som användes"],
+  "pedagogicalNote": "Kort förklaring av hur intressena användes"
 }
 
-Svara på svenska. Var kreativ och engagerande!`;
+Skriv om texten kreativt men bevara faktamässig korrekthet.`;
 
   const completion = await client.chat.completions.create({
     model: getModelName(),
@@ -289,13 +320,13 @@ Svara på svenska. Var kreativ och engagerande!`;
       {
         role: 'system',
         content:
-          'Du är en kreativ pedagogisk AI som skapar personaliserade exempel baserat på elevens intressen. Du returnerar JSON.',
+          'Du är en expertpedagog specialiserad på makro-personalisering. Du skriver om hela texter med kreativa analogier baserade på elevens intressen. Returnerar JSON.',
       },
       { role: 'user', content: prompt },
     ],
     response_format: { type: 'json_object' },
-    ...temperatureOptions(0.7),
-    ...maxTokenOptions(1500),
+    ...temperatureOptions(0.8),
+    ...maxTokenOptions(16000),
   });
 
   return JSON.parse(completion.choices[0].message.content);

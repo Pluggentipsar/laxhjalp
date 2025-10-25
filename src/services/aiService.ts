@@ -289,11 +289,9 @@ export interface PersonalizedExplanationResponse {
 }
 
 export interface PersonalizedExamplesResponse {
-  examples: Array<{
-    title: string;
-    description: string;
-    context: string;
-  }>;
+  personalizedText: string;
+  usedAnalogies: string[];
+  pedagogicalNote: string;
 }
 
 export interface SummaryResponse {
@@ -396,7 +394,9 @@ export async function generatePersonalizedExamples(
     const data = await response.json();
     console.log('[aiService] API response:', data);
     return {
-      examples: data.examples || [],
+      personalizedText: data.personalizedText || '',
+      usedAnalogies: data.usedAnalogies || [],
+      pedagogicalNote: data.pedagogicalNote || '',
     };
   } catch (error) {
     console.error('[aiService] Personaliserade exempel fel, using mock data:', error);
@@ -715,18 +715,19 @@ function mockPersonalizedExplanation(
 }
 
 function mockPersonalizedExamples(
-  _materialContent: string,
+  materialContent: string,
   interests: string[],
-  count: number
+  _count: number
 ): PersonalizedExamplesResponse {
   const interest = interests[0] || 'något du gillar';
 
   return {
-    examples: Array.from({ length: count }, (_, i) => ({
-      title: `Exempel ${i + 1} med ${interest}`,
-      description: `Här är ett exempel som kopplar till ${interest.toLowerCase()}. Det visar hur konceptet fungerar i en kontext du känner igen.`,
-      context: `I ${interest} kan du se detta när...`,
-    })),
+    personalizedText: `# Personaliserad version med ${interest}\n\n${materialContent.slice(0, 200)}...\n\n*Tänk på det som när du ${interest.toLowerCase()} - koncepten fungerar på liknande sätt.*`,
+    usedAnalogies: [
+      `Jämförelse med ${interest}`,
+      `Koppling till hur det fungerar i ${interest}`,
+    ],
+    pedagogicalNote: `Texten har skrivits om med analogier från ${interest} för att göra innehållet mer relaterbartoch lättare att förstå.`,
   };
 }
 
