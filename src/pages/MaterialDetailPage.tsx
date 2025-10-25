@@ -584,6 +584,7 @@ export function MaterialDetailPage() {
         advancedContent: deepened,
         updatedAt: new Date(),
       });
+      // Växla till fördjupad flik EFTER att innehållet är genererat
       setContentView('advanced');
     } catch (error) {
       console.error('Deepen error', error);
