@@ -8,6 +8,7 @@ import {
 import {
   simplifyMaterial,
   deepenMaterial,
+  deepenMaterialWithSuggestion,
   explainSelection,
   generatePersonalizedExplanation,
   generatePersonalizedExamples,
@@ -191,6 +192,37 @@ router.post('/deepen', async (req, res, next) => {
     res.json({
       success: true,
       deepenedText
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/generate/deepen-with-suggestion
+ * F�rdjupa material baserat på ett specifikt förslag från "Nästa steg"
+ */
+router.post('/deepen-with-suggestion', async (req, res, next) => {
+  try {
+    const { originalContent, suggestion, grade = 7 } = req.body;
+
+    if (!originalContent || originalContent.trim().length < 10) {
+      return res.status(400).json({
+        error: 'Originalinneh�llet �r f�r kort.'
+      });
+    }
+
+    if (!suggestion || !suggestion.title || !suggestion.topic) {
+      return res.status(400).json({
+        error: 'Förslag saknar nödvändiga fält (title, topic).'
+      });
+    }
+
+    const deepenedText = await deepenMaterialWithSuggestion(originalContent, suggestion, { grade });
+
+    res.json({
+      success: true,
+      content: deepenedText
     });
   } catch (error) {
     next(error);

@@ -124,7 +124,7 @@ async function findRelevantChunks(question, chunks, topK = 3) {
 /**
  * Generera system prompt baserat på chattläge
  */
-function getSystemPromptForMode(mode, grade, context) {
+function getSystemPromptForMode(mode, grade, context, customQuestions = null) {
   const baseIntro = `Du är en vänlig och hjälpsam AI-assistent för en elev i årskurs ${grade}.`;
 
   const modePrompts = {
@@ -145,7 +145,39 @@ Viktigt:
 STUDIEMATERIAL:
 ${context}`,
 
-    socratic: `${baseIntro}
+    socratic: customQuestions ?
+      `${baseIntro}
+
+Du använder den SOKRATISKA METODEN för att hjälpa eleven lära sig genom att förhöra eleven på SPECIFIKA FRÅGOR.
+
+VIKTIGT - ANVÄND DESSA FRÅGOR:
+${customQuestions.map((q, i) => `${i + 1}. ${q}`).join('\n')}
+
+Din uppgift:
+- Ställ frågorna i ORDNING (börja med fråga 1, sedan 2, osv.)
+- Efter varje svar från eleven: ge feedback och förklara rätt svar om det behövs
+- GE INTE direkt facit - guide eleven till att tänka själv först
+- Om eleven svarar rätt, bekräfta och gå vidare till nästa fråga
+- Om eleven svarar fel, ge ledtrådar och en andra chans
+- Var uppmuntrande och pedagogisk!
+
+Så här gör du:
+1. Ställ nästa fråga från listan (börja med #1)
+2. Vänta på elevens svar
+3. Ge feedback baserat på svaret:
+   - Om rätt: "Bra jobbat! [kort förklaring]. Nästa fråga: [fråga #2]"
+   - Om fel: "Hmm, inte riktigt. Tänk på [ledtråd]. Vill du försöka igen?"
+4. När eleven svarat på alla frågor: sammanfatta och uppmuntra!
+
+Viktigt:
+- Använd språk anpassat för årskurs ${grade}
+- Basera dina förklaringar på studiematerialet nedan
+- Håll koll på vilken fråga du är på (1-${customQuestions.length})
+
+STUDIEMATERIAL FÖR KONTEXT:
+${context}`
+      :
+      `${baseIntro}
 
 Du använder den SOKRATISKA METODEN för att hjälpa eleven lära sig.
 
@@ -313,10 +345,10 @@ ${context}`
  * RAG-baserad chat med studiematerial
  */
 export async function chatWithMaterial(materialContent, previousMessages, userMessage, options = {}) {
-  const { grade = 5, mode = 'free' } = options;
+  const { grade = 5, mode = 'free', customQuestions = null } = options;
   const client = getOpenAIClient();
 
-  console.log('[chatService] chatWithMaterial called', { mode, grade, userMessage: userMessage.substring(0, 50) });
+  console.log('[chatService] chatWithMaterial called', { mode, grade, customQuestions: customQuestions?.length || 0, userMessage: userMessage.substring(0, 50) });
 
   try{
     // 1. Generera embeddings för materialet (om inte redan gjort)
@@ -330,7 +362,7 @@ export async function chatWithMaterial(materialContent, previousMessages, userMe
     console.log('[chatService] Found', relevantChunks.length, 'relevant chunks');
 
     // 3. Skapa prompt med kontext baserat på valt läge
-    const systemPrompt = getSystemPromptForMode(mode, grade, context);
+    const systemPrompt = getSystemPromptForMode(mode, grade, context, customQuestions);
     console.log('[chatService] System prompt length:', systemPrompt.length);
 
     // 4. Bygg konversationshistorik - begränsa till senaste 6 meddelanden för att spara tokens

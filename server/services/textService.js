@@ -157,6 +157,91 @@ ${content}`;
   return completion.choices[0].message.content.trim();
 }
 
+export async function deepenMaterialWithSuggestion(
+  originalContent,
+  suggestion,
+  { grade = 5 } = {}
+) {
+  const client = getClient();
+
+  // Mappa årskurs till pedagogisk nivå
+  let targetLevel = 'Nivå 2';
+  let levelDescription = 'Mellanstadiet (Motsvarande ÅK 6 / 11-13 år)';
+
+  if (grade <= 3) {
+    targetLevel = 'Nivå 1';
+    levelDescription = 'Lågstadiet (Motsvarande ÅK 3 / 8-10 år)';
+  } else if (grade >= 7) {
+    targetLevel = 'Nivå 3';
+    levelDescription = 'Högstadiet (Motsvarande ÅK 9 / 14-16 år)';
+  }
+
+  const truncatedContent = originalContent.slice(0, 5000);
+
+  const prompt = `Du är en expertpedagog och ska skapa en FÖRDJUPNING av befintligt studiematerial baserat på ett specifikt fördjupningsförslag.
+
+VIKTIGT: Detta är INTE en fristående text. Du ska utgå från originaltexten och fördjupa den specifikt i den riktning som förslaget anger.
+
+ORIGINALTEXT (som grund):
+${truncatedContent}
+
+FÖRDJUPNINGSFÖRSLAG:
+Titel: ${suggestion.title}
+Beskrivning: ${suggestion.description}
+Fokus: ${suggestion.topic}
+
+MÅLGRUPPSNIVÅ: ${targetLevel} - ${levelDescription}
+
+DIN UPPGIFT:
+Skapa en fördjupad version av originaltexten som:
+
+1. **TAR URSPRUNGSTEXTEN SOM BAS** - Behåll de grundläggande koncepten och fakta från originalet
+2. **FÖRDJUPAR I FÖRSLAGETS RIKTNING** - Fokusera specifikt på det som förslaget beskriver (t.ex. "Analysera dilemman med etiska teorier" betyder att du ska ta materialet om etik och VERKLIGEN genomföra analyser av konkreta dilemman med olika etiska teorier)
+3. **UTFÖR, inte bara förklarar** - Om förslaget är "Analysera X", ska du GÖRA analysen, inte bara förklara vad analys är
+4. **GER SUBSTANS** - Konkreta exempel, tillämpningar, genomgångar, case studies etc.
+
+RIKTLINJER FÖR FÖRDJUPNINGEN:
+
+**Innehåll:**
+- Börja med att kort referera till kärnkoncepten från originalet
+- Gå sedan djupare i den specifika riktning som förslaget anger
+- Ge konkreta exempel, genomgångar eller case studies
+- Visa tillämpning och praktiska aspekter
+- Förklara varför och hur saker hänger ihop
+
+**Struktur:**
+- Använd tydliga rubriker och underrubriker
+- Skapa sektioner för olika aspekter av fördjupningen
+- Använd punktlistor, tabeller eller exempel-rutor där det passar
+- Håll en logisk progression
+
+**Språk och stil:**
+- Anpassa till ${targetLevel}
+- Använd "du" som tilltal
+- Var engagerande och väck nyfikenhet
+- Behåll samma språknivå som originalet (fördjupning ≠ svårare ord)
+
+**Längd:** 400-700 ord. Texten ska vara substantiell och ge verkligt djup.
+
+Returnera endast den fördjupade texten i markdown-format, utan inledande kommentarer.`;
+
+  const completion = await client.chat.completions.create({
+    model: getModelName(),
+    messages: [
+      {
+        role: 'system',
+        content:
+          'Du är en expertpedagog som skapar fördjupade versioner av studiematerial baserat på specifika fördjupningsförslag. Du UTFÖR fördjupningen (t.ex. genomför analyser, ger exempel, visar tillämpningar) istället för att bara förklara vad begreppen betyder. Du returnerar markdown-formaterad text.',
+      },
+      { role: 'user', content: prompt },
+    ],
+    ...temperatureOptions(0.7),
+    ...maxTokenOptions(4000),
+  });
+
+  return completion.choices[0].message.content.trim();
+}
+
 export async function explainSelection(materialContent, selection, { grade = 5 } = {}) {
   const client = getClient();
 

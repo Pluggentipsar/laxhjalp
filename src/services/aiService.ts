@@ -146,7 +146,8 @@ export async function sendChatMessage(
   messages: ChatMessage[],
   userMessage: string,
   grade: number = 5,
-  mode: string = 'free'
+  mode: string = 'free',
+  customQuestions: string[] | null = null
 ): Promise<ChatResponse> {
   try {
     const response = await fetch(`${API_BASE_URL}/chat`, {
@@ -159,7 +160,8 @@ export async function sendChatMessage(
         messages,
         userMessage,
         grade,
-        mode
+        mode,
+        customQuestions
       }),
     });
 
@@ -526,6 +528,43 @@ export async function generateNextSteps(
     const mockData = mockNextSteps();
     console.log('[aiService] Mock data:', mockData);
     return mockData;
+  }
+}
+
+/**
+ * Fördjupa material baserat på ett specifikt förslag från "Nästa steg"
+ */
+export async function deepenMaterialWithSuggestion(
+  originalContent: string,
+  suggestion: { title: string; description: string; topic: string },
+  grade: number = 7
+): Promise<{ content: string }> {
+  console.log('[aiService] deepenMaterialWithSuggestion called with suggestion:', suggestion.title);
+  try {
+    const response = await fetch(`${API_BASE_URL}/generate/deepen-with-suggestion`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        originalContent,
+        suggestion,
+        grade,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Deepen with suggestion API-fel: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log('[aiService] API response:', data);
+    return {
+      content: data.content,
+    };
+  } catch (error) {
+    console.error('[aiService] Deepen with suggestion fel:', error);
+    throw error;
   }
 }
 

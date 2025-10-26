@@ -46,7 +46,7 @@ import {
   generatePersonalizedExamples,
   generateSummary,
   generateNextSteps,
-  generateMaterial,
+  deepenMaterialWithSuggestion,
   type ExplainSelectionResponse,
   type PersonalizedExplanationResponse,
   type PersonalizedExamplesResponse,
@@ -749,23 +749,24 @@ export function MaterialDetailPage() {
     }
   };
 
-  const handleGenerateMaterialFromNextStep = async (topic: string, difficulty: 'easier' | 'same' | 'harder', title: string) => {
+  const handleGenerateMaterialFromNextStep = async (suggestion: { title: string; description: string; topic: string; difficulty: 'easier' | 'same' | 'harder' }) => {
     if (!material) return;
 
-    console.log('[MaterialDetailPage] Adding section from next step:', topic, difficulty);
+    console.log('[MaterialDetailPage] Adding section from next step:', suggestion.topic, suggestion.difficulty);
     setIsGeneratingNextSteps(true);
 
     try {
-      const result = await generateMaterial(topic, grade, difficulty);
+      // Använd den nya fördjupningsfunktionen som tar hänsyn till originalmaterialet
+      const result = await deepenMaterialWithSuggestion(displayedContent, suggestion, grade);
       console.log('[MaterialDetailPage] Got result:', result);
 
       // Skapa ny sektion istället för nytt material
       const newSection = {
         id: crypto.randomUUID(),
-        title: title,
+        title: suggestion.title,
         content: result.content,
         type: 'next-step' as const,
-        difficulty: difficulty,
+        difficulty: suggestion.difficulty,
         addedAt: new Date(),
         collapsed: false,
       };
@@ -2409,7 +2410,7 @@ export function MaterialDetailPage() {
                   <button
                     key={idx}
                     className={`rounded-lg bg-gradient-to-r ${config.color} border ${config.border} p-4 space-y-2 hover:shadow-lg transition-all cursor-pointer text-left w-full disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105`}
-                    onClick={() => handleGenerateMaterialFromNextStep(suggestion.topic, suggestion.difficulty, suggestion.title)}
+                    onClick={() => handleGenerateMaterialFromNextStep(suggestion)}
                     disabled={isGeneratingNextSteps}
                   >
                     <div className="flex items-start gap-2">

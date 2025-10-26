@@ -13,6 +13,7 @@ import {
   Users,
   History,
   Plus,
+  ClipboardList,
 } from 'lucide-react';
 import { MainLayout } from '../../components/layout/MainLayout';
 import { Card } from '../../components/common/Card';
@@ -22,6 +23,7 @@ import { CollapsibleMaterialReference } from '../../components/chat/CollapsibleM
 import { VoiceInput } from '../../components/chat/VoiceInput';
 import { ExportChatButton } from '../../components/chat/ExportChatButton';
 import { ConversationHistory } from '../../components/chat/ConversationHistory';
+import { CustomQuestionsModal } from '../../components/chat/CustomQuestionsModal';
 import { useAppStore } from '../../store/appStore';
 import { sendChatMessage } from '../../services/aiService';
 import type { ChatMessage, ChatMode } from '../../types';
@@ -30,11 +32,11 @@ const XP_PER_TURN = 15;
 
 const WELCOME_MESSAGES: Record<ChatMode, string> = {
   free: 'Hej! Jag är här för att hjälpa dig förstå materialet. Ställ vilka frågor du vill så svarar jag! 😊',
-  socratic: 'Hej! Jag kommer att förhöra dig på materialet genom att ställa frågor som får dig att tänka själv. Här kommer första frågan... 🧠',
+  socratic: 'Hej! Jag kommer att förhöra dig på materialet genom att ställa frågor som får dig att tänka själv.\n\n💡 **Tips:** Klicka på "Egna frågor"-knappen om du vill klistra in specifika frågor att bli förhörd på!\n\nSkriv "fortsätt" eller "börja" så kör vi! 🧠',
   adventure: 'Välkommen till ditt äventyr! Jag kommer berätta en spännande historia baserad på materialet där DU är hjälten. Äventyret börjar nu... 🗺️',
   'active-learning': 'Hej! Jag kommer först förklara ett koncept, sedan ge dig en uppgift att lösa. Vi börjar direkt... 🎯',
   quiz: 'Hej! Jag är Quiz-mästaren! Jag kommer testa din kunskap med frågor och förklara varje svar. Här kommer första frågan... 🏆',
-  discussion: 'Hej! Låt oss diskutera materialet tillsammans. Berätta vad du tycker eller fråga något, så presenterar jag olika perspektiv och utmanar din tanke! 💭',
+  discussion: 'Hej! Låt ons diskutera materialet tillsammans. Berätta vad du tycker eller fråga något, så presenterar jag olika perspektiv och utmanar din tanke! 💭',
 };
 
 export function ChatStudyPage() {
@@ -66,6 +68,8 @@ export function ChatStudyPage() {
   const [hasInitialized, setHasInitialized] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [conversationCount, setConversationCount] = useState(0);
+  const [showCustomQuestionsModal, setShowCustomQuestionsModal] = useState(false);
+  const [customQuestions, setCustomQuestions] = useState<string[] | null>(null);
 
   const [messagesState, setMessagesState] = useState<ChatMessage[]>([]);
   const messagesRef = useRef<ChatMessage[]>([]);
@@ -294,13 +298,14 @@ export function ChatStudyPage() {
     }
 
     try {
-      console.log('[ChatStudyPage] Calling sendChatMessage API...', { mode: currentMode, grade: user?.grade ?? 5 });
+      console.log('[ChatStudyPage] Calling sendChatMessage API...', { mode: currentMode, grade: user?.grade ?? 5, customQuestions: customQuestions?.length || 0 });
       const response = await sendChatMessage(
         material.content,
         conversationForAI,
         userMessage.content,
         user?.grade ?? 5,
-        currentMode
+        currentMode,
+        customQuestions
       );
       console.log('[ChatStudyPage] Got response from API:', response);
 
@@ -409,7 +414,7 @@ export function ChatStudyPage() {
         <motion.section
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary-500 via-primary-600 to-purple-600 p-6 shadow-xl"
+          className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary-500 via-primary-600 to-purple-600 p-4 sm:p-6 shadow-xl"
         >
           {/* Background decoration */}
           <div className="absolute top-0 right-0 w-64 h-64 opacity-10">
@@ -440,31 +445,47 @@ export function ChatStudyPage() {
               </div>
 
               {/* Action buttons */}
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={handleNewConversation}
                   disabled={isSending}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-primary-600 font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl bg-white text-primary-600 font-semibold text-sm shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex-1 sm:flex-initial"
                 >
                   <Plus className="h-4 w-4" />
-                  Ny konversation
+                  <span className="hidden xs:inline">Ny konversation</span>
+                  <span className="xs:hidden">Ny</span>
                 </motion.button>
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setShowHistory(!showHistory)}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 backdrop-blur-sm text-white font-semibold hover:bg-white/20 transition-all"
+                  className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl bg-white/10 backdrop-blur-sm text-white font-semibold text-sm hover:bg-white/20 transition-all flex-1 sm:flex-initial"
                 >
                   <History className="h-4 w-4" />
-                  {showHistory ? 'Dölj' : 'Historik'}
+                  <span>{showHistory ? 'Dölj' : 'Historik'}</span>
                   {conversationCount > 0 && (
                     <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-white text-primary-600">
                       {conversationCount}
                     </span>
                   )}
                 </motion.button>
+                {currentMode === 'socratic' && (
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setShowCustomQuestionsModal(true)}
+                    className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold text-sm shadow-lg hover:shadow-xl transition-all flex-1 sm:flex-initial"
+                    title="Klistra in egna förhörsfrågor"
+                  >
+                    <ClipboardList className="h-4 w-4" />
+                    <span className="hidden sm:inline">
+                      {customQuestions ? `${customQuestions.length} frågor` : 'Egna frågor'}
+                    </span>
+                    <span className="sm:hidden">Frågor</span>
+                  </motion.button>
+                )}
                 <ChatModeSelector
                   currentMode={currentMode}
                   onModeChange={handleModeChange}
@@ -484,7 +505,7 @@ export function ChatStudyPage() {
           />
         )}
 
-        <Card className="p-6 h-[60vh] flex flex-col gap-4 shadow-xl">
+        <Card className="p-4 sm:p-6 h-[60vh] sm:h-[65vh] flex flex-col gap-4 shadow-xl">
           <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-4 pr-2">
             {isHistoryLoading && (
               <motion.div
@@ -582,7 +603,7 @@ export function ChatStudyPage() {
           <div className="relative pt-4">
             <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gray-200 dark:via-gray-700 to-transparent" />
 
-            <div className="flex items-end gap-3 pt-3">
+            <div className="flex flex-col sm:flex-row sm:items-end gap-3 pt-3">
               <div className="flex items-end gap-2 flex-1">
                 <div className="relative flex-1">
                   <textarea
@@ -604,14 +625,14 @@ export function ChatStudyPage() {
                 whileTap={{ scale: 0.95 }}
                 onClick={handleSend}
                 disabled={!input.trim() || isSending || isHistoryLoading}
-                className={`px-6 py-3 rounded-xl font-semibold text-sm shadow-lg transition-all ${
+                className={`w-full sm:w-auto px-6 py-3 rounded-xl font-semibold text-sm shadow-lg transition-all ${
                   !input.trim() || isSending || isHistoryLoading
                     ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
                     : 'bg-gradient-to-r from-primary-500 to-primary-600 text-white hover:shadow-xl hover:from-primary-600 hover:to-primary-700'
                 }`}
               >
                 {isSending ? (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-center gap-2">
                     <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     Skickar...
                   </div>
@@ -665,6 +686,57 @@ export function ChatStudyPage() {
             )}
           </div>
         </div>
+
+        {/* Custom Questions Modal */}
+        <CustomQuestionsModal
+          isOpen={showCustomQuestionsModal}
+          onClose={() => setShowCustomQuestionsModal(false)}
+          onSubmit={async (questions) => {
+            setCustomQuestions(questions);
+            setShowCustomQuestionsModal(false);
+
+            // Skicka ett automatiskt meddelande för att starta förhöret med de egna frågorna
+            if (!materialId || !material || !currentConversationId) return;
+
+            const startMessage: ChatMessage = {
+              id: crypto.randomUUID(),
+              role: 'user',
+              content: 'Börja förhöra mig på de frågor jag har klistrat in.',
+              timestamp: new Date(),
+            };
+
+            setIsSending(true);
+            updateMessages((prev) => [...prev, startMessage]);
+
+            try {
+              await appendChatMessage(currentConversationId, startMessage);
+
+              const response = await sendChatMessage(
+                material.content,
+                messagesRef.current,
+                startMessage.content,
+                user?.grade ?? 5,
+                currentMode,
+                questions // Använd de nya frågorna direkt
+              );
+
+              const assistantMessage: ChatMessage = {
+                id: crypto.randomUUID(),
+                role: 'assistant',
+                content: response.message,
+                timestamp: new Date(),
+              };
+
+              updateMessages((prev) => [...prev, assistantMessage]);
+              await appendChatMessage(currentConversationId, assistantMessage);
+              setSources(response.sources ?? []);
+            } catch (error) {
+              console.error('Kunde inte starta förhör med custom questions', error);
+            } finally {
+              setIsSending(false);
+            }
+          }}
+        />
       </div>
     </MainLayout>
   );

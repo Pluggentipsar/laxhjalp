@@ -83,13 +83,13 @@ export function ChatModeSelector({
           whileHover={{ scale: disabled ? 1 : 1.02 }}
           whileTap={{ scale: disabled ? 1 : 0.98 }}
           disabled={disabled}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 hover:border-primary-500 dark:hover:border-primary-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 hover:border-primary-500 dark:hover:border-primary-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
         >
           <Icon className={`h-5 w-5 ${currentModeInfo?.color}`} />
-          <span className="font-medium text-gray-900 dark:text-white">
+          <span className="font-medium text-sm text-gray-900 dark:text-white truncate">
             {currentModeInfo?.label}
           </span>
-          <ChevronDown className="h-4 w-4 text-gray-500" />
+          <ChevronDown className="h-4 w-4 text-gray-500 ml-auto" />
         </motion.button>
       </DropdownMenu.Trigger>
 
