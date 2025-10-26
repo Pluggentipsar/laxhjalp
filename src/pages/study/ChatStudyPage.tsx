@@ -14,6 +14,7 @@ import {
   History,
   Plus,
   ClipboardList,
+  ArrowLeft,
 } from 'lucide-react';
 import { MainLayout } from '../../components/layout/MainLayout';
 import { Card } from '../../components/common/Card';
@@ -669,19 +670,34 @@ export function ChatStudyPage() {
           </Card>
         )}
 
-        <div className="flex justify-between items-center flex-wrap gap-3">
-          <Button variant="ghost" onClick={() => navigate('/study')}>
-            Tillbaka till studieöversikten
-          </Button>
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <Button
+              variant="ghost"
+              onClick={() => navigate(`/study/material/${materialId}/chat`)}
+              className="w-full sm:w-auto"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Byt chattläge
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => navigate(`/study/material/${materialId}`)}
+              className="w-full sm:w-auto"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Till materialet
+            </Button>
+          </div>
+          <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
             <ExportChatButton
               messages={messagesState}
               materialTitle={material.title}
               disabled={messagesState.length === 0}
             />
             {userTurns > 0 && (
-              <span className="text-xs text-gray-500">
-                {userTurns} frågor · {sessionXp} XP insamlat
+              <span className="text-xs text-gray-500 whitespace-nowrap">
+                {userTurns} frågor · {sessionXp} XP
               </span>
             )}
           </div>
