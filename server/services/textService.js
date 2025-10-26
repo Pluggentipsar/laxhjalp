@@ -284,6 +284,11 @@ export async function generatePersonalizedExamples(
   const truncatedMaterial = materialContent.slice(0, 5000);
   const interestsText = interests.length > 0 ? interests.join(', ') : customContext || 'generella exempel';
 
+  console.log('[generatePersonalizedExamples] Starting generation');
+  console.log('[generatePersonalizedExamples] Material length:', truncatedMaterial.length);
+  console.log('[generatePersonalizedExamples] Interests:', interestsText);
+  console.log('[generatePersonalizedExamples] Grade:', grade, 'Level:', targetLevel);
+
   const prompt = `Du är en expertpedagog och kreativ skribent specialiserad på differentierad undervisning. Utför en "Makro-personalisering" av texten genom att skriva om HELA texten sammanhängande, där du använder elevens intressen som tematiskt ramverk eller källa till analogier.
 
 KÄLLTEXT:
@@ -314,6 +319,9 @@ Returnera JSON:
 
 Skriv om texten kreativt men bevara faktamässig korrekthet.`;
 
+  console.log('[generatePersonalizedExamples] Prompt length:', prompt.length);
+  console.log('[generatePersonalizedExamples] Model:', getModelName());
+
   const completion = await client.chat.completions.create({
     model: getModelName(),
     messages: [
@@ -329,7 +337,15 @@ Skriv om texten kreativt men bevara faktamässig korrekthet.`;
     ...maxTokenOptions(16000),
   });
 
-  return JSON.parse(completion.choices[0].message.content);
+  console.log('[generatePersonalizedExamples] AI response received');
+  console.log('[generatePersonalizedExamples] Completion object:', JSON.stringify(completion, null, 2));
+  console.log('[generatePersonalizedExamples] Raw content length:', completion.choices?.[0]?.message?.content?.length);
+  console.log('[generatePersonalizedExamples] Finish reason:', completion.choices?.[0]?.finish_reason);
+
+  const parsedResult = JSON.parse(completion.choices[0].message.content);
+  console.log('[generatePersonalizedExamples] Parsed result:', JSON.stringify(parsedResult, null, 2));
+
+  return parsedResult;
 }
 
 export async function generateSummary(content, { grade = 7 } = {}) {

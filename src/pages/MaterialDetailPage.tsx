@@ -1106,6 +1106,10 @@ export function MaterialDetailPage() {
 
                 <Tabs.Content value="personalized-examples">
                   <div data-content-area className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-6 shadow-inner min-h-[320px]">
+                    {(() => {
+                      console.log('[MaterialDetailPage] Rendering personalized tab, data:', personalizedExamples);
+                      return null;
+                    })()}
                     {personalizedExamples ? (
                       <div className="space-y-6">
                         <div className="space-y-2">
@@ -1115,18 +1119,27 @@ export function MaterialDetailPage() {
                               Personaliserad version
                             </h3>
                           </div>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            {personalizedExamples.pedagogicalNote}
-                          </p>
+                          {personalizedExamples.pedagogicalNote && (
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                              {personalizedExamples.pedagogicalNote}
+                            </p>
+                          )}
                         </div>
 
-                        <div className="prose dark:prose-invert max-w-none">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                            {personalizedExamples.personalizedText}
-                          </ReactMarkdown>
-                        </div>
+                        {personalizedExamples.personalizedText ? (
+                          <div className="prose dark:prose-invert max-w-none">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                              {personalizedExamples.personalizedText}
+                            </ReactMarkdown>
+                          </div>
+                        ) : (
+                          <div className="text-red-500 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                            <p className="font-semibold">Debug: Ingen personaliserad text mottagen</p>
+                            <pre className="text-xs mt-2 overflow-auto">{JSON.stringify(personalizedExamples, null, 2)}</pre>
+                          </div>
+                        )}
 
-                        {personalizedExamples.usedAnalogies.length > 0 && (
+                        {personalizedExamples.usedAnalogies && personalizedExamples.usedAnalogies.length > 0 && (
                           <div className="rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200 dark:border-amber-800 p-4">
                             <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
                               Analogier som användes:
