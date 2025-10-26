@@ -15,6 +15,8 @@ import {
   Plus,
   ClipboardList,
   ArrowLeft,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import { MainLayout } from '../../components/layout/MainLayout';
 import { Card } from '../../components/common/Card';
@@ -71,6 +73,7 @@ export function ChatStudyPage() {
   const [conversationCount, setConversationCount] = useState(0);
   const [showCustomQuestionsModal, setShowCustomQuestionsModal] = useState(false);
   const [customQuestions, setCustomQuestions] = useState<string[] | null>(null);
+  const [isMaximized, setIsMaximized] = useState(false);
 
   const [messagesState, setMessagesState] = useState<ChatMessage[]>([]);
   const messagesRef = useRef<ChatMessage[]>([]);
@@ -410,13 +413,25 @@ export function ChatStudyPage() {
 
   return (
     <MainLayout title="Chattförhör" showBottomNav={false}>
+      {/* Backdrop when maximized */}
+      {isMaximized && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+          onClick={() => setIsMaximized(false)}
+        />
+      )}
+
       <div className="py-6 space-y-6 max-w-6xl mx-auto">
         {/* Elegant header with gradient */}
-        <motion.section
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary-500 via-primary-600 to-purple-600 p-4 sm:p-6 shadow-xl"
-        >
+        {!isMaximized && (
+          <motion.section
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary-500 via-primary-600 to-purple-600 p-4 sm:p-6 shadow-xl"
+          >
           {/* Background decoration */}
           <div className="absolute top-0 right-0 w-64 h-64 opacity-10">
             <ModeIcon className="w-full h-full" />
@@ -496,8 +511,9 @@ export function ChatStudyPage() {
             </div>
           </div>
         </motion.section>
+        )}
 
-        {showHistory && materialId && (
+        {!isMaximized && showHistory && materialId && (
           <ConversationHistory
             materialId={materialId}
             mode={currentMode}
@@ -506,7 +522,29 @@ export function ChatStudyPage() {
           />
         )}
 
-        <Card className="p-4 sm:p-6 h-[60vh] sm:h-[65vh] flex flex-col gap-4 shadow-xl">
+        <Card className={`p-4 sm:p-6 flex flex-col gap-4 shadow-xl transition-all ${
+          isMaximized ? 'fixed inset-4 z-50 h-[calc(100vh-2rem)]' : 'h-[60vh] sm:h-[65vh]'
+        }`}>
+          {/* Maximize button */}
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400">
+              Konversation
+            </h3>
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setIsMaximized(!isMaximized)}
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              title={isMaximized ? 'Minimera' : 'Maximera'}
+            >
+              {isMaximized ? (
+                <Minimize2 className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+              ) : (
+                <Maximize2 className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+              )}
+            </motion.button>
+          </div>
+
           <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-4 pr-2">
             {isHistoryLoading && (
               <motion.div
@@ -646,13 +684,15 @@ export function ChatStudyPage() {
         </Card>
 
         {/* Material reference - kollapsbar */}
-        <CollapsibleMaterialReference
-          title={material.title}
-          content={material.content}
-          highlightedText={highlightedSource}
-        />
+        {!isMaximized && (
+          <CollapsibleMaterialReference
+            title={material.title}
+            content={material.content}
+            highlightedText={highlightedSource}
+          />
+        )}
 
-        {sources.length > 0 && (
+        {!isMaximized && sources.length > 0 && (
           <Card className="p-4 space-y-2">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
               Hämtat från materialet
@@ -670,7 +710,8 @@ export function ChatStudyPage() {
           </Card>
         )}
 
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        {!isMaximized && (
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <Button
               variant="ghost"
@@ -702,6 +743,7 @@ export function ChatStudyPage() {
             )}
           </div>
         </div>
+        )}
 
         {/* Custom Questions Modal */}
         <CustomQuestionsModal
