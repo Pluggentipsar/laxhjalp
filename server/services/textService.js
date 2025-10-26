@@ -419,15 +419,24 @@ Skriv om texten kreativt men bevara faktamässig korrekthet.`;
     ],
     response_format: { type: 'json_object' },
     ...temperatureOptions(0.8),
-    ...maxTokenOptions(16000),
+    ...maxTokenOptions(20000), // Ökat från 16000 till 20000
   });
 
   console.log('[generatePersonalizedExamples] AI response received');
   console.log('[generatePersonalizedExamples] Completion object:', JSON.stringify(completion, null, 2));
   console.log('[generatePersonalizedExamples] Raw content length:', completion.choices?.[0]?.message?.content?.length);
   console.log('[generatePersonalizedExamples] Finish reason:', completion.choices?.[0]?.finish_reason);
+  console.log('[generatePersonalizedExamples] Raw content:', completion.choices?.[0]?.message?.content);
 
-  const parsedResult = JSON.parse(completion.choices[0].message.content);
+  const rawContent = completion.choices[0].message.content;
+
+  // Kolla om innehållet är tomt eller bara whitespace
+  if (!rawContent || rawContent.trim().length === 0) {
+    console.error('[generatePersonalizedExamples] ERROR: Empty content received from AI!');
+    throw new Error('AI returnerade tomt innehåll');
+  }
+
+  const parsedResult = JSON.parse(rawContent);
   console.log('[generatePersonalizedExamples] Parsed result:', JSON.stringify(parsedResult, null, 2));
 
   return parsedResult;

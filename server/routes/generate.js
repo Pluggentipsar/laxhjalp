@@ -308,7 +308,14 @@ router.post('/personalized-examples', async (req, res, next) => {
       materialContent, interests, customContext, { grade, count }
     );
 
-    res.json({ success: true, examples: result.examples || [] });
+    console.log('[Route /personalized-examples] Result from textService:', result);
+
+    res.json({
+      success: true,
+      personalizedText: result.personalizedText || '',
+      usedAnalogies: result.usedAnalogies || [],
+      pedagogicalNote: result.pedagogicalNote || ''
+    });
   } catch (error) {
     next(error);
   }
