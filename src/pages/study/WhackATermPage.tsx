@@ -415,8 +415,8 @@ export function WhackATermPage() {
         prepResultRef.current?.materialIds.length
           ? prepResultRef.current.materialIds
           : materialId
-          ? [materialId]
-          : [];
+            ? [materialId]
+            : [];
       mistakeTargets.forEach((targetId: string) => {
         registerMistake(targetId, {
           term: term.term,
@@ -740,11 +740,10 @@ export function WhackATermPage() {
                   {Array.from({ length: 3 }).map((_, i) => (
                     <Heart
                       key={i}
-                      className={`w-6 h-6 ${
-                        i < lives
+                      className={`w-6 h-6 ${i < lives
                           ? 'fill-red-500 text-red-500'
                           : 'text-gray-300 dark:text-gray-600'
-                      }`}
+                        }`}
                     />
                   ))}
                 </div>
@@ -765,25 +764,44 @@ export function WhackATermPage() {
 
             {/* SOLO Level indicator */}
             <Card className="p-4 bg-gradient-to-r from-primary-50 to-white dark:from-primary-950 dark:to-gray-900">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">{soloLevelDisplay.icon}</span>
-                  <div>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                      Din nivå
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-3xl filter drop-shadow-md">{soloLevelDisplay.icon}</span>
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                        Din nivå
+                      </p>
+                      <p className={`text-lg font-bold ${soloLevelDisplay.color}`}>
+                        {soloLevelDisplay.label}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {distractorCount + 1} alternativ
                     </p>
-                    <p className={`text-lg font-bold ${soloLevelDisplay.color}`}>
-                      {soloLevelDisplay.label}
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {(displayTime / 1000).toFixed(1)}s reaktionstid
                     </p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {distractorCount + 1} begrepp
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-500">
-                    {(displayTime / 1000).toFixed(1)}s tid
-                  </p>
+
+                {/* Progress Bar */}
+                <div className="relative h-2 w-full rounded-full bg-gray-200 dark:bg-gray-800 overflow-hidden">
+                  <div
+                    className={`absolute top-0 left-0 h-full transition-all duration-500 ease-out ${soloLevel === 'unistructural' ? 'w-1/4 bg-green-500' :
+                        soloLevel === 'multistructural' ? 'w-2/4 bg-emerald-500' :
+                          soloLevel === 'relational' ? 'w-3/4 bg-teal-500' :
+                            'w-full bg-amber-500'
+                      }`}
+                  />
+                </div>
+                <div className="flex justify-between text-[10px] font-medium text-gray-400 uppercase tracking-wider">
+                  <span>Nybörjare</span>
+                  <span>På väg</span>
+                  <span>Mästare</span>
+                  <span>Expert</span>
                 </div>
               </div>
             </Card>
@@ -817,18 +835,16 @@ export function WhackATermPage() {
             {/* Feedback */}
             {feedback && (
               <Card
-                className={`p-4 border-2 ${
-                  feedback.status === 'correct'
+                className={`p-4 border-2 ${feedback.status === 'correct'
                     ? 'border-green-500 bg-green-50 dark:bg-green-950'
                     : 'border-red-500 bg-red-50 dark:bg-red-950'
-                }`}
+                  }`}
               >
                 <p
-                  className={`font-bold ${
-                    feedback.status === 'correct'
+                  className={`font-bold ${feedback.status === 'correct'
                       ? 'text-green-700 dark:text-green-300'
                       : 'text-red-700 dark:text-red-300'
-                  }`}
+                    }`}
                 >
                   {feedback.message}
                 </p>

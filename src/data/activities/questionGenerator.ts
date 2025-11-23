@@ -54,11 +54,9 @@ export function generateAddition1to5(): ActivityQuestion[] {
         questions.push({
           id: generateId(),
           activityId: 'addition-subtraktion-1-3',
-          question: `${getRandomName()} har ${a} ${a === 1 ? context.singular : context.item}. ${
-            a === 0 ? 'Hen' : 'Hen'
-          } får ${b} ${b === 1 ? context.singular : context.item} till. Hur många ${context.item} har ${
-            a === 0 ? 'hen' : 'hen'
-          } nu?`,
+          question: `${getRandomName()} har ${a} ${a === 1 ? context.singular : context.item}. ${a === 0 ? 'Hen' : 'Hen'
+            } får ${b} ${b === 1 ? context.singular : context.item} till. Hur många ${context.item} har ${a === 0 ? 'hen' : 'hen'
+            } nu?`,
           questionType: 'number-input',
           correctAnswer: sum,
           explanation: `${a} + ${b} = ${sum}`,
@@ -339,9 +337,8 @@ export function generateSubtraction1to5(): ActivityQuestion[] {
         questions.push({
           id: generateId(),
           activityId: 'addition-subtraktion-1-3',
-          question: `Du har ${a} ${a === 1 ? context.singular : context.item}. Du ${
-            b === 0 ? 'behåller alla' : `ger bort ${b} ${b === 1 ? context.singular : context.item}`
-          }. Hur många har du kvar?`,
+          question: `Du har ${a} ${a === 1 ? context.singular : context.item}. Du ${b === 0 ? 'behåller alla' : `ger bort ${b} ${b === 1 ? context.singular : context.item}`
+            }. Hur många har du kvar?`,
           questionType: 'number-input',
           correctAnswer: diff,
           explanation: `${a} - ${b} = ${diff}`,
@@ -491,9 +488,8 @@ export function generateMixedOperations(): ActivityQuestion[] {
       questions.push({
         id: generateId(),
         activityId: 'addition-subtraktion-1-3',
-        question: `${name} har ${op.a} ${context.item}. Hen ${
-          op.op1 === '+' ? 'får' : 'ger bort'
-        } ${op.b}. Sen ${op.op2 === '+' ? 'får hen' : 'ger hen bort'} ${op.c}. Hur många har hen nu?`,
+        question: `${name} har ${op.a} ${context.item}. Hen ${op.op1 === '+' ? 'får' : 'ger bort'
+          } ${op.b}. Sen ${op.op2 === '+' ? 'får hen' : 'ger hen bort'} ${op.c}. Hur många har hen nu?`,
         questionType: 'number-input',
         correctAnswer: result,
         explanation: `${op.a} ${op.op1} ${op.b} = ${step1}, sen ${step1} ${op.op2} ${op.c} = ${result}`,
@@ -526,5 +522,129 @@ export function generateAllQuestions(): ActivityQuestion[] {
     ...generateSubtraction1to5(),
     ...generateSubtraction1to10(),
     ...generateMixedOperations(),
+    ...generateMultiplication1to10(),
+    ...generateDivision1to10(),
   ];
+}
+
+/**
+ * MULTIPLICATION GENERATORS
+ */
+
+// Multiplication 1-10 (100 questions)
+export function generateMultiplication1to10(): ActivityQuestion[] {
+  const questions: ActivityQuestion[] = [];
+
+  for (let a = 1; a <= 10; a++) {
+    for (let b = 1; b <= 10; b++) {
+      const product = a * b;
+      const context = getRandomContext();
+      const useContext = Math.random() > 0.4;
+
+      if (useContext) {
+        questions.push({
+          id: generateId(),
+          activityId: 'multiplikation-division-4-6',
+          question: `${getRandomName()} har ${a} påsar med ${b} ${context.item} i varje. Hur många ${context.item} har hen totalt?`,
+          questionType: 'number-input',
+          correctAnswer: product,
+          explanation: `${a} gånger ${b} är ${product}`,
+          hint1: `Tänk: ${a} grupper med ${b} i varje`,
+          hint2: `${a} * ${b}`,
+          hint3: `Svaret är ${product}`,
+          difficulty: product <= 20 ? 'easy' : product <= 50 ? 'medium' : 'hard',
+          conceptArea: 'multiplikation-4-6',
+          ageGroup: '4-6',
+          soloLevel: 'multistructural',
+          bloomLevel: 'apply',
+          visualSupport: true,
+          realWorldContext: `${a} x ${context.emoji} (${b}) = ?`,
+        });
+      } else {
+        questions.push({
+          id: generateId(),
+          activityId: 'multiplikation-division-4-6',
+          question: `${a} ⋅ ${b} = ?`,
+          questionType: 'number-input',
+          correctAnswer: product,
+          explanation: `${a} gånger ${b} är ${product}`,
+          hint1: `Hoppa ${b}-skutt ${a} gånger`,
+          hint2: `${b}, ${b * 2}, ${b * 3}...`,
+          hint3: `Svaret är ${product}`,
+          difficulty: product <= 20 ? 'easy' : product <= 50 ? 'medium' : 'hard',
+          conceptArea: 'multiplikation-4-6',
+          ageGroup: '4-6',
+          soloLevel: 'unistructural',
+          bloomLevel: 'remember',
+        });
+      }
+    }
+  }
+  return questions;
+}
+
+/**
+ * DIVISION GENERATORS
+ */
+
+// Division 1-10 (100 questions)
+export function generateDivision1to10(): ActivityQuestion[] {
+  const questions: ActivityQuestion[] = [];
+
+  for (let b = 1; b <= 10; b++) { // Divisor
+    for (let c = 1; c <= 10; c++) { // Quotient
+      const a = b * c; // Dividend
+
+      const context = getRandomContext();
+      const useContext = Math.random() > 0.4;
+
+      if (useContext) {
+        questions.push({
+          id: generateId(),
+          activityId: 'multiplikation-division-4-6',
+          question: `${getRandomName()} har ${a} ${context.item} och ska dela dem lika på ${b} personer. Hur många får var och en?`,
+          questionType: 'number-input',
+          correctAnswer: c,
+          explanation: `${a} delat på ${b} är ${c}, eftersom ${c} gånger ${b} är ${a}`,
+          hint1: `Tänk: Vad gånger ${b} blir ${a}?`,
+          hint2: `? * ${b} = ${a}`,
+          hint3: `Svaret är ${c}`,
+          difficulty: a <= 20 ? 'easy' : a <= 50 ? 'medium' : 'hard',
+          conceptArea: 'division-4-6',
+          ageGroup: '4-6',
+          soloLevel: 'multistructural',
+          bloomLevel: 'apply',
+          visualSupport: true,
+          realWorldContext: `${a} ${context.emoji} / ${b} 👤 = ?`,
+        });
+      } else {
+        questions.push({
+          id: generateId(),
+          activityId: 'multiplikation-division-4-6',
+          question: `${a} / ${b} = ?`,
+          questionType: 'number-input',
+          correctAnswer: c,
+          explanation: `${a} delat med ${b} är ${c}`,
+          hint1: `Hur många gånger får ${b} plats i ${a}?`,
+          hint2: `Tänk multiplikation baklänges`,
+          hint3: `Svaret är ${c}`,
+          difficulty: a <= 20 ? 'easy' : a <= 50 ? 'medium' : 'hard',
+          conceptArea: 'division-4-6',
+          ageGroup: '4-6',
+          soloLevel: 'unistructural',
+          bloomLevel: 'remember',
+        });
+      }
+    }
+  }
+  return questions;
+}
+
+/**
+ * AI TEXT PROBLEMS (Placeholder)
+ */
+export function generateTextProblems(): ActivityQuestion[] {
+  // This is a placeholder. In a real scenario, these would be fetched or generated on demand.
+  // For now, we return an empty array as they are handled dynamically.
+  return [];
 }

@@ -444,9 +444,8 @@ export function SnakeGamePage() {
       if (activeMaterialNames.length > 0) {
         const preview = activeMaterialNames.slice(0, 2).join(', ');
         const remaining = activeMaterialNames.length - 2;
-        return `AI + ${activeMaterialNames.length} material (${preview}${
-          remaining > 0 ? ` +${remaining}` : ''
-        })`;
+        return `AI + ${activeMaterialNames.length} material (${preview}${remaining > 0 ? ` +${remaining}` : ''
+          })`;
       }
       return 'AI-genererat paket';
     }
@@ -455,9 +454,8 @@ export function SnakeGamePage() {
       if (activeMaterialNames.length > 0) {
         const preview = activeMaterialNames.slice(0, 3).join(', ');
         const remaining = activeMaterialNames.length - 3;
-        return `${activeMaterialNames.length} material (${preview}${
-          remaining > 0 ? ` +${remaining}` : ''
-        })`;
+        return `${activeMaterialNames.length} material (${preview}${remaining > 0 ? ` +${remaining}` : ''
+          })`;
       }
       return 'Flera material';
     }
@@ -695,8 +693,8 @@ export function SnakeGamePage() {
         sessionMaterialIdsRef.current.length > 0
           ? sessionMaterialIdsRef.current
           : materialId
-          ? [materialId]
-          : [];
+            ? [materialId]
+            : [];
       mistakeTargets.forEach((targetId) => {
         registerMistake(targetId, {
           term: term.term,
@@ -1141,44 +1139,35 @@ export function SnakeGamePage() {
         </Card>
 
         {showReview && prepResult?.needsReview && (
-          <Card className="p-6 space-y-3 border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20">
-            <h3 className="text-base font-semibold text-amber-800 dark:text-amber-200">
-              Snabbgranskning – auto-genererade begrepp
-            </h3>
-            <p className="text-sm text-amber-700 dark:text-amber-100">
-              AI:n har föreslagit begrepp och distraktorer. Ändra eller ta bort det som inte passar –
-              minst tre behövs för att börja spela.
-            </p>
-            {activeSourceMode === 'generated' && (
-              <div className="rounded-xl border border-amber-200 bg-white px-3 py-2 dark:border-amber-700 dark:bg-gray-900/40">
-                <p className="text-xs font-semibold text-amber-800 dark:text-amber-200 mb-1">
-                  Vill du byta språk och generera om?
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {LANGUAGE_OPTIONS.map((option) => {
-                    const isActive = gamePreferences.language === option.id;
-                    return (
-                      <button
-                        key={option.id}
-                        type="button"
-                        onClick={() => handleReviewLanguageSwitch(option.id)}
-                        disabled={isActive}
-                        className={`rounded-lg border px-3 py-1 text-xs font-semibold transition ${
-                          isActive
-                            ? 'border-amber-500 bg-amber-100 text-amber-800 cursor-default dark:border-amber-400 dark:bg-amber-900/50 dark:text-amber-100'
-                            : 'border-amber-300 text-amber-700 hover:border-amber-400 hover:bg-amber-50 dark:border-amber-600 dark:text-amber-200 dark:hover:bg-amber-900/30'
+          <Card className="p-4 space-y-4">
+            <div className="space-y-2">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Välj språk för definitionerna:
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {LANGUAGE_OPTIONS.map((option) => {
+                  const isActive = gamePreferences.language === option.id;
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => handleReviewLanguageSwitch(option.id)}
+                      disabled={isActive}
+                      className={`rounded-lg border px-3 py-1 text-xs font-semibold transition ${isActive
+                        ? 'border-amber-500 bg-amber-100 text-amber-800 cursor-default dark:border-amber-400 dark:bg-amber-900/50 dark:text-amber-100'
+                        : 'border-amber-300 text-amber-700 hover:border-amber-400 hover:bg-amber-50 dark:border-amber-600 dark:text-amber-200 dark:hover:bg-amber-900/30'
                         }`}
-                      >
-                        {option.label}
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="mt-2 text-[11px] text-amber-700/80 dark:text-amber-200/80">
-                  Vi laddar om listan när du väljer ett nytt språk. Ditt tema behålls.
-                </p>
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
               </div>
-            )}
+              <p className="mt-2 text-[11px] text-amber-700/80 dark:text-amber-200/80">
+                Vi laddar om listan när du väljer ett nytt språk. Ditt tema behålls.
+              </p>
+            </div>
+
             <div className="max-h-72 overflow-y-auto space-y-2 pr-1 text-left">
               {editableTerms.map((term, index) => (
                 <div
@@ -1252,13 +1241,13 @@ export function SnakeGamePage() {
                 setPrepResult((current) =>
                   current
                     ? {
-                        ...current,
-                        terms: validEditableTerms.map((term) => ({
-                          ...term,
-                          term: term.term.trim(),
-                          definition: term.definition.trim(),
-                        })),
-                      }
+                      ...current,
+                      terms: validEditableTerms.map((term) => ({
+                        ...term,
+                        term: term.term.trim(),
+                        definition: term.definition.trim(),
+                      })),
+                    }
                     : current
                 );
                 setShowReview(false);
@@ -1270,365 +1259,371 @@ export function SnakeGamePage() {
           </Card>
         )}
 
-        {loadState === 'loading' && (
-          <Card className="p-10 text-center space-y-3">
-            <div className="text-4xl">🐍</div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Förbereder begrepp och distraktorer...
-            </p>
-          </Card>
-        )}
-
-        {loadState === 'error' && (
-          <Card className="p-6 space-y-4 border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20">
-            <h3 className="text-lg font-semibold text-red-700 dark:text-red-300">
-              Kunde inte starta Snake-spelet
-            </h3>
-            <p className="text-sm text-red-600 dark:text-red-200">{error}</p>
-            <div className="flex gap-2">
-              <Button onClick={handleRetryLoad}>
-                <RefreshCcw className="mr-2 h-4 w-4" />
-                Försök igen
-              </Button>
-              <Button variant="ghost" onClick={() => navigate('/study')}>
-                Till studievyn
-              </Button>
-            </div>
-          </Card>
-        )}
-
-        {loadState === 'ready' && prepResult && (
-          <Card className="p-4 sm:p-6 space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600 dark:text-gray-300">
-                <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-1 dark:bg-gray-800">
-                  Rond
-                  <strong className="ml-1">
-                    {Math.min(currentRoundIndex + 1, totalRounds)} / {totalRounds}
-                  </strong>
-                </span>
-                <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-1 dark:bg-gray-800">
-                  Poäng
-                  <strong className="ml-1">{score}</strong>
-                </span>
-                <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-1 dark:bg-gray-800">
-                  Streak
-                  <strong className="ml-1">{streak}</strong>
-                  <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">(bäst {maxStreak})</span>
-                </span>
-                <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-1 font-semibold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200">
-                  +{xpPreview} XP
-                </span>
-              </div>
-              <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
-                <span className="inline-flex items-center gap-1 rounded-full bg-primary-100 px-2 py-1 font-semibold text-primary-700 dark:bg-primary-900/40 dark:text-primary-200">
-                  {activeSourceMode === 'generated' ? (
-                    <Sparkles className="h-3 w-3" />
-                  ) : activeSourceMode === 'multi-material' ? (
-                    <Layers className="h-3 w-3" />
-                  ) : (
-                    <Gamepad2 className="h-3 w-3" />
-                  )}
-                  {sourceBadgeLabel}
-                </span>
-                {materialPreview && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-200">
-                    {activeMaterialNames.length > 1 || activeSourceMode !== 'single-material' ? (
-                      <Layers className="h-3 w-3" />
-                    ) : (
-                      <Gamepad2 className="h-3 w-3" />
-                    )}
-                    {materialPreview}
-                  </span>
-                )}
-                <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 text-gray-700 dark:bg-gray-800 dark:text-gray-200">
-                  Språk {activeLanguage}
-                </span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 text-gray-700 dark:bg-gray-800 dark:text-gray-200">
-                  <Gauge className="h-3 w-3" />
-                  {stepsPerSecond} steg/s
-                </span>
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: MAX_LIVES }).map((_, index) => (
-                    <Heart
-                      key={index}
-                      className={`h-4 w-4 ${
-                        index < lives ? 'text-rose-500' : 'text-gray-300 dark:text-gray-600'
-                      }`}
-                      fill={index < lives ? 'currentColor' : 'none'}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleTogglePause}
-                disabled={gamePhase === 'finished'}
-              >
-                {gamePhase === 'playing' ? (
-                  <>
-                    <Pause className="mr-2 h-4 w-4" />
-                    Pausa
-                  </>
-                ) : (
-                  <>
-                    <Play className="mr-2 h-4 w-4" />
-                    Fortsätt
-                  </>
-                )}
-              </Button>
-            </div>
-
-            <Card className="border-2 border-primary-300 dark:border-primary-700 bg-gradient-to-br from-primary-50 to-white dark:from-primary-950 dark:to-gray-900 p-5 shadow-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary-500 text-white">
-                  <Sparkles className="w-4 h-4" />
-                </div>
-                <p className="text-sm font-bold uppercase tracking-wide text-primary-600 dark:text-primary-400">
-                  Hitta begreppet som matchar:
-                </p>
-              </div>
-              <p className="text-base font-medium text-gray-900 dark:text-gray-100 min-h-[48px] leading-relaxed">
-                {currentTerm?.definition ?? 'Tryck på "Starta spel" för att börja.'}
+        {
+          loadState === 'loading' && (
+            <Card className="p-10 text-center space-y-3">
+              <div className="text-4xl">🐍</div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Förbereder begrepp och distraktorer...
               </p>
             </Card>
+          )
+        }
 
-            <SnakeCanvas
-              gridWidth={GRID_WIDTH}
-              gridHeight={GRID_HEIGHT}
-              snake={snake}
-              tokens={tokens}
-              isPlaying={gamePhase === 'playing'}
-              shake={feedback ? 0.5 : 0}
-              fullscreen={fullscreen}
-              onFullscreenToggle={() => setFullscreen(!fullscreen)}
-              currentDefinition={currentTerm?.definition}
-            />
-
-            {feedback && (
-              <Card
-                className={`px-4 py-3 border text-sm ${
-                  feedback.status === 'correct'
-                    ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20'
-                    : 'border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20'
-                }`}
-              >
-                <p className="font-semibold text-gray-900 dark:text-white">{feedback.message}</p>
-                <p className="text-gray-700 dark:text-gray-300">{feedback.definition}</p>
-                {feedback.example && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 italic mt-1">
-                    Exempel: {feedback.example}
-                  </p>
-                )}
-              </Card>
-            )}
-
-            {/* Touch Controls - Mobile friendly grid layout */}
-            <div className="grid grid-cols-3 gap-2 max-w-xs mx-auto md:hidden">
-              <div />
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={() => changeDirection('up')}
-                disabled={gamePhase !== 'playing'}
-                className="aspect-square flex items-center justify-center"
-              >
-                <ChevronUp className="h-6 w-6" />
-              </Button>
-              <div />
-
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={() => changeDirection('left')}
-                disabled={gamePhase !== 'playing'}
-                className="aspect-square flex items-center justify-center"
-              >
-                <ChevronLeft className="h-6 w-6" />
-              </Button>
-              <div />
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={() => changeDirection('right')}
-                disabled={gamePhase !== 'playing'}
-                className="aspect-square flex items-center justify-center"
-              >
-                <ChevronRight className="h-6 w-6" />
-              </Button>
-
-              <div />
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={() => changeDirection('down')}
-                disabled={gamePhase !== 'playing'}
-                className="aspect-square flex items-center justify-center"
-              >
-                <ChevronDown className="h-6 w-6" />
-              </Button>
-              <div />
-            </div>
-
-            {/* Desktop keyboard hint */}
-            <div className="hidden md:block text-center text-sm text-gray-500 dark:text-gray-400">
-              Använd piltangenterna eller WASD för att styra ormen
-            </div>
-          </Card>
-        )}
-
-        {gamePhase === 'finished' && prepResult && (
-          <Card className="p-6 space-y-5 border-primary-200 dark:border-primary-800 bg-primary-50 dark:bg-primary-900/20">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div className="space-y-1">
-                <h3 className="text-lg font-semibold text-primary-700 dark:text-primary-200">
-                  {summaryReason === 'completed' ? 'Snyggt jobbat!' : 'Spelet avslutades'}
-                </h3>
-                <p className="text-sm text-primary-600 dark:text-primary-200">
-                  {summaryReason === 'completed'
-                    ? 'Alla rundor klarade – fortsätt på samma spår!'
-                    : summaryReason === 'lives'
-                    ? 'Ormen tog slut på liv. Sänk tempot och försök igen.'
-                    : 'Du avbröt rundan. Starta om när du är redo.'}
-                </p>
+        {
+          loadState === 'error' && (
+            <Card className="p-6 space-y-4 border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20">
+              <h3 className="text-lg font-semibold text-red-700 dark:text-red-300">
+                Kunde inte starta Snake-spelet
+              </h3>
+              <p className="text-sm text-red-600 dark:text-red-200">{error}</p>
+              <div className="flex gap-2">
+                <Button onClick={handleRetryLoad}>
+                  <RefreshCcw className="mr-2 h-4 w-4" />
+                  Försök igen
+                </Button>
+                <Button variant="ghost" onClick={() => navigate('/study')}>
+                  Till studievyn
+                </Button>
               </div>
-              <div className="text-right">
-                <p className="text-xs uppercase tracking-wide text-primary-500 dark:text-primary-300">
-                  Poäng
-                </p>
-                <p className="text-3xl font-semibold text-primary-700 dark:text-primary-100">{score}</p>
-                <p className="text-xs font-semibold text-primary-600 dark:text-primary-200">
-                  +{lastXpEarned} XP
-                </p>
-              </div>
-            </div>
+            </Card>
+          )
+        }
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="rounded-xl bg-white/80 px-4 py-3 shadow-sm dark:bg-gray-900/60">
-                <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  Träffsäkerhet
-                </p>
-                <p className="text-2xl font-semibold text-gray-900 dark:text-white">{accuracy}%</p>
-              </div>
-              <div className="rounded-xl bg-white/80 px-4 py-3 shadow-sm dark:bg-gray-900/60">
-                <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  Bästa streak
-                </p>
-                <p className="text-2xl font-semibold text-gray-900 dark:text-white">{maxStreak}</p>
-              </div>
-              <div className="rounded-xl bg-white/80 px-4 py-3 shadow-sm dark:bg-gray-900/60">
-                <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  Speltid
-                </p>
-                <p className="text-2xl font-semibold text-gray-900 dark:text-white">
-                  {formatSessionDuration(sessionDuration)}
-                </p>
-              </div>
-            </div>
-
-            <div className="rounded-xl bg-white/80 px-4 py-3 shadow-sm dark:bg-gray-900/60">
-              <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
-                <span className="inline-flex items-center gap-1 rounded-full bg-primary-100 px-2 py-1 font-semibold text-primary-700 dark:bg-primary-900/40 dark:text-primary-200">
-                  {activeSourceMode === 'generated' ? (
-                    <Sparkles className="h-3 w-3" />
-                  ) : activeSourceMode === 'multi-material' ? (
-                    <Layers className="h-3 w-3" />
-                  ) : (
-                    <Gamepad2 className="h-3 w-3" />
-                  )}
-                  {sourceBadgeLabel}
-                </span>
-                {materialPreview && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-200">
-                    {activeMaterialNames.length > 1 || activeSourceMode !== 'single-material' ? (
+        {
+          loadState === 'ready' && prepResult && (
+            <Card className="p-4 sm:p-6 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600 dark:text-gray-300">
+                  <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-1 dark:bg-gray-800">
+                    Rond
+                    <strong className="ml-1">
+                      {Math.min(currentRoundIndex + 1, totalRounds)} / {totalRounds}
+                    </strong>
+                  </span>
+                  <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-1 dark:bg-gray-800">
+                    Poäng
+                    <strong className="ml-1">{score}</strong>
+                  </span>
+                  <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-1 dark:bg-gray-800">
+                    Streak
+                    <strong className="ml-1">{streak}</strong>
+                    <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">(bäst {maxStreak})</span>
+                  </span>
+                  <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-1 font-semibold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200">
+                    +{xpPreview} XP
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary-100 px-2 py-1 font-semibold text-primary-700 dark:bg-primary-900/40 dark:text-primary-200">
+                    {activeSourceMode === 'generated' ? (
+                      <Sparkles className="h-3 w-3" />
+                    ) : activeSourceMode === 'multi-material' ? (
                       <Layers className="h-3 w-3" />
                     ) : (
                       <Gamepad2 className="h-3 w-3" />
                     )}
-                    {materialPreview}
+                    {sourceBadgeLabel}
                   </span>
-                )}
-                <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 text-gray-700 dark:bg-gray-800 dark:text-gray-200">
-                  Språk {activeLanguage}
-                </span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 text-gray-700 dark:bg-gray-800 dark:text-gray-200">
-                  Innehåll{' '}
-                  {prepResult.source === 'generated'
-                    ? 'AI'
-                    : prepResult.source === 'mixed'
-                    ? 'Mix'
-                    : 'Eget'}
-                </span>
-              </div>
-              <dl className="mt-3 grid gap-2 text-sm text-gray-600 dark:text-gray-300 sm:grid-cols-2">
-                <div>
-                  <dt className="text-xs uppercase tracking-wide text-gray-400">Källa</dt>
-                  <dd className="font-medium text-gray-900 dark:text-white">{sourceDescription}</dd>
-                </div>
-                {materialSummary && (
-                  <div>
-                    <dt className="text-xs uppercase tracking-wide text-gray-400">Material</dt>
-                    <dd className="font-medium text-gray-900 dark:text-white">{materialSummary}</dd>
+                  {materialPreview && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                      {activeMaterialNames.length > 1 || activeSourceMode !== 'single-material' ? (
+                        <Layers className="h-3 w-3" />
+                      ) : (
+                        <Gamepad2 className="h-3 w-3" />
+                      )}
+                      {materialPreview}
+                    </span>
+                  )}
+                  <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                    Språk {activeLanguage}
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                    <Gauge className="h-3 w-3" />
+                    {stepsPerSecond} steg/s
+                  </span>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: MAX_LIVES }).map((_, index) => (
+                      <Heart
+                        key={index}
+                        className={`h-4 w-4 ${index < lives ? 'text-rose-500' : 'text-gray-300 dark:text-gray-600'
+                          }`}
+                        fill={index < lives ? 'currentColor' : 'none'}
+                      />
+                    ))}
                   </div>
-                )}
-                <div>
-                  <dt className="text-xs uppercase tracking-wide text-gray-400">Språk</dt>
-                  <dd className="font-medium text-gray-900 dark:text-white">{activeLanguage}</dd>
                 </div>
-                <div>
-                  <dt className="text-xs uppercase tracking-wide text-gray-400">Innehållskälla</dt>
-                  <dd className="font-medium text-gray-900 dark:text-white">
+              </div>
+
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleTogglePause}
+                  disabled={gamePhase === 'finished'}
+                >
+                  {gamePhase === 'playing' ? (
+                    <>
+                      <Pause className="mr-2 h-4 w-4" />
+                      Pausa
+                    </>
+                  ) : (
+                    <>
+                      <Play className="mr-2 h-4 w-4" />
+                      Fortsätt
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              <Card className="border-2 border-primary-300 dark:border-primary-700 bg-gradient-to-br from-primary-50 to-white dark:from-primary-950 dark:to-gray-900 p-5 shadow-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary-500 text-white">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <p className="text-sm font-bold uppercase tracking-wide text-primary-600 dark:text-primary-400">
+                    Hitta begreppet som matchar:
+                  </p>
+                </div>
+                <p className="text-base font-medium text-gray-900 dark:text-gray-100 min-h-[48px] leading-relaxed">
+                  {currentTerm?.definition ?? 'Tryck på "Starta spel" för att börja.'}
+                </p>
+              </Card>
+
+              <SnakeCanvas
+                gridWidth={GRID_WIDTH}
+                gridHeight={GRID_HEIGHT}
+                snake={snake}
+                tokens={tokens}
+                isPlaying={gamePhase === 'playing'}
+                shake={feedback ? 0.5 : 0}
+                fullscreen={fullscreen}
+                onFullscreenToggle={() => setFullscreen(!fullscreen)}
+                currentDefinition={currentTerm?.definition}
+              />
+
+              {feedback && (
+                <Card
+                  className={`px-4 py-3 border text-sm ${feedback.status === 'correct'
+                    ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20'
+                    : 'border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20'
+                    }`}
+                >
+                  <p className="font-semibold text-gray-900 dark:text-white">{feedback.message}</p>
+                  <p className="text-gray-700 dark:text-gray-300">{feedback.definition}</p>
+                  {feedback.example && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 italic mt-1">
+                      Exempel: {feedback.example}
+                    </p>
+                  )}
+                </Card>
+              )}
+
+              {/* Touch Controls - Mobile friendly grid layout */}
+              <div className="grid grid-cols-3 gap-2 max-w-xs mx-auto md:hidden">
+                <div />
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => changeDirection('up')}
+                  disabled={gamePhase !== 'playing'}
+                  className="aspect-square flex items-center justify-center"
+                >
+                  <ChevronUp className="h-6 w-6" />
+                </Button>
+                <div />
+
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => changeDirection('left')}
+                  disabled={gamePhase !== 'playing'}
+                  className="aspect-square flex items-center justify-center"
+                >
+                  <ChevronLeft className="h-6 w-6" />
+                </Button>
+                <div />
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => changeDirection('right')}
+                  disabled={gamePhase !== 'playing'}
+                  className="aspect-square flex items-center justify-center"
+                >
+                  <ChevronRight className="h-6 w-6" />
+                </Button>
+
+                <div />
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => changeDirection('down')}
+                  disabled={gamePhase !== 'playing'}
+                  className="aspect-square flex items-center justify-center"
+                >
+                  <ChevronDown className="h-6 w-6" />
+                </Button>
+                <div />
+              </div>
+
+              {/* Desktop keyboard hint */}
+              <div className="hidden md:block text-center text-sm text-gray-500 dark:text-gray-400">
+                Använd piltangenterna eller WASD för att styra ormen
+              </div>
+            </Card>
+          )
+        }
+
+        {
+          gamePhase === 'finished' && prepResult && (
+            <Card className="p-6 space-y-5 border-primary-200 dark:border-primary-800 bg-primary-50 dark:bg-primary-900/20">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="space-y-1">
+                  <h3 className="text-lg font-semibold text-primary-700 dark:text-primary-200">
+                    {summaryReason === 'completed' ? 'Snyggt jobbat!' : 'Spelet avslutades'}
+                  </h3>
+                  <p className="text-sm text-primary-600 dark:text-primary-200">
+                    {summaryReason === 'completed'
+                      ? 'Alla rundor klarade – fortsätt på samma spår!'
+                      : summaryReason === 'lives'
+                        ? 'Ormen tog slut på liv. Sänk tempot och försök igen.'
+                        : 'Du avbröt rundan. Starta om när du är redo.'}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs uppercase tracking-wide text-primary-500 dark:text-primary-300">
+                    Poäng
+                  </p>
+                  <p className="text-3xl font-semibold text-primary-700 dark:text-primary-100">{score}</p>
+                  <p className="text-xs font-semibold text-primary-600 dark:text-primary-200">
+                    +{lastXpEarned} XP
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="rounded-xl bg-white/80 px-4 py-3 shadow-sm dark:bg-gray-900/60">
+                  <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    Träffsäkerhet
+                  </p>
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-white">{accuracy}%</p>
+                </div>
+                <div className="rounded-xl bg-white/80 px-4 py-3 shadow-sm dark:bg-gray-900/60">
+                  <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    Bästa streak
+                  </p>
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-white">{maxStreak}</p>
+                </div>
+                <div className="rounded-xl bg-white/80 px-4 py-3 shadow-sm dark:bg-gray-900/60">
+                  <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    Speltid
+                  </p>
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-white">
+                    {formatSessionDuration(sessionDuration)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-xl bg-white/80 px-4 py-3 shadow-sm dark:bg-gray-900/60">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary-100 px-2 py-1 font-semibold text-primary-700 dark:bg-primary-900/40 dark:text-primary-200">
+                    {activeSourceMode === 'generated' ? (
+                      <Sparkles className="h-3 w-3" />
+                    ) : activeSourceMode === 'multi-material' ? (
+                      <Layers className="h-3 w-3" />
+                    ) : (
+                      <Gamepad2 className="h-3 w-3" />
+                    )}
+                    {sourceBadgeLabel}
+                  </span>
+                  {materialPreview && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                      {activeMaterialNames.length > 1 || activeSourceMode !== 'single-material' ? (
+                        <Layers className="h-3 w-3" />
+                      ) : (
+                        <Gamepad2 className="h-3 w-3" />
+                      )}
+                      {materialPreview}
+                    </span>
+                  )}
+                  <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                    Språk {activeLanguage}
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                    Innehåll{' '}
                     {prepResult.source === 'generated'
-                      ? 'AI-genererat paket'
+                      ? 'AI'
                       : prepResult.source === 'mixed'
-                      ? 'Mix av AI och eget material'
-                      : 'Eget material'}
-                  </dd>
+                        ? 'Mix'
+                        : 'Eget'}
+                  </span>
                 </div>
-              </dl>
-            </div>
-
-            <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-100">
-              <h4 className="font-semibold">{nextStep.title}</h4>
-              <p>{nextStep.description}</p>
-            </div>
-
-            {mistakeResults.length > 0 ? (
-              <div className="space-y-2">
-                <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
-                  Begrepp att repetera
-                </h4>
-                {mistakeResults.map((result, index) => (
-                  <div
-                    key={`${result.term}-${index}`}
-                    className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-100"
-                  >
-                    <span className="font-semibold">{result.term}</span>: {result.definition}
+                <dl className="mt-3 grid gap-2 text-sm text-gray-600 dark:text-gray-300 sm:grid-cols-2">
+                  <div>
+                    <dt className="text-xs uppercase tracking-wide text-gray-400">Källa</dt>
+                    <dd className="font-medium text-gray-900 dark:text-white">{sourceDescription}</dd>
                   </div>
-                ))}
+                  {materialSummary && (
+                    <div>
+                      <dt className="text-xs uppercase tracking-wide text-gray-400">Material</dt>
+                      <dd className="font-medium text-gray-900 dark:text-white">{materialSummary}</dd>
+                    </div>
+                  )}
+                  <div>
+                    <dt className="text-xs uppercase tracking-wide text-gray-400">Språk</dt>
+                    <dd className="font-medium text-gray-900 dark:text-white">{activeLanguage}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs uppercase tracking-wide text-gray-400">Innehållskälla</dt>
+                    <dd className="font-medium text-gray-900 dark:text-white">
+                      {prepResult.source === 'generated'
+                        ? 'AI-genererat paket'
+                        : prepResult.source === 'mixed'
+                          ? 'Mix av AI och eget material'
+                          : 'Eget material'}
+                    </dd>
+                  </div>
+                </dl>
               </div>
-            ) : (
-              <p className="text-sm text-emerald-700 dark:text-emerald-200">
-                Inga missar den här gången – grymt!
-              </p>
-            )}
 
-            <div className="flex flex-wrap gap-3">
-              <Button onClick={startGame}>
-                <Sparkles className="mr-2 h-4 w-4" />
-                Spela igen
-              </Button>
-              <Button variant="outline" onClick={() => navigate('/study')}>
-                Till studievyn
-              </Button>
-            </div>
-          </Card>
-        )}
-      </div>
-    </MainLayout>
+              <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-100">
+                <h4 className="font-semibold">{nextStep.title}</h4>
+                <p>{nextStep.description}</p>
+              </div>
+
+              {mistakeResults.length > 0 ? (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+                    Begrepp att repetera
+                  </h4>
+                  {mistakeResults.map((result, index) => (
+                    <div
+                      key={`${result.term}-${index}`}
+                      className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-100"
+                    >
+                      <span className="font-semibold">{result.term}</span>: {result.definition}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-emerald-700 dark:text-emerald-200">
+                  Inga missar den här gången – grymt!
+                </p>
+              )}
+
+              <div className="flex flex-wrap gap-3">
+                <Button onClick={startGame}>
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Spela igen
+                </Button>
+                <Button variant="outline" onClick={() => navigate('/study')}>
+                  Till studievyn
+                </Button>
+              </div>
+            </Card>
+          )
+        }
+      </div >
+    </MainLayout >
   );
 }
