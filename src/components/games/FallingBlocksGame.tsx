@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Star, Shield, Zap, Bomb, Snowflake, Timer } from 'lucide-react';
+import { Star, Shield, Snowflake, Timer } from 'lucide-react';
 import type { ActivityQuestion } from '../../types';
 
 interface FallingBlocksGameProps {
@@ -44,8 +44,8 @@ export function FallingBlocksGame({ questions, onGameOver, onScoreUpdate }: Fall
     const [combo, setCombo] = useState(0);
 
     // Game loop refs
-    const requestRef = useRef<number>();
-    const lastTimeRef = useRef<number>();
+    const requestRef = useRef<number | null>(null);
+    const lastTimeRef = useRef<number | null>(null);
     const spawnTimerRef = useRef<number>(0);
     const waveTimerRef = useRef<number>(0);
 
