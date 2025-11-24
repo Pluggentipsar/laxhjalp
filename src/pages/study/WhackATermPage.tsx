@@ -31,7 +31,7 @@ interface WhackATermTerm {
   term: string;
   definition: string;
   examples?: string[];
-  source: 'flashcard' | 'glossary' | 'concept' | 'generated';
+  source: 'flashcard' | 'glossary' | 'concept' | 'generated' | 'mixed';
   language: LanguageCode;
   distractors: string[];
 }
@@ -106,7 +106,7 @@ export function WhackATermPage() {
   const [loadState, setLoadState] = useState<LoadState>('idle');
   const [prepResult, setPrepResult] = useState<{
     terms: WhackATermTerm[];
-    source: 'existing' | 'generated';
+    source: 'existing' | 'generated' | 'mixed';
     materialIds: string[];
     language: LanguageCode;
     timestamp: number;
@@ -741,8 +741,8 @@ export function WhackATermPage() {
                     <Heart
                       key={i}
                       className={`w-6 h-6 ${i < lives
-                          ? 'fill-red-500 text-red-500'
-                          : 'text-gray-300 dark:text-gray-600'
+                        ? 'fill-red-500 text-red-500'
+                        : 'text-gray-300 dark:text-gray-600'
                         }`}
                     />
                   ))}
@@ -791,9 +791,9 @@ export function WhackATermPage() {
                 <div className="relative h-2 w-full rounded-full bg-gray-200 dark:bg-gray-800 overflow-hidden">
                   <div
                     className={`absolute top-0 left-0 h-full transition-all duration-500 ease-out ${soloLevel === 'unistructural' ? 'w-1/4 bg-green-500' :
-                        soloLevel === 'multistructural' ? 'w-2/4 bg-emerald-500' :
-                          soloLevel === 'relational' ? 'w-3/4 bg-teal-500' :
-                            'w-full bg-amber-500'
+                      soloLevel === 'multistructural' ? 'w-2/4 bg-emerald-500' :
+                        soloLevel === 'relational' ? 'w-3/4 bg-teal-500' :
+                          'w-full bg-amber-500'
                       }`}
                   />
                 </div>
@@ -836,14 +836,14 @@ export function WhackATermPage() {
             {feedback && (
               <Card
                 className={`p-4 border-2 ${feedback.status === 'correct'
-                    ? 'border-green-500 bg-green-50 dark:bg-green-950'
-                    : 'border-red-500 bg-red-50 dark:bg-red-950'
+                  ? 'border-green-500 bg-green-50 dark:bg-green-950'
+                  : 'border-red-500 bg-red-50 dark:bg-red-950'
                   }`}
               >
                 <p
                   className={`font-bold ${feedback.status === 'correct'
-                      ? 'text-green-700 dark:text-green-300'
-                      : 'text-red-700 dark:text-red-300'
+                    ? 'text-green-700 dark:text-green-300'
+                    : 'text-red-700 dark:text-red-300'
                     }`}
                 >
                   {feedback.message}

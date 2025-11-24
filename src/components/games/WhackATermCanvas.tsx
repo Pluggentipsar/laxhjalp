@@ -39,7 +39,7 @@ export function WhackATermCanvas({
   // Sync moles ref
   useEffect(() => {
     // Check for newly hit moles to spawn particles
-    const prevMoles = molesRef.current;
+    // const prevMoles = molesRef.current;
     // const hitMole = prevMoles.find(p => p.visible && !moles.find(m => m.id === p.id));
 
     // This logic is a bit tricky since moles disappear when hit. 
