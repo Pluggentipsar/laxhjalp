@@ -69,13 +69,24 @@ export function AllActivitiesView({
     },
     {
       id: 'avancerat',
-      name: 'Avancerat',
-      description: 'Strategier och flera steg',
+      name: 'Avancerat & Utmaningar',
+      description: 'Strategier, flera steg och AI-problem',
       icon: '🚀',
       unlocked: true, // TODO: Lock based on completion
       completed: false,
       activities: activities.filter((a) =>
-        ['addition-tiotalsovergaing', 'blandade-operationer'].includes(a.id)
+        ['addition-tiotalsovergaing', 'blandade-operationer', 'ai-utmaning'].includes(a.id)
+      ),
+    },
+    {
+      id: 'multiplikation-division',
+      name: 'Multiplikation & Division',
+      description: 'Gångertabellen och dela lika',
+      icon: '✖️',
+      unlocked: true,
+      completed: false,
+      activities: activities.filter((a) =>
+        ['multiplikation-4-6', 'division-4-6'].includes(a.id)
       ),
     },
     {
@@ -145,11 +156,10 @@ export function AllActivitiesView({
             transition={{ delay: index * 0.05 }}
           >
             <Card
-              className={`overflow-hidden ${
-                !level.unlocked
+              className={`overflow-hidden ${!level.unlocked
                   ? 'opacity-60 bg-gray-50 dark:bg-gray-900'
                   : 'hover:shadow-md transition-shadow'
-              }`}
+                }`}
             >
               {/* Level Header */}
               <button
@@ -237,19 +247,18 @@ export function AllActivitiesView({
 
                               <div className="text-right flex-shrink-0">
                                 <div
-                                  className={`px-2 py-1 rounded text-xs font-semibold mb-2 ${
-                                    activity.difficulty === 'easy'
+                                  className={`px-2 py-1 rounded text-xs font-semibold mb-2 ${activity.difficulty === 'easy'
                                       ? 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400'
                                       : activity.difficulty === 'medium'
-                                      ? 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400'
-                                      : 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400'
-                                  }`}
+                                        ? 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400'
+                                        : 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400'
+                                    }`}
                                 >
                                   {activity.difficulty === 'easy'
                                     ? 'Lätt'
                                     : activity.difficulty === 'medium'
-                                    ? 'Medel'
-                                    : 'Svår'}
+                                      ? 'Medel'
+                                      : 'Svår'}
                                 </div>
                                 <div className="text-xs text-gray-500">
                                   ⏱️ {activity.estimatedDuration}

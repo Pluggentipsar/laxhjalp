@@ -20,10 +20,10 @@ export function RecommendedActivitiesView({
   const navigate = useNavigate();
 
   // TODO: Later implement smart AI-based recommendations
-  // For now, use simple heuristics
-  const continueActivity = activities.find((a) => a.id.includes('1-10')); // Simulate "last activity"
-  const nextActivity = activities.find((a) => a.id.includes('dubbletter')); // Simulate "recommended next"
-  const reviewActivity = activities.find((a) => a.id.includes('repetera'));
+  // For now, use simple heuristics, prioritizing new features for visibility
+  const continueActivity = activities.find((a) => a.id === 'ai-utmaning') || activities.find((a) => a.id.includes('1-10'));
+  const nextActivity = activities.find((a) => a.id.includes('multiplikation')) || activities.find((a) => a.id.includes('dubbletter'));
+  const reviewActivity = activities.find((a) => a.id.includes('division')) || activities.find((a) => a.id.includes('repetera'));
 
   const recommendedCards = [
     continueActivity && {
@@ -84,13 +84,12 @@ export function RecommendedActivitiesView({
               transition={{ delay: index * 0.1 }}
             >
               <Card
-                className={`p-6 cursor-pointer hover:shadow-lg transition-all border-2 ${
-                  type === 'continue'
+                className={`p-6 cursor-pointer hover:shadow-lg transition-all border-2 ${type === 'continue'
                     ? 'border-purple-200 dark:border-purple-800'
                     : type === 'next'
-                    ? 'border-green-200 dark:border-green-800'
-                    : 'border-orange-200 dark:border-orange-800'
-                }`}
+                      ? 'border-green-200 dark:border-green-800'
+                      : 'border-orange-200 dark:border-orange-800'
+                  }`}
                 onClick={() => navigate(`/subjects/${subjectHub}/${activity.id}`)}
               >
                 {/* Badge */}
@@ -117,19 +116,18 @@ export function RecommendedActivitiesView({
                 <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400 mb-4">
                   <span>⏱️ {activity.estimatedDuration}</span>
                   <span
-                    className={`px-2 py-1 rounded ${
-                      activity.difficulty === 'easy'
+                    className={`px-2 py-1 rounded ${activity.difficulty === 'easy'
                         ? 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400'
                         : activity.difficulty === 'medium'
-                        ? 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400'
-                        : 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400'
-                    }`}
+                          ? 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400'
+                          : 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400'
+                      }`}
                   >
                     {activity.difficulty === 'easy'
                       ? 'Lätt'
                       : activity.difficulty === 'medium'
-                      ? 'Medel'
-                      : 'Svår'}
+                        ? 'Medel'
+                        : 'Svår'}
                   </span>
                 </div>
 
