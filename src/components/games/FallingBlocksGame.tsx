@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Star, Shield, Snowflake, Timer, Zap, Skull, Trophy, Flame } from 'lucide-react';
+import { Star, Shield, Snowflake, Timer, Bomb, Skull, Trophy, Flame } from 'lucide-react';
 import type { ActivityQuestion } from '../../types';
 
 interface FallingBlocksGameProps {
@@ -100,8 +100,6 @@ export function FallingBlocksGame({ questions, onGameOver, onScoreUpdate }: Fall
     const handleInput = (char: string) => {
         setCurrentInput(prev => {
             const next = prev + char;
-            // Auto-submit if it matches any block's answer length (simple heuristic for now)
-            // Better: Check if it matches any block exactly
             return next;
         });
     };
@@ -334,6 +332,17 @@ export function FallingBlocksGame({ questions, onGameOver, onScoreUpdate }: Fall
         setParticles(prev => [...prev, ...newParticles]);
     };
 
+    const activatePowerup = (type: PowerupType) => {
+        if (type === 'bomb') {
+            setBlocks([]);
+            setScore(s => s + (blocks.length * 50));
+            createExplosion(50, 50, '#FFD700');
+        } else {
+            const duration = type === 'shield' ? 999999 : 5000; // Shield lasts until hit
+            setActivePowerups(prev => [...prev, { type, expiresAt: Date.now() + duration }]);
+        }
+    };
+
     return (
         <div
             className="w-full h-full bg-gray-900 relative overflow-hidden font-sans select-none"
@@ -375,6 +384,18 @@ export function FallingBlocksGame({ questions, onGameOver, onScoreUpdate }: Fall
                         {combo}x COMBO
                     </div>
                     {combo > 5 && <Flame className="w-6 h-6 text-orange-500 animate-bounce" />}
+                </div>
+
+                {/* Active Powerups */}
+                <div className="flex gap-2">
+                    {activePowerups.map((p, i) => (
+                        <div key={i} className="bg-white/20 p-2 rounded-full backdrop-blur-sm animate-pulse">
+                            {p.type === 'freeze' && <Snowflake className="w-6 h-6 text-cyan-300" />}
+                            {p.type === 'shield' && <Shield className="w-6 h-6 text-green-300" />}
+                            {p.type === 'slow' && <Timer className="w-6 h-6 text-yellow-300" />}
+                            {p.type === 'bomb' && <Bomb className="w-6 h-6 text-red-500" />}
+                        </div>
+                    ))}
                 </div>
 
                 <div className="flex gap-1">
