@@ -1,127 +1,121 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Trophy, ArrowLeft, RotateCcw, Play } from 'lucide-react';
-import { Button } from '../common/Button';
-import { Card } from '../common/Card';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Trophy, X, Gamepad2, Car } from 'lucide-react';
 import { FallingBlocksGame } from '../games/FallingBlocksGame';
+import { MathRacerGame } from '../games/MathRacerGame';
 import type { ActivityQuestion } from '../../types';
 
 interface MathGameWrapperProps {
     questions: ActivityQuestion[];
-    onComplete: (score: number, total: number) => void;
-    onExit: () => void;
     title: string;
+    onComplete: (score: number) => void;
+    onExit: () => void;
 }
 
-type GameType = 'falling-blocks' | 'quiz';
+type GameType = 'falling-blocks' | 'math-racer';
 
-export function MathGameWrapper({ questions, onComplete, onExit, title }: MathGameWrapperProps) {
-    const [gameType, setGameType] = useState<GameType>('falling-blocks');
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [score, setScore] = useState(0);
-    const [gameOver, setGameOver] = useState(false);
+export function MathGameWrapper({ questions, title, onComplete, onExit }: MathGameWrapperProps) {
+    const [selectedGame, setSelectedGame] = useState<GameType | null>(null);
+    const [showMenu, setShowMenu] = useState(true);
 
-    const handleGameComplete = (finalScore: number) => {
-        setScore(finalScore);
-        setGameOver(true);
-        onComplete(finalScore, questions.length);
+    const handleGameSelect = (game: GameType) => {
+        setSelectedGame(game);
+        setShowMenu(false);
     };
 
-    if (gameOver) {
-        return (
-            <div className="max-w-2xl mx-auto p-4 text-center">
-                <motion.div
-                    initial={{ scale: 0.9, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-xl"
-                >
-                    <Trophy className="w-24 h-24 text-yellow-500 mx-auto mb-6" />
-                    <h2 className="text-3xl font-bold mb-4">Spel Avklarat!</h2>
-                    <p className="text-xl mb-8">
-                        Du fick <span className="font-bold text-purple-600">{score}</span> poäng!
-                    </p>
-                    <div className="flex gap-4 justify-center">
-                        <Button onClick={() => window.location.reload()} variant="primary">
-                            <RotateCcw className="w-4 h-4 mr-2" />
-                            Spela igen
-                        </Button>
-                        <Button onClick={onExit} variant="secondary">
-                            <ArrowLeft className="w-4 h-4 mr-2" />
-                            Avsluta
-                        </Button>
-                    </div>
-                </motion.div>
-            </div>
-        );
-    }
-
-    if (!isPlaying) {
-        return (
-            <div className="max-w-2xl mx-auto p-4">
-                <Card className="p-8 text-center">
-                    <h1 className="text-3xl font-bold mb-6">{title} - Spelläge</h1>
-                    <p className="text-gray-600 dark:text-gray-400 mb-8">
-                        Välj ett spel för att träna på dessa uppgifter.
-                    </p>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                        <button
-                            onClick={() => setGameType('falling-blocks')}
-                            className={`p-6 rounded-xl border-2 transition-all ${gameType === 'falling-blocks'
-                                ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
-                                : 'border-gray-200 dark:border-gray-700 hover:border-purple-300'
-                                }`}
-                        >
-                            <div className="text-4xl mb-2">🧱</div>
-                            <h3 className="font-bold mb-1">Fallande Block</h3>
-                            <p className="text-sm text-gray-500">Svara innan blocken når botten!</p>
-                        </button>
-
-                        {/* Placeholder for future games */}
-                        <button
-                            disabled
-                            className="p-6 rounded-xl border-2 border-gray-100 dark:border-gray-800 opacity-50 cursor-not-allowed"
-                        >
-                            <div className="text-4xl mb-2">🏎️</div>
-                            <h3 className="font-bold mb-1">Matte-Race</h3>
-                            <p className="text-sm text-gray-500">Kommer snart...</p>
-                        </button>
-                    </div>
-
-                    <div className="flex gap-4 justify-center">
-                        <Button onClick={onExit} variant="ghost">
-                            <ArrowLeft className="w-4 h-4 mr-2" />
-                            Tillbaka
-                        </Button>
-                        <Button onClick={() => setIsPlaying(true)} size="lg" className="px-8">
-                            <Play className="w-5 h-5 mr-2" />
-                            Starta Spel
-                        </Button>
-                    </div>
-                </Card>
-            </div>
-        );
-    }
+    const handleGameOver = (score: number) => {
+        onComplete(score);
+    };
 
     return (
-        <div className="fixed inset-0 bg-gray-900 z-50 flex flex-col">
-            <div className="p-4 flex justify-between items-center text-white bg-gray-900/50 backdrop-blur-sm absolute top-0 left-0 right-0 z-10">
-                <Button variant="ghost" size="sm" onClick={() => setIsPlaying(false)} className="text-white hover:bg-white/10">
-                    <ArrowLeft className="w-4 h-4 mr-2" />
-                    Avbryt
-                </Button>
-                <div className="font-bold text-xl">Poäng: {score}</div>
-                <div className="w-20"></div> {/* Spacer for centering */}
+        <div className="fixed inset-0 z-50 bg-gray-900 flex flex-col">
+            {/* Header */}
+            <div className="p-4 flex justify-between items-center bg-gray-800 border-b border-gray-700">
+                <div className="flex items-center gap-3">
+                    <Trophy className="w-6 h-6 text-yellow-400" />
+                    <h2 className="text-xl font-bold text-white">{title}</h2>
+                </div>
+                <button
+                    onClick={onExit}
+                    className="p-2 hover:bg-gray-700 rounded-full text-gray-400 hover:text-white transition-colors"
+                >
+                    <X className="w-6 h-6" />
+                </button>
             </div>
 
+            {/* Game Area */}
             <div className="flex-1 relative overflow-hidden">
-                {gameType === 'falling-blocks' && (
-                    <FallingBlocksGame
-                        questions={questions}
-                        onGameOver={handleGameComplete}
-                        onScoreUpdate={setScore}
-                    />
-                )}
+                <AnimatePresence mode="wait">
+                    {showMenu ? (
+                        <motion.div
+                            key="menu"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            className="absolute inset-0 flex flex-col items-center justify-center p-8"
+                        >
+                            <h1 className="text-4xl font-bold text-white mb-12">Välj Spel</h1>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl w-full">
+                                {/* Falling Blocks Card */}
+                                <button
+                                    onClick={() => handleGameSelect('falling-blocks')}
+                                    className="group relative bg-gradient-to-br from-purple-900 to-indigo-900 p-8 rounded-2xl border border-purple-500/30 hover:border-purple-400 transition-all hover:scale-105 text-left overflow-hidden"
+                                >
+                                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <Gamepad2 className="w-32 h-32 text-white" />
+                                    </div>
+                                    <div className="relative z-10">
+                                        <h3 className="text-2xl font-bold text-white mb-2">Falling Blocks</h3>
+                                        <p className="text-purple-200 mb-6">Fånga svaren innan de faller ner! Använd powerups och klara vågorna.</p>
+                                        <span className="inline-block px-4 py-2 bg-purple-600 text-white rounded-lg font-bold group-hover:bg-purple-500 transition-colors">
+                                            SPELA NU
+                                        </span>
+                                    </div>
+                                </button>
+
+                                {/* Math Racer Card */}
+                                <button
+                                    onClick={() => handleGameSelect('math-racer')}
+                                    className="group relative bg-gradient-to-br from-cyan-900 to-blue-900 p-8 rounded-2xl border border-cyan-500/30 hover:border-cyan-400 transition-all hover:scale-105 text-left overflow-hidden"
+                                >
+                                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <Car className="w-32 h-32 text-white" />
+                                    </div>
+                                    <div className="relative z-10">
+                                        <h3 className="text-2xl font-bold text-white mb-2">Math Racer</h3>
+                                        <p className="text-cyan-200 mb-6">Kör fort och välj rätt fil! Undvik hinder och samla poäng i hög fart.</p>
+                                        <span className="inline-block px-4 py-2 bg-cyan-600 text-white rounded-lg font-bold group-hover:bg-cyan-500 transition-colors">
+                                            SPELA NU
+                                        </span>
+                                    </div>
+                                </button>
+                            </div>
+                        </motion.div>
+                    ) : (
+                        <motion.div
+                            key="game"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="w-full h-full"
+                        >
+                            {selectedGame === 'falling-blocks' && (
+                                <FallingBlocksGame
+                                    questions={questions}
+                                    onGameOver={handleGameOver}
+                                    onScoreUpdate={() => { }}
+                                />
+                            )}
+                            {selectedGame === 'math-racer' && (
+                                <MathRacerGame
+                                    questions={questions}
+                                    onGameOver={handleGameOver}
+                                    onScoreUpdate={() => { }}
+                                />
+                            )}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
         </div>
     );

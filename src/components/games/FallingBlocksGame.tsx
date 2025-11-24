@@ -332,16 +332,7 @@ export function FallingBlocksGame({ questions, onGameOver, onScoreUpdate }: Fall
         setParticles(prev => [...prev, ...newParticles]);
     };
 
-    const activatePowerup = (type: PowerupType) => {
-        if (type === 'bomb') {
-            setBlocks([]);
-            setScore(s => s + (blocks.length * 50));
-            createExplosion(50, 50, '#FFD700');
-        } else {
-            const duration = type === 'shield' ? 999999 : 5000; // Shield lasts until hit
-            setActivePowerups(prev => [...prev, { type, expiresAt: Date.now() + duration }]);
-        }
-    };
+
 
     return (
         <div
