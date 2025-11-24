@@ -85,14 +85,14 @@ export async function prepareSnakeGameContent(
     sourceMode === 'generated'
       ? []
       : materialsToUse.flatMap((material) =>
-          collectGameTerms({
-            materialId: material.id,
-            concepts: material.concepts,
-            flashcards: material.flashcards,
-            glossary: material.glossary ?? [],
-            language,
-          })
-        );
+        collectGameTerms({
+          materialId: material.id,
+          concepts: material.concepts,
+          flashcards: material.flashcards,
+          glossary: material.glossary ?? [],
+          language,
+        })
+      );
 
   let terms = deduplicateTerms(baseTerms);
   let source: GameContentPreparation['source'] = sourceMode === 'generated' ? 'generated' : 'existing';
@@ -137,8 +137,8 @@ export async function prepareSnakeGameContent(
       sourceMode === 'generated'
         ? 'generated'
         : terms.some((term) => term.source === 'generated')
-        ? 'mixed'
-        : 'existing';
+          ? 'mixed'
+          : 'existing';
   }
 
   if (terms.length < 3) {
@@ -159,8 +159,8 @@ export async function prepareSnakeGameContent(
     materialsToUse.length > 0
       ? materialsToUse.map((material) => material.id)
       : config.materialIds && config.materialIds.length > 0
-      ? config.materialIds
-      : ['generated'];
+        ? config.materialIds
+        : ['generated'];
 
   return {
     terms: enrichedTerms,
@@ -422,7 +422,7 @@ export async function prepareWhackATermContent(
   config: WhackATermConfig
 ): Promise<{
   terms: any[];
-  source: 'existing' | 'generated';
+  source: 'existing' | 'generated' | 'mixed';
   materialIds: string[];
   language: LanguageCode;
   timestamp: number;
@@ -566,7 +566,7 @@ export async function prepareWhackATermContent(
     try {
       const grade = useAppStore.getState().user?.grade || 9;
       const contentForGeneration = buildGenerationContent(materialsToUse);
-      
+
       // Don't generate if content is too short
       if (contentForGeneration.length > 50) {
         const generatedConcepts = await generateConcepts(contentForGeneration, {
@@ -577,16 +577,16 @@ export async function prepareWhackATermContent(
 
         if (generatedConcepts && generatedConcepts.length > 0) {
           generatedConcepts.forEach((concept) => {
-             const term = sanitize(concept.term);
-             const definition = sanitize(concept.definition);
-             allTerms.push({
-               term,
-               definition: removeTermFromDefinition(term, definition),
-               examples: concept.examples?.map(sanitize) || [],
-               source: 'generated',
-               language,
-               distractors: [],
-             });
+            const term = sanitize(concept.term);
+            const definition = sanitize(concept.definition);
+            allTerms.push({
+              term,
+              definition: removeTermFromDefinition(term, definition),
+              examples: concept.examples?.map(sanitize) || [],
+              source: 'generated',
+              language,
+              distractors: [],
+            });
           });
         }
       }

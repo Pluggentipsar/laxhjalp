@@ -85,7 +85,7 @@ const createBokeh = (): BokehCircle[] => {
   }));
 };
 
-export function SnakeCanvas({ gridWidth, gridHeight, snake, tokens, isPlaying: _isPlaying, shake = 0, onCorrect, onIncorrect, fullscreen = false, onFullscreenToggle, currentDefinition }: SnakeCanvasProps) {
+export function SnakeCanvas({ gridWidth, gridHeight, snake, tokens, isPlaying: _isPlaying, shake: _shake = 0, onCorrect: _onCorrect, onIncorrect: _onIncorrect, fullscreen = false, onFullscreenToggle, currentDefinition }: SnakeCanvasProps) {
   // Note: isPlaying is available as _isPlaying if needed for future enhancements
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -101,22 +101,6 @@ export function SnakeCanvas({ gridWidth, gridHeight, snake, tokens, isPlaying: _
     tokensRef.current = tokens;
     // console.log('[SnakeCanvas] Updated refs - snake:', snake.length, 'tokens:', tokens.length);
   }, [snake, tokens]);
-
-  // Spawn particles effect
-  const spawnParticles = useCallback((x: number, y: number, color: string) => {
-    for (let i = 0; i < PARTICLE_COUNT; i++) {
-      particlesRef.current.push({
-        x: x * CELL_SIZE + CELL_SIZE / 2,
-        y: y * CELL_SIZE + CELL_SIZE / 2,
-        dx: (Math.random() - 0.5) * 200,
-        dy: (Math.random() - 0.5) * 200,
-        life: 1,
-        maxLife: 1,
-        color,
-        size: Math.random() * 3 + 2,
-      });
-    }
-  }, []);
 
   // Game Loop
   useEffect(() => {

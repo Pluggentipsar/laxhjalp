@@ -23,8 +23,8 @@ export function FallingBlocksGame({ questions, onGameOver, onScoreUpdate }: Fall
     const [level, setLevel] = useState(1);
 
     // Game loop ref
-    const requestRef = useRef<number>();
-    const lastTimeRef = useRef<number>();
+    const requestRef = useRef<number | undefined>(undefined);
+    const lastTimeRef = useRef<number | undefined>(undefined);
     const spawnTimerRef = useRef<number>(0);
 
     // Initialize game
@@ -175,10 +175,10 @@ export function FallingBlocksGame({ questions, onGameOver, onScoreUpdate }: Fall
                                     ].sort(() => Math.random() - 0.5).map((opt, i) => (
                                         <button
                                             key={i}
-                                            onClick={() => handleAnswer(block.id, opt)}
+                                            onClick={() => handleAnswer(block.id, opt as string | number)}
                                             className="bg-purple-600 hover:bg-purple-500 text-white py-1 px-2 rounded text-sm transition-colors"
                                         >
-                                            {opt}
+                                            {String(opt)}
                                         </button>
                                     ))}
                                 </div>

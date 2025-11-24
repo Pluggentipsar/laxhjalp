@@ -391,10 +391,7 @@ export function ArithmeticActivity() {
               </button>
               <button
                 onClick={() => setMode('game')}
-                className={`px-3 py-1 rounded-md text-sm font-medium transition-all ${mode === 'game'
-                  ? 'bg-white dark:bg-gray-700 shadow-sm text-purple-600'
-                  : 'text-gray-500 hover:text-gray-700'
-                  }`}
+                className="px-3 py-1 rounded-md text-sm font-medium transition-all text-gray-500 hover:text-gray-700"
               >
                 <Gamepad2 className="w-4 h-4 inline mr-1" />
                 Spela
@@ -554,6 +551,6 @@ export function ArithmeticActivity() {
           </div>
         </div>
       </div>
-    </MainLayout>
+    </MainLayout >
   );
 }

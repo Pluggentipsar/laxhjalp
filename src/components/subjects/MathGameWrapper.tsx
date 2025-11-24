@@ -24,6 +24,7 @@ export function MathGameWrapper({ questions, onComplete, onExit, title }: MathGa
     const handleGameComplete = (finalScore: number) => {
         setScore(finalScore);
         setGameOver(true);
+        onComplete(finalScore, questions.length);
     };
 
     if (gameOver) {
