@@ -182,7 +182,7 @@ export function MathRacerGame({ questions, onGameOver, onScoreUpdate }: MathRace
   };
 
   const createExplosion = (color: string) => {
-    const newParticles = Array.from({ length: 10 }, (_, i) => ({
+    const newParticles = Array.from({ length: 10 }, (_) => ({
       id: Math.random().toString(),
       x: (laneRef.current - 1) * 30 + (Math.random() - 0.5) * 10, // Near player
       y: 10, // Near bottom

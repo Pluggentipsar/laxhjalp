@@ -125,6 +125,15 @@ export function FallingBlocksGame({ questions, onGameOver, onScoreUpdate }: Fall
                     const points = (b.isBoss ? 500 : b.isGold ? 100 : 10) * (activeEvent === 'gold_rush' ? 2 : 1);
                     addScore(points, b.x, b.y);
                     createExplosion(b.x, b.y, b.isBoss ? '#FF0000' : b.isGold ? '#FFD700' : '#4ADE80');
+
+                    // Chance to drop powerup
+                    if (Math.random() < 0.05) {
+                        const types: PowerupType[] = ['freeze', 'bomb', 'shield', 'slow'];
+                        const type = types[Math.floor(Math.random() * types.length)];
+                        activatePowerup(type);
+                        addFloatingText(b.x, b.y, type.toUpperCase(), '#00FFFF');
+                    }
+
                     return false;
                 }
                 return true;
@@ -332,7 +341,16 @@ export function FallingBlocksGame({ questions, onGameOver, onScoreUpdate }: Fall
         setParticles(prev => [...prev, ...newParticles]);
     };
 
-
+    const activatePowerup = (type: PowerupType) => {
+        if (type === 'bomb') {
+            setBlocks([]);
+            setScore(s => s + (blocks.length * 50));
+            createExplosion(50, 50, '#FFD700');
+        } else {
+            const duration = type === 'shield' ? 999999 : 5000; // Shield lasts until hit
+            setActivePowerups(prev => [...prev, { type, expiresAt: Date.now() + duration }]);
+        }
+    };
 
     return (
         <div
