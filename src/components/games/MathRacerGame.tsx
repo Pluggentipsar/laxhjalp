@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, Timer, Zap, Skull, Flag, RotateCcw } from 'lucide-react';
 import type { ActivityQuestion } from '../../types';
 
 interface MathRacerGameProps {
@@ -561,7 +560,7 @@ function getDistToSegment(px: number, py: number, x1: number, y1: number, x2: nu
 export function MathRacerGame({ questions, onGameOver, onScoreUpdate }: MathRacerGameProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<GameEngine | null>(null);
-  const requestRef = useRef<number>();
+  const requestRef = useRef<number | null>(null);
 
   const [score, setScore] = useState(0);
   const [lap, setLap] = useState(1);
@@ -632,7 +631,7 @@ export function MathRacerGame({ questions, onGameOver, onScoreUpdate }: MathRace
           onGameOver(score);
         }
       },
-      (correct: boolean, val: number) => {
+      (correct: boolean) => {
         if (correct) {
           setScore(s => s + 100);
           spawnNextQuestion();

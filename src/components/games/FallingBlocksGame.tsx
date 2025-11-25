@@ -375,43 +375,43 @@ export function FallingBlocksGame({ questions, onGameOver, onScoreUpdate }: Fall
             </div>
 
             {/* HUD */}
-            <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-start z-20 bg-gradient-to-b from-black/50 to-transparent">
-                <div className="flex gap-4">
-                    <div className="text-white">
-                        <div className="text-xs uppercase tracking-wider text-purple-300">Wave</div>
-                        <div className="text-2xl font-bold">{wave}</div>
+            <div className="absolute top-0 left-0 right-0 p-6 flex justify-between items-start z-20 bg-gradient-to-b from-black/80 via-black/40 to-transparent">
+                <div className="flex gap-6">
+                    <div className="bg-gradient-to-br from-purple-600/30 to-purple-900/30 backdrop-blur-md border border-purple-400/30 rounded-2xl px-6 py-3 shadow-2xl">
+                        <div className="text-xs uppercase tracking-widest text-purple-300 font-bold mb-1">Wave</div>
+                        <div className="text-4xl font-black bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">{wave}</div>
                     </div>
-                    <div className="text-white">
-                        <div className="text-xs uppercase tracking-wider text-purple-300">Score</div>
-                        <div className="text-2xl font-bold text-yellow-400">{score}</div>
+                    <div className="bg-gradient-to-br from-yellow-600/30 to-orange-900/30 backdrop-blur-md border border-yellow-400/30 rounded-2xl px-6 py-3 shadow-2xl">
+                        <div className="text-xs uppercase tracking-widest text-yellow-300 font-bold mb-1">Score</div>
+                        <div className="text-4xl font-black bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">{score}</div>
                     </div>
                 </div>
 
                 {/* Combo Meter */}
-                <div className="flex flex-col items-center">
-                    <div className={`text-2xl font-black italic ${combo > 5 ? 'text-red-500 animate-pulse' : 'text-white'}`}>
+                <div className="flex flex-col items-center bg-gradient-to-br from-red-600/30 to-orange-900/30 backdrop-blur-md border border-red-400/30 rounded-2xl px-8 py-3 shadow-2xl">
+                    <div className={`text-3xl font-black italic tracking-wider ${combo > 5 ? 'text-red-400 animate-pulse drop-shadow-[0_0_10px_rgba(239,68,68,0.8)]' : 'text-white'}`}>
                         {combo}x COMBO
                     </div>
-                    {combo > 5 && <Flame className="w-6 h-6 text-orange-500 animate-bounce" />}
+                    {combo > 5 && <Flame className="w-8 h-8 text-orange-400 animate-bounce drop-shadow-[0_0_10px_rgba(251,146,60,0.8)]" />}
                 </div>
 
                 {/* Active Powerups */}
-                <div className="flex gap-2">
+                <div className="flex gap-3">
                     {activePowerups.map((p, i) => (
-                        <div key={i} className="bg-white/20 p-2 rounded-full backdrop-blur-sm animate-pulse">
-                            {p.type === 'freeze' && <Snowflake className="w-6 h-6 text-cyan-300" />}
-                            {p.type === 'shield' && <Shield className="w-6 h-6 text-green-300" />}
-                            {p.type === 'slow' && <Timer className="w-6 h-6 text-yellow-300" />}
-                            {p.type === 'bomb' && <Bomb className="w-6 h-6 text-red-500" />}
+                        <div key={i} className="bg-gradient-to-br from-cyan-600/40 to-blue-900/40 backdrop-blur-md border border-cyan-400/50 p-3 rounded-2xl shadow-2xl animate-pulse">
+                            {p.type === 'freeze' && <Snowflake className="w-8 h-8 text-cyan-300 drop-shadow-[0_0_8px_rgba(103,232,249,0.8)]" />}
+                            {p.type === 'shield' && <Shield className="w-8 h-8 text-green-300 drop-shadow-[0_0_8px_rgba(134,239,172,0.8)]" />}
+                            {p.type === 'slow' && <Timer className="w-8 h-8 text-yellow-300 drop-shadow-[0_0_8px_rgba(253,224,71,0.8)]" />}
+                            {p.type === 'bomb' && <Bomb className="w-8 h-8 text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.8)]" />}
                         </div>
                     ))}
                 </div>
 
-                <div className="flex gap-1">
+                <div className="flex gap-2 bg-gradient-to-br from-red-600/30 to-pink-900/30 backdrop-blur-md border border-red-400/30 rounded-2xl px-4 py-3 shadow-2xl">
                     {Array.from({ length: 3 }).map((_, i) => (
                         <Star
                             key={i}
-                            className={`w-8 h-8 ${i < lives ? 'text-red-500 fill-red-500' : 'text-gray-700'}`}
+                            className={`w-10 h-10 transition-all duration-300 ${i < lives ? 'text-red-400 fill-red-400 drop-shadow-[0_0_10px_rgba(248,113,113,0.8)] scale-110' : 'text-gray-700 scale-90'}`}
                         />
                     ))}
                 </div>
@@ -421,15 +421,16 @@ export function FallingBlocksGame({ questions, onGameOver, onScoreUpdate }: Fall
             <AnimatePresence>
                 {activeEvent !== 'none' && (
                     <motion.div
-                        initial={{ y: -50, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        exit={{ y: -50, opacity: 0 }}
-                        className="absolute top-20 left-1/2 transform -translate-x-1/2 z-20 bg-purple-600/80 px-6 py-2 rounded-full border border-purple-400 backdrop-blur-md"
+                        initial={{ y: -50, opacity: 0, scale: 0.8 }}
+                        animate={{ y: 0, opacity: 1, scale: 1 }}
+                        exit={{ y: -50, opacity: 0, scale: 0.8 }}
+                        transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                        className="absolute top-24 left-1/2 transform -translate-x-1/2 z-20 bg-gradient-to-br from-purple-600/90 to-pink-600/90 px-8 py-4 rounded-3xl border-2 border-purple-300 backdrop-blur-md shadow-2xl shadow-purple-500/50"
                     >
-                        <span className="text-white font-bold uppercase tracking-widest flex items-center gap-2">
-                            {activeEvent === 'boss_battle' && <Skull className="w-5 h-5" />}
-                            {activeEvent === 'gold_rush' && <Trophy className="w-5 h-5 text-yellow-400" />}
-                            {activeEvent === 'time_warp' && <Timer className="w-5 h-5" />}
+                        <span className="text-white font-black uppercase tracking-widest flex items-center gap-3 text-2xl drop-shadow-lg">
+                            {activeEvent === 'boss_battle' && <Skull className="w-7 h-7 animate-pulse" />}
+                            {activeEvent === 'gold_rush' && <Trophy className="w-7 h-7 text-yellow-300 animate-bounce" />}
+                            {activeEvent === 'time_warp' && <Timer className="w-7 h-7 animate-spin" />}
                             {activeEvent.replace('_', ' ')}
                         </span>
                     </motion.div>
@@ -449,34 +450,43 @@ export function FallingBlocksGame({ questions, onGameOver, onScoreUpdate }: Fall
                             rotate: block.isBoss ? [0, -5, 5, 0] : 0
                         }}
                         exit={{ scale: 1.5, opacity: 0 }}
+                        transition={{ type: "spring", stiffness: 300, damping: 20 }}
                         className="absolute transform -translate-x-1/2 z-10"
                         style={{ top: `${block.y}%`, left: `${block.x}%` }}
                     >
                         <div className={`
-              relative p-4 rounded-xl text-white shadow-lg
-              backdrop-blur-md border 
-              min-w-[120px] text-center
+              relative p-5 rounded-2xl text-white shadow-2xl
+              backdrop-blur-md border-2
+              min-w-[140px] text-center
+              transition-all duration-200
               ${block.isBoss
-                                ? 'bg-red-900/90 border-red-500 w-48 scale-125'
+                                ? 'bg-gradient-to-br from-red-600 to-red-900 border-red-400 w-56 scale-125 shadow-[0_0_30px_rgba(239,68,68,0.8)]'
                                 : block.isGold
-                                    ? 'bg-yellow-600/90 border-yellow-400'
-                                    : 'bg-purple-900/80 border-purple-500/30'}
+                                    ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 border-yellow-300 shadow-[0_0_20px_rgba(250,204,21,0.8)]'
+                                    : 'bg-gradient-to-br from-purple-600 to-purple-900 border-purple-400/50 shadow-[0_0_15px_rgba(168,85,247,0.6)]'}
             `}>
                             {block.isBoss && (
-                                <div className="absolute -top-6 left-1/2 transform -translate-x-1/2">
-                                    <Skull className="w-8 h-8 text-red-500" />
+                                <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 animate-bounce">
+                                    <Skull className="w-10 h-10 text-red-400 drop-shadow-[0_0_10px_rgba(248,113,113,0.9)]" />
                                 </div>
                             )}
 
-                            <div className="text-2xl font-bold mb-1 text-white drop-shadow-md">
+                            {block.isGold && (
+                                <div className="absolute -top-2 -right-2">
+                                    <Star className="w-6 h-6 text-yellow-300 fill-yellow-300 animate-spin" />
+                                </div>
+                            )}
+
+                            <div className={`font-bold mb-1 drop-shadow-lg ${block.isBoss ? 'text-3xl' : 'text-2xl'
+                                }`}>
                                 {block.question.question}
                             </div>
 
                             {/* HP Bar for Boss */}
                             {block.isBoss && (
-                                <div className="w-full h-2 bg-black/50 rounded-full mt-2 overflow-hidden">
+                                <div className="w-full h-3 bg-black/50 rounded-full mt-3 overflow-hidden border border-red-900">
                                     <div
-                                        className="h-full bg-red-500 transition-all duration-300"
+                                        className="h-full bg-gradient-to-r from-red-500 to-orange-500 transition-all duration-300 shadow-[0_0_10px_rgba(239,68,68,0.8)]"
                                         style={{ width: `${(block.hp / block.maxHp) * 100}%` }}
                                     />
                                 </div>
@@ -490,14 +500,15 @@ export function FallingBlocksGame({ questions, onGameOver, onScoreUpdate }: Fall
             {particles.map(p => (
                 <div
                     key={p.id}
-                    className="absolute rounded-full pointer-events-none"
+                    className="absolute rounded-full pointer-events-none shadow-lg"
                     style={{
                         left: `${p.x}%`,
                         top: `${p.y}%`,
-                        width: `${p.scale * 8}px`,
-                        height: `${p.scale * 8}px`,
+                        width: `${p.scale * 12}px`,
+                        height: `${p.scale * 12}px`,
                         backgroundColor: p.color,
-                        opacity: p.life
+                        opacity: p.life,
+                        boxShadow: `0 0 ${p.scale * 8}px ${p.color}`
                     }}
                 />
             ))}
@@ -506,14 +517,17 @@ export function FallingBlocksGame({ questions, onGameOver, onScoreUpdate }: Fall
             {floatingTexts.map(t => (
                 <motion.div
                     key={t.id}
-                    initial={{ scale: 0.5, opacity: 0 }}
-                    animate={{ scale: 1.5, opacity: 1 }}
-                    className="absolute font-black text-2xl pointer-events-none z-30"
+                    initial={{ scale: 0.5, opacity: 0, y: 0 }}
+                    animate={{ scale: 2, opacity: 1, y: -20 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.5, ease: "easeOut" }}
+                    className="absolute font-black text-3xl pointer-events-none z-30"
                     style={{
                         left: `${t.x}%`,
                         top: `${t.y}%`,
                         color: t.color,
-                        textShadow: '0 2px 4px rgba(0,0,0,0.5)'
+                        textShadow: `0 0 20px ${t.color}, 0 4px 8px rgba(0,0,0,0.8)`,
+                        WebkitTextStroke: '1px rgba(0,0,0,0.5)'
                     }}
                 >
                     {t.text}
@@ -521,40 +535,40 @@ export function FallingBlocksGame({ questions, onGameOver, onScoreUpdate }: Fall
             ))}
 
             {/* Numpad (Mobile/Touch) */}
-            <div className="absolute bottom-0 left-0 right-0 p-4 bg-black/40 backdrop-blur-lg z-40 border-t border-white/10">
-                <div className="max-w-md mx-auto">
+            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/90 via-black/70 to-transparent backdrop-blur-xl z-40 border-t border-white/20">
+                <div className="max-w-lg mx-auto">
                     {/* Current Input Display */}
-                    <div className="text-center mb-4 h-12 flex items-center justify-center">
-                        <span className="text-4xl font-mono font-bold text-white tracking-widest">
-                            {currentInput || <span className="text-white/20">_</span>}
+                    <div className="text-center mb-3 h-16 flex items-center justify-center bg-gradient-to-br from-purple-600/30 to-blue-900/30 backdrop-blur-md border border-purple-400/40 rounded-2xl shadow-2xl">
+                        <span className="text-5xl font-mono font-black text-white tracking-widest drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">
+                            {currentInput || <span className="text-white/30">_</span>}
                         </span>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-3 gap-3">
                         {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
                             <button
                                 key={num}
                                 onClick={() => handleInput(String(num))}
-                                className="bg-white/10 active:bg-white/30 hover:bg-white/20 text-white text-2xl font-bold py-4 rounded-lg transition-colors"
+                                className="bg-gradient-to-br from-purple-600/40 to-purple-900/40 active:from-purple-500/60 active:to-purple-800/60 hover:from-purple-500/50 hover:to-purple-800/50 backdrop-blur-md border border-purple-400/40 text-white text-3xl font-black py-5 rounded-2xl transition-all duration-150 shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 hover:shadow-purple-500/50"
                             >
                                 {num}
                             </button>
                         ))}
                         <button
                             onClick={() => setCurrentInput('')}
-                            className="bg-red-500/20 active:bg-red-500/40 text-red-300 font-bold py-4 rounded-lg"
+                            className="bg-gradient-to-br from-red-600/40 to-red-900/40 active:from-red-500/60 active:to-red-800/60 backdrop-blur-md border border-red-400/40 text-red-200 font-black py-5 rounded-2xl transition-all duration-150 shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 hover:shadow-red-500/50"
                         >
                             CLR
                         </button>
                         <button
                             onClick={() => handleInput('0')}
-                            className="bg-white/10 active:bg-white/30 text-white text-2xl font-bold py-4 rounded-lg"
+                            className="bg-gradient-to-br from-purple-600/40 to-purple-900/40 active:from-purple-500/60 active:to-purple-800/60 hover:from-purple-500/50 hover:to-purple-800/50 backdrop-blur-md border border-purple-400/40 text-white text-3xl font-black py-5 rounded-2xl transition-all duration-150 shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 hover:shadow-purple-500/50"
                         >
                             0
                         </button>
                         <button
                             onClick={() => setCurrentInput(prev => prev.slice(0, -1))}
-                            className="bg-white/10 active:bg-white/30 text-white font-bold py-4 rounded-lg"
+                            className="bg-gradient-to-br from-orange-600/40 to-orange-900/40 active:from-orange-500/60 active:to-orange-800/60 backdrop-blur-md border border-orange-400/40 text-orange-200 font-black py-5 rounded-2xl transition-all duration-150 shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 hover:shadow-orange-500/50 text-2xl"
                         >
                             ⌫
                         </button>
