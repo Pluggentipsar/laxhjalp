@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, X, Gamepad2, Car } from 'lucide-react';
+import { Trophy, X, Gamepad2, Car, Rocket } from 'lucide-react';
 import { FallingBlocksGame } from '../games/FallingBlocksGame';
 import { MathRacerGame } from '../games/MathRacerGame';
+import { SpaceShooterGame } from '../games/SpaceShooterGame';
 import type { ActivityQuestion } from '../../types';
 
 interface MathGameWrapperProps {
@@ -12,7 +13,7 @@ interface MathGameWrapperProps {
     onExit: () => void;
 }
 
-type GameType = 'falling-blocks' | 'math-racer';
+type GameType = 'falling-blocks' | 'math-racer' | 'space-shooter';
 
 export function MathGameWrapper({ questions, title, onComplete, onExit }: MathGameWrapperProps) {
     const [selectedGame, setSelectedGame] = useState<GameType | null>(null);
@@ -56,19 +57,19 @@ export function MathGameWrapper({ questions, title, onComplete, onExit }: MathGa
                         >
                             <h1 className="text-4xl font-bold text-white mb-12">Välj Spel</h1>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl w-full">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl w-full">
                                 {/* Falling Blocks Card */}
                                 <button
                                     onClick={() => handleGameSelect('falling-blocks')}
-                                    className="group relative bg-gradient-to-br from-purple-900 to-indigo-900 p-8 rounded-2xl border border-purple-500/30 hover:border-purple-400 transition-all hover:scale-105 text-left overflow-hidden"
+                                    className="group relative bg-gradient-to-br from-purple-900 to-indigo-900 p-6 rounded-2xl border border-purple-500/30 hover:border-purple-400 transition-all hover:scale-105 text-left overflow-hidden"
                                 >
                                     <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                                        <Gamepad2 className="w-32 h-32 text-white" />
+                                        <Gamepad2 className="w-24 h-24 text-white" />
                                     </div>
                                     <div className="relative z-10">
-                                        <h3 className="text-2xl font-bold text-white mb-2">Falling Blocks</h3>
-                                        <p className="text-purple-200 mb-6">Fånga svaren innan de faller ner! Använd powerups och klara vågorna.</p>
-                                        <span className="inline-block px-4 py-2 bg-purple-600 text-white rounded-lg font-bold group-hover:bg-purple-500 transition-colors">
+                                        <h3 className="text-xl font-bold text-white mb-2">Falling Blocks</h3>
+                                        <p className="text-purple-200 mb-4 text-sm">Fånga svaren innan de faller ner! Använd powerups och klara vågorna.</p>
+                                        <span className="inline-block px-4 py-2 bg-purple-600 text-white rounded-lg font-bold group-hover:bg-purple-500 transition-colors text-sm">
                                             SPELA NU
                                         </span>
                                     </div>
@@ -77,15 +78,32 @@ export function MathGameWrapper({ questions, title, onComplete, onExit }: MathGa
                                 {/* Math Racer Card */}
                                 <button
                                     onClick={() => handleGameSelect('math-racer')}
-                                    className="group relative bg-gradient-to-br from-cyan-900 to-blue-900 p-8 rounded-2xl border border-cyan-500/30 hover:border-cyan-400 transition-all hover:scale-105 text-left overflow-hidden"
+                                    className="group relative bg-gradient-to-br from-cyan-900 to-blue-900 p-6 rounded-2xl border border-cyan-500/30 hover:border-cyan-400 transition-all hover:scale-105 text-left overflow-hidden"
                                 >
                                     <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                                        <Car className="w-32 h-32 text-white" />
+                                        <Car className="w-24 h-24 text-white" />
                                     </div>
                                     <div className="relative z-10">
-                                        <h3 className="text-2xl font-bold text-white mb-2">Math Racer</h3>
-                                        <p className="text-cyan-200 mb-6">Kör fort och välj rätt fil! Undvik hinder och samla poäng i hög fart.</p>
-                                        <span className="inline-block px-4 py-2 bg-cyan-600 text-white rounded-lg font-bold group-hover:bg-cyan-500 transition-colors">
+                                        <h3 className="text-xl font-bold text-white mb-2">Math Racer</h3>
+                                        <p className="text-cyan-200 mb-4 text-sm">Kör fort och välj rätt fil! Undvik hinder och samla poäng i hög fart.</p>
+                                        <span className="inline-block px-4 py-2 bg-cyan-600 text-white rounded-lg font-bold group-hover:bg-cyan-500 transition-colors text-sm">
+                                            SPELA NU
+                                        </span>
+                                    </div>
+                                </button>
+
+                                {/* Space Shooter Card */}
+                                <button
+                                    onClick={() => handleGameSelect('space-shooter')}
+                                    className="group relative bg-gradient-to-br from-indigo-900 to-purple-900 p-6 rounded-2xl border border-indigo-500/30 hover:border-indigo-400 transition-all hover:scale-105 text-left overflow-hidden"
+                                >
+                                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <Rocket className="w-24 h-24 text-white" />
+                                    </div>
+                                    <div className="relative z-10">
+                                        <h3 className="text-xl font-bold text-white mb-2">Space Shooter</h3>
+                                        <p className="text-indigo-200 mb-4 text-sm">Skjut ner asteroider med rätt svar! Power-ups och boss-vågor.</p>
+                                        <span className="inline-block px-4 py-2 bg-indigo-600 text-white rounded-lg font-bold group-hover:bg-indigo-500 transition-colors text-sm">
                                             SPELA NU
                                         </span>
                                     </div>
@@ -108,6 +126,13 @@ export function MathGameWrapper({ questions, title, onComplete, onExit }: MathGa
                             )}
                             {selectedGame === 'math-racer' && (
                                 <MathRacerGame
+                                    questions={questions}
+                                    onGameOver={handleGameOver}
+                                    onScoreUpdate={() => { }}
+                                />
+                            )}
+                            {selectedGame === 'space-shooter' && (
+                                <SpaceShooterGame
                                     questions={questions}
                                     onGameOver={handleGameOver}
                                     onScoreUpdate={() => { }}
