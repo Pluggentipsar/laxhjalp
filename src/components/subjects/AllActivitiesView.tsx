@@ -42,7 +42,7 @@ export function AllActivitiesView({
       unlocked: true,
       completed: false,
       activities: activities.filter((a) =>
-        ['addition-1-5', 'subtraktion-1-5'].includes(a.id)
+        ['antal-1-10', 'addition-1-5', 'subtraktion-1-5', 'former-1-3'].includes(a.id)
       ),
     },
     {
@@ -53,7 +53,7 @@ export function AllActivitiesView({
       unlocked: true,
       completed: false,
       activities: activities.filter((a) =>
-        ['addition-1-10', 'addition-dubbletter', 'subtraktion-1-10'].includes(a.id)
+        ['addition-1-10', 'addition-dubbletter', 'subtraktion-1-10', 'monster-1-3', 'klockan-1-3', 'brak-1-3'].includes(a.id)
       ),
     },
     {
@@ -157,8 +157,8 @@ export function AllActivitiesView({
           >
             <Card
               className={`overflow-hidden ${!level.unlocked
-                  ? 'opacity-60 bg-gray-50 dark:bg-gray-900'
-                  : 'hover:shadow-md transition-shadow'
+                ? 'opacity-60 bg-gray-50 dark:bg-gray-900'
+                : 'hover:shadow-md transition-shadow'
                 }`}
             >
               {/* Level Header */}
@@ -248,10 +248,10 @@ export function AllActivitiesView({
                               <div className="text-right flex-shrink-0">
                                 <div
                                   className={`px-2 py-1 rounded text-xs font-semibold mb-2 ${activity.difficulty === 'easy'
-                                      ? 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400'
-                                      : activity.difficulty === 'medium'
-                                        ? 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400'
-                                        : 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400'
+                                    ? 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400'
+                                    : activity.difficulty === 'medium'
+                                      ? 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400'
+                                      : 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400'
                                     }`}
                                 >
                                   {activity.difficulty === 'easy'
