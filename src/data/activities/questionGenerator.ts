@@ -524,6 +524,11 @@ export function generateAllQuestions(): ActivityQuestion[] {
     ...generateMixedOperations(),
     ...generateMultiplication1to10(),
     ...generateDivision1to10(),
+    ...generatePatterns1to3(),
+    ...generateCounting1to10(),
+    ...generateShapes1to3(),
+    ...generateFractions1to3(),
+    ...generateTime1to3(),
   ];
 }
 
@@ -637,6 +642,330 @@ export function generateDivision1to10(): ActivityQuestion[] {
       }
     }
   }
+  return questions;
+}
+
+/**
+ * PATTERN GENERATORS
+ */
+
+export function generatePatterns1to3(): ActivityQuestion[] {
+  const questions: ActivityQuestion[] = [];
+
+  // Simple sequences (1, 2, 3, _)
+  for (let start = 1; start <= 5; start++) {
+    const sequence = [start, start + 1, start + 2, start + 3];
+    const answer = sequence[3];
+    const display = `${sequence[0]}, ${sequence[1]}, ${sequence[2]}, _`;
+
+    questions.push({
+      id: generateId(),
+      activityId: 'monster-1-3',
+      question: `Vad kommer sen? ${display}`,
+      questionType: 'number-input',
+      correctAnswer: answer,
+      explanation: `Mönstret är +1. ${sequence[2]} + 1 = ${answer}`,
+      hint1: `Titta på skillnaden mellan talen`,
+      hint2: `Det ökar med 1 varje gång`,
+      hint3: `Svaret är ${answer}`,
+      difficulty: 'easy',
+      conceptArea: 'monster-1-3',
+      ageGroup: '1-3',
+      soloLevel: 'unistructural',
+      bloomLevel: 'understand',
+    });
+  }
+
+  // Skip counting by 2 (2, 4, 6, _)
+  for (let start = 2; start <= 6; start += 2) {
+    const sequence = [start, start + 2, start + 4, start + 6];
+    const answer = sequence[3];
+    const display = `${sequence[0]}, ${sequence[1]}, ${sequence[2]}, _`;
+
+    questions.push({
+      id: generateId(),
+      activityId: 'monster-1-3',
+      question: `Vad kommer sen? ${display}`,
+      questionType: 'number-input',
+      correctAnswer: answer,
+      explanation: `Mönstret är +2. ${sequence[2]} + 2 = ${answer}`,
+      hint1: `Hoppa över ett tal`,
+      hint2: `Det ökar med 2 varje gång`,
+      hint3: `Svaret är ${answer}`,
+      difficulty: 'medium',
+      conceptArea: 'monster-1-3',
+      ageGroup: '1-3',
+      soloLevel: 'multistructural',
+      bloomLevel: 'apply',
+    });
+  }
+
+  // Skip counting by 5 (5, 10, 15, _)
+  questions.push({
+    id: generateId(),
+    activityId: 'monster-1-3',
+    question: `Vad kommer sen? 5, 10, 15, _`,
+    questionType: 'number-input',
+    correctAnswer: 20,
+    explanation: `Mönstret är +5. 15 + 5 = 20`,
+    hint1: `Räkna med 5-hopp`,
+    hint2: `5, 10, 15...`,
+    hint3: `Svaret är 20`,
+    difficulty: 'medium',
+    conceptArea: 'monster-1-3',
+    ageGroup: '1-3',
+    soloLevel: 'multistructural',
+    bloomLevel: 'apply',
+  });
+
+  // Backwards (10, 9, 8, _)
+  for (let start = 10; start >= 4; start--) {
+    const sequence = [start, start - 1, start - 2, start - 3];
+    const answer = sequence[3];
+    const display = `${sequence[0]}, ${sequence[1]}, ${sequence[2]}, _`;
+
+    questions.push({
+      id: generateId(),
+      activityId: 'monster-1-3',
+      question: `Vad kommer sen? ${display}`,
+      questionType: 'number-input',
+      correctAnswer: answer,
+      explanation: `Mönstret är -1. ${sequence[2]} - 1 = ${answer}`,
+      hint1: `Det minskar med 1`,
+      hint2: `Räkna baklänges`,
+      hint3: `Svaret är ${answer}`,
+      difficulty: 'easy',
+      conceptArea: 'monster-1-3',
+      ageGroup: '1-3',
+      soloLevel: 'unistructural',
+      bloomLevel: 'understand',
+    });
+  }
+
+  return questions;
+}
+
+/**
+ * COUNTING GENERATORS
+ */
+
+export function generateCounting1to10(): ActivityQuestion[] {
+  const questions: ActivityQuestion[] = [];
+
+  for (let n = 1; n <= 10; n++) {
+    const context = getRandomContext();
+
+    // Count objects
+    questions.push({
+      id: generateId(),
+      activityId: 'antal-1-10',
+      question: `Hur många ${context.item} ser du?`,
+      questionType: 'number-input',
+      correctAnswer: n,
+      explanation: `Det är ${n} ${context.item}.`,
+      hint1: `Peka och räkna en i taget`,
+      hint2: `1, 2, 3...`,
+      hint3: `Svaret är ${n}`,
+      difficulty: 'easy',
+      conceptArea: 'antal-1-10',
+      ageGroup: '1-3',
+      soloLevel: 'unistructural',
+      bloomLevel: 'remember',
+      visualSupport: true,
+      realWorldContext: context.emoji.repeat(n),
+    });
+
+    // Multiple choice variation
+    const options = [n - 1, n, n + 1, n + 2].filter(x => x > 0).sort(() => Math.random() - 0.5);
+    // Ensure unique options
+    const uniqueOptions = Array.from(new Set(options));
+    if (uniqueOptions.length < 4) {
+      while (uniqueOptions.length < 4) {
+        const r = Math.floor(Math.random() * 10) + 1;
+        if (!uniqueOptions.includes(r)) uniqueOptions.push(r);
+      }
+    }
+
+    questions.push({
+      id: generateId(),
+      activityId: 'antal-1-10',
+      question: `Räkna ${context.item}. Hur många är det?`,
+      questionType: 'multiple-choice',
+      correctAnswer: n,
+      options: uniqueOptions,
+      explanation: `Det är ${n} ${context.item}.`,
+      hint1: `Räkna noga`,
+      hint2: `Det är fler än ${n - 1}`,
+      hint3: `Svaret är ${n}`,
+      difficulty: 'easy',
+      conceptArea: 'antal-1-10',
+      ageGroup: '1-3',
+      soloLevel: 'unistructural',
+      bloomLevel: 'remember',
+      visualSupport: true,
+      realWorldContext: context.emoji.repeat(n),
+    });
+  }
+
+  return questions;
+}
+
+/**
+ * GEOMETRY GENERATORS
+ */
+
+export function generateShapes1to3(): ActivityQuestion[] {
+  const questions: ActivityQuestion[] = [];
+  const shapes = [
+    { name: 'Cirkel', emoji: '⭕', sides: 0, corners: 0 },
+    { name: 'Kvadrat', emoji: '🟥', sides: 4, corners: 4 },
+    { name: 'Triangel', emoji: '🔺', sides: 3, corners: 3 },
+    { name: 'Rektangel', emoji: '📏', sides: 4, corners: 4 },
+  ];
+
+  shapes.forEach((shape) => {
+    // Identify shape
+    questions.push({
+      id: generateId(),
+      activityId: 'former-1-3',
+      question: `Vilken form är detta? ${shape.emoji}`,
+      questionType: 'multiple-choice',
+      correctAnswer: shape.name,
+      options: shapes.map(s => s.name).sort(() => Math.random() - 0.5),
+      explanation: `Detta är en ${shape.name.toLowerCase()}.`,
+      hint1: `Titta på formen`,
+      hint2: `Den har ${shape.sides} sidor`,
+      hint3: `Svaret är ${shape.name}`,
+      difficulty: 'easy',
+      conceptArea: 'former-1-3',
+      ageGroup: '1-3',
+      soloLevel: 'unistructural',
+      bloomLevel: 'remember',
+      visualSupport: true,
+    });
+
+    // Count sides
+    if (shape.sides > 0) {
+      questions.push({
+        id: generateId(),
+        activityId: 'former-1-3',
+        question: `Hur många sidor har en ${shape.name.toLowerCase()}? ${shape.emoji}`,
+        questionType: 'number-input',
+        correctAnswer: shape.sides,
+        explanation: `En ${shape.name.toLowerCase()} har ${shape.sides} sidor.`,
+        hint1: `Räkna kanterna`,
+        hint2: `1, 2, 3...`,
+        hint3: `Svaret är ${shape.sides}`,
+        difficulty: 'medium',
+        conceptArea: 'former-1-3',
+        ageGroup: '1-3',
+        soloLevel: 'multistructural',
+        bloomLevel: 'analyze',
+        visualSupport: true,
+      });
+    }
+  });
+
+  return questions;
+}
+
+/**
+ * FRACTION GENERATORS
+ */
+
+export function generateFractions1to3(): ActivityQuestion[] {
+  const questions: ActivityQuestion[] = [];
+  const fractions = [
+    { name: 'En halv', value: '1/2', decimal: 0.5, emoji: '🌗' },
+    { name: 'En tredjedel', value: '1/3', decimal: 0.33, emoji: '🍰' }, // Approximation for emoji
+    { name: 'En fjärdedel', value: '1/4', decimal: 0.25, emoji: '🍕' }, // Slice
+  ];
+
+  fractions.forEach((frac) => {
+    questions.push({
+      id: generateId(),
+      activityId: 'brak-1-3',
+      question: `Vad betyder ${frac.value}?`,
+      questionType: 'multiple-choice',
+      correctAnswer: frac.name,
+      options: fractions.map(f => f.name).concat(['En hel']).sort(() => Math.random() - 0.5),
+      explanation: `${frac.value} betyder ${frac.name.toLowerCase()}.`,
+      hint1: `Titta på nämnaren (talet där nere)`,
+      hint2: `Det är 1 del av...`,
+      hint3: `Svaret är ${frac.name}`,
+      difficulty: 'medium',
+      conceptArea: 'brak-1-3',
+      ageGroup: '1-3',
+      soloLevel: 'unistructural',
+      bloomLevel: 'understand',
+    });
+  });
+
+  // Simple calculation
+  questions.push({
+    id: generateId(),
+    activityId: 'brak-1-3',
+    question: `Vad är hälften av 4?`,
+    questionType: 'number-input',
+    correctAnswer: 2,
+    explanation: `Hälften av 4 är 2. 2 + 2 = 4.`,
+    hint1: `Dela 4 i två lika delar`,
+    hint2: `4 / 2`,
+    hint3: `Svaret är 2`,
+    difficulty: 'easy',
+    conceptArea: 'brak-1-3',
+    ageGroup: '1-3',
+    soloLevel: 'multistructural',
+    bloomLevel: 'apply',
+  });
+
+  questions.push({
+    id: generateId(),
+    activityId: 'brak-1-3',
+    question: `Vad är hälften av 10?`,
+    questionType: 'number-input',
+    correctAnswer: 5,
+    explanation: `Hälften av 10 är 5. 5 + 5 = 10.`,
+    hint1: `Dela 10 i två lika delar`,
+    hint2: `10 / 2`,
+    hint3: `Svaret är 5`,
+    difficulty: 'easy',
+    conceptArea: 'brak-1-3',
+    ageGroup: '1-3',
+    soloLevel: 'multistructural',
+    bloomLevel: 'apply',
+  });
+
+  return questions;
+}
+
+/**
+ * TIME GENERATORS
+ */
+
+export function generateTime1to3(): ActivityQuestion[] {
+  const questions: ActivityQuestion[] = [];
+
+  // Whole hours
+  for (let h = 1; h <= 12; h++) {
+    questions.push({
+      id: generateId(),
+      activityId: 'klockan-1-3',
+      question: `Klockan är ${h}:00. Vad visar den lilla visaren?`,
+      questionType: 'number-input',
+      correctAnswer: h,
+      explanation: `När klockan är heltimme pekar lilla visaren på timmen (${h}) och stora på 12.`,
+      hint1: `Lilla visaren visar timmen`,
+      hint2: `Den pekar på...`,
+      hint3: `Svaret är ${h}`,
+      difficulty: 'easy',
+      conceptArea: 'klockan-1-3',
+      ageGroup: '1-3',
+      soloLevel: 'unistructural',
+      bloomLevel: 'remember',
+    });
+  }
+
   return questions;
 }
 

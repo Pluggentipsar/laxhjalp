@@ -43,6 +43,12 @@ const ACTIVITY_CONCEPT_MAP: { [key: string]: string } = {
   'multiplikation-4-6': 'multiplikation-4-6',
   'division-4-6': 'division-4-6',
   'ai-utmaning': 'ai-generated',
+  'antal-1-10': 'antal-1-10',
+  'monster-1-3': 'monster-1-3',
+  'addition-0-20': 'addition-0-20',
+  'former-1-3': 'former-1-3',
+  'brak-1-3': 'brak-1-3',
+  'klockan-1-3': 'klockan-1-3',
 };
 
 export function ArithmeticActivity() {

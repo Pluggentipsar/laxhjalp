@@ -35,7 +35,14 @@ export function getQuestionsByFilters(filters: {
   difficulty?: string;
 }) {
   return ADDITION_SUBTRACTION_QUESTIONS.filter((q) => {
-    if (filters.conceptArea && q.conceptArea !== filters.conceptArea) return false;
+    if (filters.conceptArea) {
+      if (filters.conceptArea === 'addition-0-20') {
+        // Include all addition questions
+        if (!q.conceptArea.startsWith('addition')) return false;
+      } else if (q.conceptArea !== filters.conceptArea) {
+        return false;
+      }
+    }
     if (filters.soloLevel && q.soloLevel !== filters.soloLevel) return false;
     if (filters.bloomLevel && q.bloomLevel !== filters.bloomLevel) return false;
     if (filters.difficulty && q.difficulty !== filters.difficulty) return false;
