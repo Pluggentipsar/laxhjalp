@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { useAppStore } from './store/appStore';
 import { OnboardingFlow } from './components/onboarding/OnboardingFlow';
@@ -24,12 +24,23 @@ import { ActivityPlaceholderPage } from './pages/subjects/ActivityPlaceholderPag
 import { AdditionSubtractionActivity } from './pages/subjects/activities/AdditionSubtractionActivity';
 import { ReviewMistakesActivity } from './pages/subjects/activities/ReviewMistakesActivity';
 import { ArithmeticActivity } from './pages/subjects/activities/ArithmeticActivity';
+// Motion Learn - No auth required
+import { MotionLearnHub } from './pages/motion-learn/MotionLearnHub';
+import { AdminPage } from './pages/motion-learn/AdminPage';
+import { HandTrackingDemo } from './pages/motion-learn/HandTrackingDemo';
+import { OrdregnGame } from './pages/motion-learn/games/OrdregnGame';
+import { WhackAWordGame } from './pages/motion-learn/games/WhackAWordGame';
+import { GoalKeeperGame } from './pages/motion-learn/games/GoalKeeperGame';
 
 function AppContent() {
   const { userProfile } = useAuth();
+  const location = useLocation();
   const user = useAppStore((state) => state.user);
   const onboarding = useAppStore((state) => state.onboarding);
   const loadMaterials = useAppStore((state) => state.loadMaterials);
+
+  // Check if accessing motion-learn routes (no auth required)
+  const isMotionLearnRoute = location.pathname.startsWith('/motion-learn');
 
   useEffect(() => {
     // Sync Firebase user with local store
@@ -73,8 +84,24 @@ function AppContent() {
   console.log('[App] Rendering with state:', {
     hasUserProfile: !!userProfile,
     hasLocalUser: !!user,
-    onboardingCompleted: onboarding.completed
+    onboardingCompleted: onboarding.completed,
+    isMotionLearnRoute,
   });
+
+  // Motion Learn routes - accessible without authentication
+  if (isMotionLearnRoute) {
+    return (
+      <Routes>
+        <Route path="/motion-learn" element={<MotionLearnHub />} />
+        <Route path="/motion-learn/admin" element={<AdminPage />} />
+        <Route path="/motion-learn/demo" element={<HandTrackingDemo />} />
+        <Route path="/motion-learn/ordregn" element={<OrdregnGame />} />
+        <Route path="/motion-learn/whack" element={<WhackAWordGame />} />
+        <Route path="/motion-learn/goalkeeper" element={<GoalKeeperGame />} />
+        <Route path="*" element={<Navigate to="/motion-learn" replace />} />
+      </Routes>
+    );
+  }
 
   // No user logged in - show auth
   if (!userProfile) {
