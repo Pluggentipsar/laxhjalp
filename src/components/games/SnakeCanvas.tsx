@@ -85,7 +85,7 @@ const createBokeh = (): BokehCircle[] => {
   }));
 };
 
-export function SnakeCanvas({ gridWidth, gridHeight, snake, tokens, isPlaying: _isPlaying, shake = 0, onCorrect, onIncorrect, fullscreen = false, onFullscreenToggle, currentDefinition }: SnakeCanvasProps) {
+export function SnakeCanvas({ gridWidth, gridHeight, snake, tokens, isPlaying: _isPlaying, shake: _shake = 0, onCorrect: _onCorrect, onIncorrect: _onIncorrect, fullscreen = false, onFullscreenToggle, currentDefinition }: SnakeCanvasProps) {
   // Note: isPlaying is available as _isPlaying if needed for future enhancements
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -102,154 +102,60 @@ export function SnakeCanvas({ gridWidth, gridHeight, snake, tokens, isPlaying: _
     // console.log('[SnakeCanvas] Updated refs - snake:', snake.length, 'tokens:', tokens.length);
   }, [snake, tokens]);
 
-  // Spawn particles effect (used by game logic via callbacks)
-  const spawnParticles = useCallback((x: number, y: number, color: string) => {
-    const particles = particlesRef.current;
-    for (let i = 0; i < PARTICLE_COUNT; i++) {
-      particles.push({
-        x: x * CELL_SIZE + CELL_SIZE / 2,
-        y: y * CELL_SIZE + CELL_SIZE / 2,
-        dx: (Math.random() - 0.5) * 200,
-        dy: (Math.random() - 0.5) * 200,
-        life: 1,
-        maxLife: 1,
-        color,
-        size: Math.random() * 3 + 2,
-      });
-    }
-  }, []);
-
-  // Trigger callbacks when appropriate (placeholder for future use)
-  useEffect(() => {
-    if (onCorrect || onIncorrect) {
-      // Future: trigger particle effects based on game events
-    }
-  }, [onCorrect, onIncorrect, spawnParticles]);
-
-  // Resize canvas
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    const container = containerRef.current;
-    if (!canvas || !container) return;
-
-    const resize = () => {
-      if (fullscreen) {
-        // Fullscreen mode - use window size and maintain aspect ratio
-        const maxWidth = window.innerWidth;
-        const maxHeight = window.innerHeight;
-        const cellSizeWidth = Math.floor(maxWidth / gridWidth);
-        const cellSizeHeight = Math.floor(maxHeight / gridHeight);
-        const cellSize = Math.min(cellSizeWidth, cellSizeHeight);
-        const width = gridWidth * cellSize;
-        const height = gridHeight * cellSize;
-        canvas.width = width;
-        canvas.height = height;
-        canvas.style.width = `${width}px`;
-        canvas.style.height = `${height}px`;
-      } else {
-        // Normal mode - larger canvas for better visibility
-        const width = gridWidth * CELL_SIZE;
-        const height = gridHeight * CELL_SIZE;
-        canvas.width = width;
-        canvas.height = height;
-        canvas.style.width = `${width}px`;
-        canvas.style.height = `${height}px`;
-      }
-    };
-
-    resize();
-    window.addEventListener('resize', resize);
-    return () => window.removeEventListener('resize', resize);
-  }, [gridWidth, gridHeight, fullscreen]);
-
-  // Render loop
+  // Game Loop
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
-    if (!ctx || !canvas) {
-      return;
-    }
+    if (!canvas || !ctx) return;
 
-    let animationId: number;
+    let animationFrameId: number;
 
     const render = (timestamp: number) => {
-      const dt = (timestamp - lastFrameRef.current) / 1000 || 0;
+      const dt = Math.min((timestamp - lastFrameRef.current) / 1000, 0.1); // Cap dt
       lastFrameRef.current = timestamp;
 
-      // Calculate current cell size based on canvas size
-      if (canvas.width === 0 || canvas.height === 0 || gridWidth === 0) {
-        animationId = requestAnimationFrame(render);
-        return;
-      }
-      const currentCellSize = canvas.width / gridWidth;
+      // Clear
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Clear and draw background
-      drawBackground(ctx, canvas.width, canvas.height, currentCellSize);
+      // Draw Background
+      drawBackground(ctx, canvas.width, canvas.height, CELL_SIZE);
+
+      // Draw Bokeh
       drawBokeh(ctx, bokehRef.current, canvas.width, canvas.height);
 
-      // Apply camera shake
-      if (shake > 0) {
-        const mag = shake * 6;
-        ctx.save();
-        ctx.translate(
-          (Math.random() - 0.5) * mag,
-          (Math.random() - 0.5) * mag
-        );
-      }
+      // Draw Tokens
+      drawTokens(ctx, tokensRef.current, CELL_SIZE);
 
-      // Draw tokens (food)
-      drawTokens(ctx, tokensRef.current, currentCellSize);
+      // Draw Snake
+      drawSnake(ctx, snakeRef.current, CELL_SIZE);
 
-      // Draw snake
-      drawSnake(ctx, snakeRef.current, currentCellSize);
-
-      // Draw particles
+      // Draw Particles
       drawParticles(ctx, particlesRef.current, dt);
 
-      if (shake > 0) {
-        ctx.restore();
-      }
-
-      animationId = requestAnimationFrame(render);
+      animationFrameId = requestAnimationFrame(render);
     };
 
-    animationId = requestAnimationFrame(render);
-    return () => cancelAnimationFrame(animationId);
-  }, [gridWidth, shake]);
+    lastFrameRef.current = performance.now();
+    animationFrameId = requestAnimationFrame(render);
 
-  // Handle escape key for fullscreen
-  useEffect(() => {
-    if (!fullscreen || !onFullscreenToggle) return;
-
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onFullscreenToggle();
-      }
+    return () => {
+      cancelAnimationFrame(animationFrameId);
     };
-
-    window.addEventListener('keydown', handleEscape);
-    return () => window.removeEventListener('keydown', handleEscape);
-  }, [fullscreen, onFullscreenToggle]);
+  }, [gridWidth, gridHeight]);
 
   const canvasElement = (
-    <div
-      ref={containerRef}
-      className={`relative rounded-2xl overflow-hidden ring-1 ring-white/10 shadow-2xl bg-gradient-to-br from-slate-900 to-slate-950 ${
-        fullscreen ? 'flex items-center justify-center' : ''
-      }`}
-      style={fullscreen ? { width: '100vw', height: '100vh' } : undefined}
-    >
+    <div ref={containerRef} className="relative rounded-xl overflow-hidden shadow-2xl border-4 border-slate-800 bg-slate-900">
       <canvas
         ref={canvasRef}
-        className="block mx-auto"
+        width={gridWidth * CELL_SIZE}
+        height={gridHeight * CELL_SIZE}
+        className="block w-full h-full"
+        style={{ imageRendering: 'pixelated' }}
       />
-
-      {/* Fullscreen toggle button */}
       {onFullscreenToggle && (
         <button
           onClick={onFullscreenToggle}
-          className="absolute top-4 right-4 p-3 rounded-lg bg-black/60 hover:bg-black/80 text-white/90 hover:text-white transition-all backdrop-blur-sm shadow-lg z-10"
-          title={fullscreen ? 'Avsluta helskärm (ESC)' : 'Helskärm'}
+          className="absolute top-2 right-2 p-2 rounded-lg bg-black/50 text-white hover:bg-black/70 transition-colors z-10"
         >
           {fullscreen ? (
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

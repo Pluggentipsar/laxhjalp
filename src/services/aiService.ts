@@ -685,7 +685,64 @@ function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
-// Mock-funktioner för utveckling (fallback när backend inte svarar)
+// ... existing code ...
+
+/**
+ * Generera matteproblem med AI
+ */
+export async function generateMathQuestions(
+  topic: string,
+  count: number = 5,
+  difficulty: 'easy' | 'medium' | 'hard' = 'medium',
+  grade: number = 5
+): Promise<any[]> { // Using any[] to avoid circular dependency with types for now, but should be ActivityQuestion[]
+  try {
+    const response = await fetch(`${API_BASE_URL}/generate/math-questions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        topic,
+        count,
+        difficulty,
+        grade
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Math API-fel: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.questions;
+  } catch (error) {
+    console.error('Fel vid AI-generering av mattefrågor:', error);
+    return mockGenerateMathQuestions(topic, count);
+  }
+}
+
+function mockGenerateMathQuestions(topic: string, count: number): any[] {
+  return Array.from({ length: count }, (_, i) => ({
+    id: `ai-math-${Date.now()}-${i}`,
+    activityId: 'ai-utmaning',
+    question: `Detta är ett AI-genererat problem om ${topic} (Problem ${i + 1}). Om du har 5 äpplen och får 3 till, hur många har du?`,
+    questionType: 'number-input',
+    correctAnswer: 8,
+    explanation: '5 + 3 = 8',
+    hint1: 'Räkna ihop dem',
+    hint2: 'Använd fingrarna',
+    hint3: 'Svaret är 8',
+    difficulty: 'medium',
+    conceptArea: 'ai-generated',
+    ageGroup: '4-6',
+    soloLevel: 'multistructural',
+    bloomLevel: 'apply',
+    visualSupport: false,
+    aiGenerated: true
+  }));
+}
+
 function mockGenerateFlashcards(content: string, count: number): Flashcard[] {
   const words = content.split(' ').filter((w) => w.length > 3);
   return Array.from({ length: Math.min(count, words.length) }, (_, i) => ({

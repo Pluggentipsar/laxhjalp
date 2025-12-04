@@ -585,6 +585,9 @@ export interface ActivityQuestion {
   // Metakognition
   reflectionPrompt?: string;
   strategyPrompt?: string;
+
+  // AI
+  aiGenerated?: boolean;
 }
 
 // Student's Attempt at a Question

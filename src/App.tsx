@@ -178,6 +178,9 @@ function AppContent() {
       <Route path="/subjects/matematik/subtraktion-1-10" element={<ArithmeticActivity />} />
       <Route path="/subjects/matematik/subtraktion-11-20" element={<ArithmeticActivity />} />
       <Route path="/subjects/matematik/blandade-operationer" element={<ArithmeticActivity />} />
+      <Route path="/subjects/matematik/multiplikation-4-6" element={<ArithmeticActivity />} />
+      <Route path="/subjects/matematik/division-4-6" element={<ArithmeticActivity />} />
+      <Route path="/subjects/matematik/ai-utmaning" element={<ArithmeticActivity />} />
 
       {/* Legacy route - keeping for backwards compatibility */}
       <Route path="/subjects/matematik/addition-subtraktion-1-3" element={<AdditionSubtractionActivity />} />

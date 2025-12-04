@@ -9,6 +9,8 @@ import {
   Trophy,
   Target,
   Sparkles,
+  Gamepad2,
+  BookOpen,
 } from 'lucide-react';
 import { MainLayout } from '../../../components/layout/MainLayout';
 import { Button } from '../../../components/common/Button';
@@ -17,6 +19,8 @@ import { useAppStore } from '../../../store/appStore';
 import { pedagogicalEngine } from '../../../services/pedagogicalEngine';
 import { dbHelpers } from '../../../lib/db';
 import { getQuestionsByFilters } from '../../../data/activities/additionSubtraction';
+import { generateMathQuestions } from '../../../services/aiService';
+import { MathGameWrapper } from '../../../components/subjects/MathGameWrapper';
 import type {
   ActivityQuestion,
   ActivityAttempt,
@@ -36,6 +40,15 @@ const ACTIVITY_CONCEPT_MAP: { [key: string]: string } = {
   'subtraktion-1-10': 'subtraktion-1-10',
   'subtraktion-11-20': 'subtraktion-11-20',
   'blandade-operationer': 'blandade-operationer',
+  'multiplikation-4-6': 'multiplikation-4-6',
+  'division-4-6': 'division-4-6',
+  'ai-utmaning': 'ai-generated',
+  'antal-1-10': 'antal-1-10',
+  'monster-1-3': 'monster-1-3',
+  'addition-0-20': 'addition-0-20',
+  'former-1-3': 'former-1-3',
+  'brak-1-3': 'brak-1-3',
+  'klockan-1-3': 'klockan-1-3',
 };
 
 export function ArithmeticActivity() {
@@ -45,6 +58,10 @@ export function ArithmeticActivity() {
 
   // Determine concept area from activity ID
   const conceptArea = activityId ? ACTIVITY_CONCEPT_MAP[activityId] : 'addition-1-10';
+  const isAIChallenge = activityId === 'ai-utmaning';
+
+  // Mode state
+  const [mode, setMode] = useState<'practice' | 'game'>('practice');
 
   // Session state
   const [sessionId] = useState(`session-${Date.now()}`);
@@ -69,6 +86,10 @@ export function ArithmeticActivity() {
   const [correctCount, setCorrectCount] = useState(0);
   const [sessionComplete, setSessionComplete] = useState(false);
 
+  // AI Questions
+  const [aiQuestions, setAiQuestions] = useState<ActivityQuestion[]>([]);
+  const [isLoadingAI, setIsLoadingAI] = useState(false);
+
   // Load cognitive profile
   useEffect(() => {
     if (!user) return;
@@ -78,20 +99,38 @@ export function ArithmeticActivity() {
     });
   }, [user]);
 
+  // Initialize AI questions if needed
+  useEffect(() => {
+    if (isAIChallenge && aiQuestions.length === 0) {
+      setIsLoadingAI(true);
+      generateMathQuestions('blandad matematik', 10, 'medium', 5).then((questions) => {
+        setAiQuestions(questions);
+        setIsLoadingAI(false);
+      });
+    }
+  }, [isAIChallenge]);
+
   // Select first question
   useEffect(() => {
-    if (currentQuestion) return;
+    if (currentQuestion || (isAIChallenge && aiQuestions.length === 0)) return;
     selectNextQuestion();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [aiQuestions]);
 
   const selectNextQuestion = () => {
-    // Filter questions by concept area
-    const conceptQuestions = getQuestionsByFilters({ conceptArea });
+    let availableQuestions: ActivityQuestion[] = [];
 
-    const availableQuestions = conceptQuestions.filter(
-      (q) => !attempts.find((a) => a.questionId === q.id)
-    );
+    if (isAIChallenge) {
+      availableQuestions = aiQuestions.filter(
+        (q) => !attempts.find((a) => a.questionId === q.id)
+      );
+    } else {
+      // Filter questions by concept area
+      const conceptQuestions = getQuestionsByFilters({ conceptArea });
+      availableQuestions = conceptQuestions.filter(
+        (q) => !attempts.find((a) => a.questionId === q.id)
+      );
+    }
 
     if (availableQuestions.length === 0 || currentQuestionIndex >= TOTAL_QUESTIONS) {
       completeSession();
@@ -249,6 +288,27 @@ export function ArithmeticActivity() {
     );
   }
 
+  // Game Mode Rendering
+  if (mode === 'game') {
+    // Get questions for the game
+    const gameQuestions = isAIChallenge
+      ? aiQuestions
+      : getQuestionsByFilters({ conceptArea });
+
+    return (
+      <MathGameWrapper
+        questions={gameQuestions}
+        title={isAIChallenge ? 'AI Utmaning' : 'Matte-Spel'}
+        onComplete={(score) => {
+          // Handle game completion logic here (save XP etc)
+          useAppStore.getState().addXP(score);
+          // We could also save attempts here if we wanted detailed tracking for games
+        }}
+        onExit={() => setMode('practice')}
+      />
+    );
+  }
+
   if (sessionComplete) {
     const accuracy = attempts.length > 0 ? (correctCount / attempts.length) * 100 : 0;
 
@@ -297,11 +357,14 @@ export function ArithmeticActivity() {
     );
   }
 
-  if (!currentQuestion) {
+  if (!currentQuestion || (isAIChallenge && isLoadingAI)) {
     return (
       <MainLayout>
         <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+            {isAIChallenge && <p>AI skapar dina frågor...</p>}
+          </div>
         </div>
       </MainLayout>
     );
@@ -314,10 +377,34 @@ export function ArithmeticActivity() {
       <div className="container mx-auto px-4 py-8 max-w-3xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <Button variant="ghost" size="sm" onClick={() => navigate('/subjects/matematik')}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Tillbaka
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/subjects/matematik')}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Tillbaka
+            </Button>
+
+            {/* Mode Toggle */}
+            <div className="bg-gray-100 dark:bg-gray-800 p-1 rounded-lg flex items-center">
+              <button
+                onClick={() => setMode('practice')}
+                className={`px-3 py-1 rounded-md text-sm font-medium transition-all ${mode === 'practice'
+                  ? 'bg-white dark:bg-gray-700 shadow-sm text-purple-600'
+                  : 'text-gray-500 hover:text-gray-700'
+                  }`}
+              >
+                <BookOpen className="w-4 h-4 inline mr-1" />
+                Öva
+              </button>
+              <button
+                onClick={() => setMode('game')}
+                className="px-3 py-1 rounded-md text-sm font-medium transition-all text-gray-500 hover:text-gray-700"
+              >
+                <Gamepad2 className="w-4 h-4 inline mr-1" />
+                Spela
+              </button>
+            </div>
+          </div>
+
           <div className="text-sm text-gray-600 dark:text-gray-400">
             Fråga {currentQuestionIndex + 1} / {TOTAL_QUESTIONS}
           </div>
@@ -346,7 +433,16 @@ export function ArithmeticActivity() {
             <Card className="p-6 mb-6">
               {/* Question */}
               <div className="mb-6">
-                <h2 className="text-2xl font-bold mb-4">{currentQuestion.question}</h2>
+                <div className="flex justify-between items-start mb-4">
+                  <h2 className="text-2xl font-bold">{currentQuestion.question}</h2>
+                  {currentQuestion.aiGenerated && (
+                    <span className="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full flex items-center">
+                      <Sparkles className="w-3 h-3 mr-1" />
+                      AI
+                    </span>
+                  )}
+                </div>
+
                 {currentQuestion.realWorldContext && (
                   <div className="text-4xl mb-4">{currentQuestion.realWorldContext}</div>
                 )}
@@ -361,11 +457,10 @@ export function ArithmeticActivity() {
                         <button
                           key={option}
                           onClick={() => setUserAnswer(String(option))}
-                          className={`p-4 rounded-lg border-2 transition-all ${
-                            userAnswer === String(option)
-                              ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
-                              : 'border-gray-200 dark:border-gray-700 hover:border-purple-300'
-                          }`}
+                          className={`p-4 rounded-lg border-2 transition-all ${userAnswer === String(option)
+                            ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
+                            : 'border-gray-200 dark:border-gray-700 hover:border-purple-300'
+                            }`}
                         >
                           <span className="text-xl font-semibold">{option}</span>
                         </button>
@@ -420,11 +515,10 @@ export function ArithmeticActivity() {
               {feedback && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
                   <div
-                    className={`p-4 rounded-lg ${
-                      feedback.isCorrect
-                        ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
-                        : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
-                    }`}
+                    className={`p-4 rounded-lg ${feedback.isCorrect
+                      ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
+                      : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
+                      }`}
                   >
                     <div className="flex items-start gap-3">
                       {feedback.isCorrect ? (
@@ -463,6 +557,6 @@ export function ArithmeticActivity() {
           </div>
         </div>
       </div>
-    </MainLayout>
+    </MainLayout >
   );
 }

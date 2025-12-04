@@ -17,32 +17,53 @@ export function CrosswordGame({ crossword, onComplete }: CrosswordGameProps) {
   const [hintsUsed, setHintsUsed] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[][]>([]);
+  const [selectedClueId, setSelectedClueId] = useState<string | null>(null);
 
-  // Initialisera refs
   useEffect(() => {
-    inputRefs.current = grid.map((row) => row.map(() => null));
-  }, [grid.length]);
-
-  // Kontrollera om korsordet är komplett och korrekt
-  useEffect(() => {
-    const allFilled = grid.every((row) =>
-      row.every((cell) => cell.letter === null || cell.userInput.length > 0)
+    const allCorrect = grid.every((row) =>
+      row.every((cell) => {
+        if (cell.letter === null) return true;
+        return cell.userInput.toUpperCase() === cell.letter;
+      })
     );
 
-    if (allFilled) {
-      const allCorrect = grid.every((row) =>
-        row.every((cell) => {
-          if (cell.letter === null) return true;
-          return cell.userInput.toUpperCase() === cell.letter;
-        })
-      );
+    if (allCorrect && !isComplete) {
+      setIsComplete(true);
+      onComplete?.();
+    }
+  }, [grid, onComplete, isComplete]);
 
-      if (allCorrect) {
-        setIsComplete(true);
-        onComplete?.();
+  // Scroll to active clue when selected
+  useEffect(() => {
+    if (selectedClueId) {
+      const element = document.getElementById(`clue-${selectedClueId}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
     }
-  }, [grid, onComplete]);
+  }, [selectedClueId]);
+
+  // Update selected clue when cell changes
+  useEffect(() => {
+    if (!selectedCell) {
+      setSelectedClueId(null);
+      return;
+    }
+
+    const { row, col } = selectedCell;
+    const word = crossword.words.find((w) => {
+      if (w.direction !== selectedDirection) return false;
+      if (selectedDirection === 'across') {
+        return w.startRow === row && col >= w.startCol && col < w.startCol + w.word.length;
+      } else {
+        return w.startCol === col && row >= w.startRow && row < w.startRow + w.word.length;
+      }
+    });
+
+    if (word) {
+      setSelectedClueId(`${word.direction}-${word.number}`);
+    }
+  }, [selectedCell, selectedDirection, crossword.words]);
 
   const handleCellClick = (row: number, col: number) => {
     const cell = grid[row][col];
@@ -313,13 +334,12 @@ export function CrosswordGame({ crossword, onComplete }: CrosswordGameProps) {
                     return (
                       <div
                         key={key}
-                        className={`relative w-10 h-10 bg-white cursor-pointer transition-colors ${
-                          isSelected
-                            ? 'ring-2 ring-primary-500 ring-inset'
-                            : isHighlighted
+                        className={`relative w-10 h-10 bg-white cursor-pointer transition-colors ${isSelected
+                          ? 'ring-2 ring-primary-500 ring-inset'
+                          : isHighlighted
                             ? 'bg-primary-100 dark:bg-primary-900/30'
                             : ''
-                        } ${showError ? 'bg-red-100' : ''} ${showCorrect ? 'bg-green-100' : ''}`}
+                          } ${showError ? 'bg-red-100' : ''} ${showCorrect ? 'bg-green-100' : ''}`}
                         onClick={() => handleCellClick(rowIndex, colIndex)}
                       >
                         {cell.number && (
@@ -364,7 +384,19 @@ export function CrosswordGame({ crossword, onComplete }: CrosswordGameProps) {
             <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Vågrätt →</h3>
             <div className="space-y-2 text-sm">
               {acrossClues.map((clue) => (
-                <div key={`across-${clue.number}`} className="flex gap-2">
+                <div
+                  key={`across-${clue.number}`}
+                  id={`clue-across-${clue.number}`}
+                  className={`flex gap-2 p-2 rounded transition-colors cursor-pointer ${selectedClueId === `across-${clue.number}`
+                      ? 'bg-primary-100 dark:bg-primary-900/30 ring-1 ring-primary-500'
+                      : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+                    }`}
+                  onClick={() => {
+                    setSelectedCell({ row: clue.startRow, col: clue.startCol });
+                    setSelectedDirection('across');
+                    inputRefs.current[clue.startRow][clue.startCol]?.focus();
+                  }}
+                >
                   <span className="font-bold text-gray-700 dark:text-gray-300 min-w-[24px]">
                     {clue.number}.
                   </span>
@@ -378,7 +410,19 @@ export function CrosswordGame({ crossword, onComplete }: CrosswordGameProps) {
             <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Lodrätt ↓</h3>
             <div className="space-y-2 text-sm">
               {downClues.map((clue) => (
-                <div key={`down-${clue.number}`} className="flex gap-2">
+                <div
+                  key={`down-${clue.number}`}
+                  id={`clue-down-${clue.number}`}
+                  className={`flex gap-2 p-2 rounded transition-colors cursor-pointer ${selectedClueId === `down-${clue.number}`
+                      ? 'bg-primary-100 dark:bg-primary-900/30 ring-1 ring-primary-500'
+                      : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+                    }`}
+                  onClick={() => {
+                    setSelectedCell({ row: clue.startRow, col: clue.startCol });
+                    setSelectedDirection('down');
+                    inputRefs.current[clue.startRow][clue.startCol]?.focus();
+                  }}
+                >
                   <span className="font-bold text-gray-700 dark:text-gray-300 min-w-[24px]">
                     {clue.number}.
                   </span>
