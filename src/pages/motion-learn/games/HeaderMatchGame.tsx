@@ -48,8 +48,8 @@ export function HeaderMatchGame() {
     });
 
     // Game Loop Refs
+    // Game Loop Refs
     const requestRef = useRef<number>();
-    const lastSpawnRef = useRef<number>(0);
     const stateRef = useRef({
         gameState: 'idle',
         balloons: [] as GameBalloon[],
@@ -73,7 +73,6 @@ export function HeaderMatchGame() {
         setLevel(1);
         setBalloons([]);
         setGameState('playing');
-        setTimeLeft(60);
         startCamera();
         spawnNewRound();
     }, [startCamera]);
@@ -81,7 +80,7 @@ export function HeaderMatchGame() {
     const quitGame = useCallback(() => {
         setGameState('idle');
         stopCamera();
-        cancelAnimationFrame(requestRef.current!);
+        if (requestRef.current) cancelAnimationFrame(requestRef.current);
     }, [stopCamera]);
 
     // Mock Word Data (Replace with Service later)
@@ -303,7 +302,7 @@ export function HeaderMatchGame() {
                     </AnimatePresence>
 
                     {/* Main User Cursor (Nose) */}
-                    {showCursor && noseRef.current && (
+                    {noseRef.current && (
                         <div
                             className="absolute w-8 h-8 rounded-full border-4 border-yellow-400 bg-red-500 shadow-[0_0_15px_rgba(255,0,0,0.6)] z-50 transition-transform duration-75"
                             style={{
