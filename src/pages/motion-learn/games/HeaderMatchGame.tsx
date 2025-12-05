@@ -1,15 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Play, RefreshCw, Trophy, Heart, Settings, Maximize2, X } from 'lucide-react';
+import { AnimatePresence } from 'framer-motion';
+import { ArrowLeft, Play, RefreshCw, Trophy, Heart, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useCombinedTracking } from '../../../../hooks/useCombinedTracking';
 import { Button } from '../../../../components/common/Button';
 import { Card } from '../../../../components/common/Card';
 import { Balloon } from './components/Balloon';
-import { playSound } from './utils/sound';
-import { GAME_CONFIGS } from './constants/game-configs';
-import { useGameLogic } from './hooks/useGameLogic'; // We might reuse or adapt this
-import type { GameState, WordPackage } from '../../../../types/motion-learn';
+import { playGameSound } from './utils/sound';
 
 // Types specific to this game
 interface GameBalloon {
@@ -26,22 +23,19 @@ interface GameBalloon {
 
 export function HeaderMatchGame() {
     const navigate = useNavigate();
-    const canvasRef = useRef<HTMLCanvasElement>(null);
 
     // Game State
     const [gameState, setGameState] = useState<'idle' | 'playing' | 'paused' | 'gameover'>('idle');
     const [score, setScore] = useState(0);
     const [lives, setLives] = useState(3);
-    const [timeLeft, setTimeLeft] = useState(60);
     const [level, setLevel] = useState(1);
     const [balloons, setBalloons] = useState<GameBalloon[]>([]);
     const [targetConcept, setTargetConcept] = useState<string>("");
-    const [showCursor, setShowCursor] = useState(true);
 
     // Tracking
     const noseRef = useRef<{ x: number, y: number } | null>(null);
     const { videoRef, startCamera, stopCamera, state: trackingState } = useCombinedTracking({
-        onPoseResults: (results) => {
+        onPoseResults: (results: any) => {
             if (!results.poseLandmarks) return;
             const nose = results.poseLandmarks[0]; // Landmark 0 is nose
             if (nose) {
@@ -169,14 +163,14 @@ export function HeaderMatchGame() {
 
                 if (dist < 8) { // Hit!
                     if (b.isCorrect) {
-                        playSound('pop'); // Need to ensure sound exists or fallback
+                        playGameSound('correct'); // Need to ensure sound exists or fallback
                         stateRef.current.score += 10;
                         scoreChanged = true;
                         // Spawn new round immediately? Or clear all first?
                         setTimeout(spawnNewRound, 500);
                         return false; // Remove correct balloon
                     } else {
-                        playSound('miss');
+                        playGameSound('wrong');
                         stateRef.current.lives -= 1;
                         livesChanged = true;
                         return false;
