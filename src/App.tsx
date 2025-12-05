@@ -31,6 +31,7 @@ import { HandTrackingDemo } from './pages/motion-learn/HandTrackingDemo';
 import { OrdregnGame } from './pages/motion-learn/games/OrdregnGame';
 import { WhackAWordGame } from './pages/motion-learn/games/WhackAWordGame';
 import { GoalKeeperGame } from './pages/motion-learn/games/GoalKeeperGame';
+import { HeaderMatchGame } from './pages/motion-learn/games/HeaderMatchGame';
 
 function AppContent() {
   const { userProfile } = useAuth();
@@ -98,6 +99,7 @@ function AppContent() {
         <Route path="/motion-learn/ordregn" element={<OrdregnGame />} />
         <Route path="/motion-learn/whack" element={<WhackAWordGame />} />
         <Route path="/motion-learn/goalkeeper" element={<GoalKeeperGame />} />
+        <Route path="/motion-learn/headermatch" element={<HeaderMatchGame />} />
         <Route path="*" element={<Navigate to="/motion-learn" replace />} />
       </Routes>
     );

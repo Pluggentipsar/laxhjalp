@@ -345,6 +345,46 @@ export function MotionLearnHub() {
               </motion.div>
             </Link>
 
+            {/* Header Match Game Card */}
+            <Link to="/motion-learn/headermatch">
+              <motion.div
+                whileHover={{ scale: 1.02, y: -5 }}
+                whileTap={{ scale: 0.98 }}
+                className="group"
+              >
+                <Card className="p-6 border-2 border-transparent hover:border-blue-300 dark:hover:border-blue-700 transition-all cursor-pointer h-full">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="p-3 rounded-xl bg-gradient-to-br from-blue-400 to-sky-500 group-hover:shadow-lg group-hover:shadow-blue-500/50 transition-shadow">
+                      <Target className="h-8 w-8 text-white" />
+                    </div>
+                    <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 text-xs font-semibold">
+                      NYHET
+                    </span>
+                  </div>
+
+                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                    Header Match
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-400 mb-4">
+                    Nicka ballongerna! Använd huvudet för att välja rätt ord som svävar förbi.
+                  </p>
+
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    <span className="px-2 py-1 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-xs font-medium text-blue-700 dark:text-blue-300">
+                      Huvudrörelser
+                    </span>
+                    <span className="px-2 py-1 rounded-lg bg-sky-100 dark:bg-sky-900/40 text-xs font-medium text-sky-700 dark:text-sky-300">
+                      Koncentration
+                    </span>
+                  </div>
+
+                  <Button className="w-full bg-gradient-to-r from-blue-400 to-sky-500 hover:from-blue-500 hover:to-sky-600 text-white font-bold">
+                    Spela Nu
+                  </Button>
+                </Card>
+              </motion.div>
+            </Link>
+
             <Card className="p-6 opacity-60 cursor-not-allowed">
               <div className="flex items-start justify-between mb-4">
                 <div className="p-3 rounded-xl bg-gray-200 dark:bg-gray-800">
