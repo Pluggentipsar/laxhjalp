@@ -1,17 +1,26 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Gamepad2, Sparkles, Package, TrendingUp, Zap, Camera, Target, Shield } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Gamepad2, Sparkles, Package, TrendingUp, Zap, Camera, Target, Shield, Download, Check, Loader2 } from 'lucide-react';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
-import { getAllPackages, getAllSessions, getAllHighScores } from '../../services/wordPackageService';
+import { getAllPackages, getAllSessions, getAllHighScores, importPackageFromCloud } from '../../services/wordPackageService';
 
 export function MotionLearnHub() {
   const [packageCount, setPackageCount] = useState(0);
   const [sessionCount, setSessionCount] = useState(0);
   const [bestScore, setBestScore] = useState(0);
 
+  // Import State
+  const [importCode, setImportCode] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
+  const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
+
   useEffect(() => {
+    loadStats();
+  }, []);
+
+  const loadStats = () => {
     // Load stats from localStorage
     const packages = getAllPackages();
     const sessions = getAllSessions();
@@ -23,7 +32,27 @@ export function MotionLearnHub() {
     // Get best score across all games
     const maxScore = highscores.reduce((max, hs) => Math.max(max, hs.score), 0);
     setBestScore(maxScore);
-  }, []);
+  };
+
+  const handleImportPackage = async () => {
+    if (!importCode || importCode.length !== 6) return;
+
+    setIsImporting(true);
+    setImportStatus('idle');
+
+    const pkg = await importPackageFromCloud(importCode);
+
+    setIsImporting(false);
+    if (pkg) {
+      setImportStatus('success');
+      setImportCode('');
+      loadStats(); // Reload stats to show new package count
+      setTimeout(() => setImportStatus('idle'), 3000);
+    } else {
+      setImportStatus('error');
+      setTimeout(() => setImportStatus('idle'), 3000);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 dark:from-gray-950 dark:via-purple-950 dark:to-gray-900">
@@ -83,6 +112,56 @@ export function MotionLearnHub() {
               </Button>
             </Link>
           </div>
+        </motion.div>
+
+        {/* Import Section (New) */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+          className="max-w-2xl mx-auto mb-12"
+        >
+          <Card className="p-6 bg-white/80 dark:bg-gray-800/80 backdrop-blur border-blue-200 dark:border-blue-800 shadow-xl">
+            <div className="flex flex-col md:flex-row items-center gap-4">
+              <div className="flex-1 text-center md:text-left">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1 flex items-center justify-center md:justify-start gap-2">
+                  <Download className="h-5 w-5 text-blue-500" />
+                  Har du en kod?
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Importera ett ordpaket direkt för att börja spela
+                </p>
+              </div>
+              <div className="flex items-center gap-2 w-full md:w-auto">
+                <input
+                  type="text"
+                  placeholder="KOD (t.ex. A7X92B)"
+                  value={importCode}
+                  onChange={(e) => setImportCode(e.target.value.toUpperCase())}
+                  maxLength={6}
+                  className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white font-mono uppercase tracking-wider w-full md:w-48 text-center md:text-left"
+                />
+                <Button
+                  onClick={handleImportPackage}
+                  disabled={isImporting || importCode.length !== 6}
+                  className={`min-w-[120px] ${importStatus === 'success' ? 'bg-green-500 hover:bg-green-600' : importStatus === 'error' ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'}`}
+                >
+                  {isImporting ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : importStatus === 'success' ? (
+                    <>
+                      <Check className="mr-2 h-5 w-5" />
+                      Klart!
+                    </>
+                  ) : importStatus === 'error' ? (
+                    'Fel kod'
+                  ) : (
+                    'Hämta'
+                  )}
+                </Button>
+              </div>
+            </div>
+          </Card>
         </motion.div>
 
         {/* Quick Stats */}

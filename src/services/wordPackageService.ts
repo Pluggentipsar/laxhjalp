@@ -283,3 +283,78 @@ export function importData(jsonData: string): boolean {
     return false;
   }
 }
+// ========== Cloud Sharing (Firebase) ==========
+
+import { db } from './firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+
+export async function savePackageToCloud(pkg: WordPackage): Promise<string | null> {
+  try {
+    // Generate a 6-character share code
+    const shareCode = generateShareCode();
+
+    // Check if code exists (simple check, could be improved with retry loop)
+    const docRef = doc(db, 'word_packages', shareCode);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+      // Collision! Try one more time
+      const retryCode = generateShareCode();
+      const retryRef = doc(db, 'word_packages', retryCode);
+      await setDoc(retryRef, { ...pkg, shareCode: retryCode, sharedAt: new Date().toISOString() });
+      return retryCode;
+    }
+
+    await setDoc(docRef, { ...pkg, shareCode, sharedAt: new Date().toISOString() });
+    return shareCode;
+  } catch (error) {
+    console.error('Error sharing package:', error);
+    return null;
+  }
+}
+
+export async function getPackageFromCloud(shareCode: string): Promise<WordPackage | null> {
+  try {
+    const docRef = doc(db, 'word_packages', shareCode.toUpperCase());
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+      const data = docSnap.data() as WordPackage;
+      return data;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error fetching package:', error);
+    return null;
+  }
+}
+
+export async function importPackageFromCloud(shareCode: string): Promise<WordPackage | null> {
+  const cloudPkg = await getPackageFromCloud(shareCode);
+  if (!cloudPkg) return null;
+
+  // Check if we already have it (by ID)
+  const existing = getPackageById(cloudPkg.id);
+  if (existing) {
+    // Update existing? Or create copy? 
+    // Let's create a copy if IDs match but content differs, or just overwrite.
+    // For simplicity, let's overwrite/update the local one.
+    updatePackage(cloudPkg.id, { name: cloudPkg.name, words: cloudPkg.words });
+    return existing;
+  } else {
+    // Create new
+    const packages = getAllPackages();
+    packages.push(cloudPkg);
+    localStorage.setItem(STORAGE_KEYS.PACKAGES, JSON.stringify(packages));
+    return cloudPkg;
+  }
+}
+
+function generateShareCode(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // No I, O, 0, 1 to avoid confusion
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
