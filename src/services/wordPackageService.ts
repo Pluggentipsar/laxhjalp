@@ -306,10 +306,12 @@ export async function savePackageToCloud(pkg: WordPackage): Promise<string | nul
     }
 
     await setDoc(docRef, { ...pkg, shareCode, sharedAt: new Date().toISOString() });
+    console.log("Package saved with code:", shareCode);
     return shareCode;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error sharing package:', error);
-    return null;
+    // Throwing error to be caught by UI
+    throw new Error(error.message || "Unknown Firebase error");
   }
 }
 

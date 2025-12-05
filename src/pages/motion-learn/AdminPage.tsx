@@ -62,9 +62,17 @@ export function AdminPage() {
     setSharingId(pkg.id);
     setShareCode(null);
 
-    const code = await savePackageToCloud(pkg);
-    setShareCode(code);
-    setSharingId(null);
+    try {
+      const code = await savePackageToCloud(pkg);
+      if (code) {
+        setShareCode(code);
+      }
+    } catch (error: any) {
+      console.error("Share failed:", error);
+      alert(`Delning misslyckades: ${error.message}\n\nKontrollera att:\n1. Du är ansluten till internet\n2. Din Firebase-konfiguration är korrekt\n3. Dina databas-regler tillåter skrivning`);
+    } finally {
+      setSharingId(null);
+    }
   };
 
   const handleImportPackage = async () => {
