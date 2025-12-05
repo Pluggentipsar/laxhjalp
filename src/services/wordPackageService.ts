@@ -294,13 +294,13 @@ export async function savePackageToCloud(pkg: WordPackage): Promise<string | nul
     const shareCode = generateShareCode();
 
     // Check if code exists (simple check, could be improved with retry loop)
-    const docRef = doc(db, 'word_packages', shareCode);
+    const docRef = doc(db, 'wordPackages', shareCode);
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
       // Collision! Try one more time
       const retryCode = generateShareCode();
-      const retryRef = doc(db, 'word_packages', retryCode);
+      const retryRef = doc(db, 'wordPackages', retryCode);
       await setDoc(retryRef, { ...pkg, shareCode: retryCode, sharedAt: new Date().toISOString() });
       return retryCode;
     }
@@ -317,7 +317,7 @@ export async function savePackageToCloud(pkg: WordPackage): Promise<string | nul
 
 export async function getPackageFromCloud(shareCode: string): Promise<WordPackage | null> {
   try {
-    const docRef = doc(db, 'word_packages', shareCode.toUpperCase());
+    const docRef = doc(db, 'wordPackages', shareCode.toUpperCase());
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
