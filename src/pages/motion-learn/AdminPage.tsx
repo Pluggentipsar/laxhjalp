@@ -6,7 +6,6 @@ import {
   Plus,
   Package,
   Trash2,
-  Edit2,
   AlertCircle,
   Share2,
   Download,
