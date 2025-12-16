@@ -2,9 +2,9 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Play, RefreshCw, Trophy, Heart, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useCombinedTracking } from '../../../../hooks/useCombinedTracking';
-import { Button } from '../../../../components/common/Button';
-import { Card } from '../../../../components/common/Card';
+import { useCombinedTracking } from '../../../hooks/useCombinedTracking';
+import { Button } from '../../../components/common/Button';
+import { Card } from '../../../components/common/Card';
 import { Balloon } from './components/Balloon';
 import { playGameSound } from './utils/sound';
 

@@ -1,10 +1,14 @@
 // Simple retro sound synthesizer using Web Audio API
 
-const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+let audioContext: AudioContext | null = null;
 
 export type SoundType = 'correct' | 'wrong' | 'gameover' | 'levelUp';
 
 export function playGameSound(type: SoundType) {
+    if (!audioContext) {
+        audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+
     if (audioContext.state === 'suspended') {
         audioContext.resume();
     }
