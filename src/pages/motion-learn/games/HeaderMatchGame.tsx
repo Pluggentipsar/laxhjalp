@@ -49,7 +49,7 @@ export function HeaderMatchGame() {
 
     // Game Loop Refs
     // Game Loop Refs
-    const requestRef = useRef<number>();
+    const requestRef = useRef<number>(undefined);
     const stateRef = useRef({
         gameState: 'idle',
         balloons: [] as GameBalloon[],

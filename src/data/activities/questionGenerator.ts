@@ -1,4 +1,8 @@
 import type { ActivityQuestion } from '../../types';
+import { generateAllGeometryQuestions } from './geometryQuestions';
+import { generateAllAlgebraQuestions } from './algebraQuestions';
+import { generateAllStatisticsQuestions } from './statisticsQuestions';
+import { generateAllProblemQuestions } from './problemQuestions';
 
 /**
  * Generate comprehensive question bank for addition and subtraction
@@ -515,6 +519,7 @@ export function generateMixedOperations(): ActivityQuestion[] {
  */
 export function generateAllQuestions(): ActivityQuestion[] {
   return [
+    // Arithmetic
     ...generateAddition1to5(),
     ...generateAddition1to10(),
     ...generateAdditionDoubles(),
@@ -529,6 +534,14 @@ export function generateAllQuestions(): ActivityQuestion[] {
     ...generateShapes1to3(),
     ...generateFractions1to3(),
     ...generateTime1to3(),
+    // Geometry (new)
+    ...generateAllGeometryQuestions(),
+    // Algebra (new)
+    ...generateAllAlgebraQuestions(),
+    // Statistics (new)
+    ...generateAllStatisticsQuestions(),
+    // Problem-solving (new)
+    ...generateAllProblemQuestions(),
   ];
 }
 

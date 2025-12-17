@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import * as Tabs from '@radix-ui/react-tabs';
@@ -23,30 +23,46 @@ import {
   BookOpen,
   X,
   Loader2,
+  Lightbulb,
+  StickyNote,
 } from 'lucide-react';
 import { MainLayout } from '../components/layout/MainLayout';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { PersonalizedExplanationModal } from '../components/common/PersonalizedExplanationModal';
 import { PersonalizedExamplesModal } from '../components/common/PersonalizedExamplesModal';
-import { ReadingModeToolbar } from '../components/reading/ReadingModeToolbar';
+import { ReadingModeToolbar, type ReadingModeSettings } from '../components/reading/ReadingModeToolbar';
 import { ReadingRuler } from '../components/reading/ReadingRuler';
 import { NotesSection } from '../components/material/NotesSection';
-import { TextSelectionToolbar } from '../components/material/TextSelectionToolbar';
-import { GlossaryPanel } from '../components/material/GlossaryPanel';
-import { ExplanationHistoryPanel, type ExplanationHistoryItem } from '../components/material/ExplanationHistoryPanel';
 import { useAppStore } from '../store/appStore';
-import { useReadingMode } from '../hooks/useReadingMode';
-import { useTextSelection } from '../hooks/useTextSelection';
-import { useContentGeneration, type ContentView } from '../hooks/useContentGeneration';
-import { useMaterialGeneration } from '../hooks/useMaterialGeneration';
+import { type ContentView } from '../hooks/useContentGeneration';
+import { type GenerationMode } from '../hooks/useMaterialGeneration';
 import {
   explainSelection,
   generatePersonalizedExplanation,
+  generateFlashcards,
+  generateQuestions,
+  generateConcepts,
+  simplifyText,
+  deepenText,
+  generatePersonalizedExamples,
+  generateSummary,
+  generateNextSteps,
+  deepenMaterialWithSuggestion,
   type ExplainSelectionResponse,
   type PersonalizedExplanationResponse,
+  type PersonalizedExamplesResponse,
+  type SummaryResponse,
+  type NextStepsResponse,
 } from '../services/aiService';
-import type { GlossaryEntry, Note } from '../types';
+import type { Difficulty, GlossaryEntry, GenerationLogEntry, Material, Note } from '../types';
+
+// Local type for selection menu state
+type SelectionMenuState = {
+  text: string;
+  top: number;
+  left: number;
+};
 
 const subjectLabels: Record<string, string> = {
   svenska: 'Svenska',

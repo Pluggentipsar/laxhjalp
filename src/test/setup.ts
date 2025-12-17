@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom'
-import { vi } from 'vitest'
+import { vi, afterEach } from 'vitest'
 
 // Mock environment variables
 vi.stubEnv('VITE_API_URL', 'http://localhost:3001/api')
@@ -16,7 +16,7 @@ const localStorageMock = {
 Object.defineProperty(window, 'localStorage', { value: localStorageMock })
 
 // Mock fetch
-global.fetch = vi.fn()
+globalThis.fetch = vi.fn() as typeof fetch
 
 // Mock matchMedia for responsive tests
 Object.defineProperty(window, 'matchMedia', {

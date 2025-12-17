@@ -5,7 +5,6 @@ import type {
   ActivityAttempt,
   StudentCognitiveProfile,
   SOLOLevel,
-  BloomLevel,
 } from '../../types'
 
 // Mock factories
@@ -20,7 +19,7 @@ function createMockQuestion(overrides: Partial<ActivityQuestion> = {}): Activity
     bloomLevel: 'remember',
     difficulty: 'easy',
     conceptArea: 'addition',
-    ageGroup: '8-10',
+    ageGroup: '7-9',
     hint1: 'Think about counting',
     explanation: '2 + 2 = 4',
     ...overrides,
@@ -33,6 +32,8 @@ function createMockAttempt(overrides: Partial<ActivityAttempt> = {}): ActivityAt
     userId: 'test-user',
     sessionId: 'test-session',
     activityId: 'test-activity',
+    subjectHub: 'matematik',
+    ageGroup: '7-9',
     questionId: 'test-question',
     userAnswer: '4',
     correctAnswer: '4',
@@ -314,7 +315,7 @@ describe('PedagogicalActivityEngine', () => {
         'test-user',
         'matematik',
         attempts,
-        '8-10'
+        '7-9'
       )
 
       expect(result.userId).toBe('test-user')
@@ -344,7 +345,7 @@ describe('PedagogicalActivityEngine', () => {
         'test-user',
         'matematik',
         attempts,
-        '8-10'
+        '7-9'
       )
 
       expect(result.conceptLevels['addition']).toBeDefined()
@@ -374,7 +375,7 @@ describe('PedagogicalActivityEngine', () => {
         'test-user',
         'matematik',
         attempts,
-        '8-10'
+        '7-9'
       )
 
       expect(result.preferredScaffolding.visualLearner).toBe(0.6)
@@ -399,7 +400,7 @@ describe('PedagogicalActivityEngine', () => {
         'test-user',
         'matematik',
         attempts,
-        '8-10'
+        '7-9'
       )
 
       // ZPD should span from lowest to highest level
@@ -432,7 +433,7 @@ describe('PedagogicalActivityEngine', () => {
         'test-user',
         'matematik',
         attempts,
-        '8-10'
+        '7-9'
       )
 
       expect(result.conceptLevels['addition'].totalAttempts).toBe(12)
