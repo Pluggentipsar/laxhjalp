@@ -49,6 +49,19 @@ const ACTIVITY_CONCEPT_MAP: { [key: string]: string } = {
   'former-1-3': 'former-1-3',
   'brak-1-3': 'brak-1-3',
   'klockan-1-3': 'klockan-1-3',
+  // Geometry activities (1-3)
+  'langd-matning-1-3': 'langd-matning-1-3',
+  'vikt-volym-1-3': 'vikt-volym-1-3',
+  'symmetri-1-3': 'symmetri-1-3',
+  'position-riktning-1-3': 'position-riktning-1-3',
+  // Algebra activities (1-3)
+  'obekant-tal-1-3': 'obekant-tal-1-3',
+  'monster-avancerat-1-3': 'monster-avancerat-1-3',
+  // Problem-solving (1-3)
+  'textuppgifter-1-3': 'textuppgifter-1-3',
+  // Statistics (1-3)
+  'sortering-1-3': 'sortering-1-3',
+  'tabeller-1-3': 'tabeller-1-3',
 };
 
 export function ArithmeticActivity() {

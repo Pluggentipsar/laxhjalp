@@ -88,8 +88,11 @@ export function FallingBlocksGame({ questions, onGameOver, onScoreUpdate }: Fall
     }, [blocks, activePowerups]); // Dependencies for keydown listener
 
     const handleKeyDown = useCallback((e: KeyboardEvent) => {
-        if (e.key >= '0' && e.key <= '9' || e.key === '-') {
+        if (e.key >= '0' && e.key <= '9') {
             handleInput(e.key);
+        } else if (e.key === '-') {
+            // Only allow minus at the start of input for negative numbers
+            setCurrentInput(prev => prev === '' ? '-' : prev);
         } else if (e.key === 'Backspace') {
             setCurrentInput(prev => prev.slice(0, -1));
         } else if (e.key === 'Enter') {
@@ -158,8 +161,16 @@ export function FallingBlocksGame({ questions, onGameOver, onScoreUpdate }: Fall
 
     // Check input against blocks automatically
     useEffect(() => {
-        if (!currentInput) return;
+        // Skip if no input or just a minus sign (partial negative number)
+        if (!currentInput || currentInput === '-') return;
+
         const answer = Number(currentInput);
+
+        // Skip if not a valid number
+        if (isNaN(answer)) {
+            setCurrentInput('');
+            return;
+        }
 
         // Check if any block matches this answer exactly
         const match = blocks.some(b => b.value === answer);

@@ -190,6 +190,29 @@ function AppContent() {
       {/* Mistake review */}
       <Route path="/subjects/matematik/repetera-misstag-1-3" element={<ReviewMistakesActivity />} />
 
+      {/* Geometry activities (1-3) */}
+      <Route path="/subjects/matematik/former-1-3" element={<ArithmeticActivity />} />
+      <Route path="/subjects/matematik/klockan-1-3" element={<ArithmeticActivity />} />
+      <Route path="/subjects/matematik/langd-matning-1-3" element={<ArithmeticActivity />} />
+      <Route path="/subjects/matematik/vikt-volym-1-3" element={<ArithmeticActivity />} />
+      <Route path="/subjects/matematik/symmetri-1-3" element={<ArithmeticActivity />} />
+      <Route path="/subjects/matematik/position-riktning-1-3" element={<ArithmeticActivity />} />
+
+      {/* Algebra activities (1-3) */}
+      <Route path="/subjects/matematik/monster-1-3" element={<ArithmeticActivity />} />
+      <Route path="/subjects/matematik/obekant-tal-1-3" element={<ArithmeticActivity />} />
+      <Route path="/subjects/matematik/monster-avancerat-1-3" element={<ArithmeticActivity />} />
+
+      {/* Problem-solving (1-3) */}
+      <Route path="/subjects/matematik/textuppgifter-1-3" element={<ArithmeticActivity />} />
+
+      {/* Statistics (1-3) */}
+      <Route path="/subjects/matematik/sortering-1-3" element={<ArithmeticActivity />} />
+      <Route path="/subjects/matematik/tabeller-1-3" element={<ArithmeticActivity />} />
+
+      {/* Fractions (1-3) */}
+      <Route path="/subjects/matematik/brak-1-3" element={<ArithmeticActivity />} />
+
       {/* Catch-all for future activities */}
       <Route path="/subjects/:subjectHub/:activityId" element={<ActivityPlaceholderPage />} />
       <Route path="/material" element={<Navigate to="/study" replace />} />

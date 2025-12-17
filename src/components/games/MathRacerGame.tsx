@@ -213,6 +213,28 @@ class Car {
     this.x += Math.cos(this.angle) * this.speed;
     this.y += Math.sin(this.angle) * this.speed;
 
+    // World boundary clamping
+    const MARGIN = 50;
+    const WORLD_WIDTH = 1800;
+    const WORLD_HEIGHT = 1400;
+
+    if (this.x < MARGIN) {
+      this.x = MARGIN;
+      this.speed *= 0.5;
+    }
+    if (this.x > WORLD_WIDTH - MARGIN) {
+      this.x = WORLD_WIDTH - MARGIN;
+      this.speed *= 0.5;
+    }
+    if (this.y < MARGIN) {
+      this.y = MARGIN;
+      this.speed *= 0.5;
+    }
+    if (this.y > WORLD_HEIGHT - MARGIN) {
+      this.y = WORLD_HEIGHT - MARGIN;
+      this.speed *= 0.5;
+    }
+
     // Skidmarks
     if (Math.abs(this.speed) > 8 && (input.left || input.right)) {
       if (Math.random() > 0.5) game.addSkid(this.x, this.y, this.angle);

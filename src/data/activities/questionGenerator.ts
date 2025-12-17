@@ -1,8 +1,18 @@
 import type { ActivityQuestion } from '../../types';
+// Årskurs 1-3 imports
 import { generateAllGeometryQuestions } from './geometryQuestions';
 import { generateAllAlgebraQuestions } from './algebraQuestions';
 import { generateAllStatisticsQuestions } from './statisticsQuestions';
 import { generateAllProblemQuestions } from './problemQuestions';
+// Årskurs 4-6 imports
+import { generateAllArithmetic46Questions } from './arithmetic46Questions';
+import { generateAllGeometry46Questions } from './geometry46Questions';
+import { generateAllAlgebra46Questions } from './algebra46Questions';
+import { generateAllStatistics46Questions } from './statistics46Questions';
+import { generateAllProblem46Questions } from './problem46Questions';
+import { generateAllDecimal46Questions } from './decimal46Questions';
+import { generateAllFraction46Questions } from './fractions46Questions';
+import { generateAllUnits46Questions } from './units46Questions';
 
 /**
  * Generate comprehensive question bank for addition and subtraction
@@ -519,6 +529,7 @@ export function generateMixedOperations(): ActivityQuestion[] {
  */
 export function generateAllQuestions(): ActivityQuestion[] {
   return [
+    // === ÅRSKURS 1-3 ===
     // Arithmetic
     ...generateAddition1to5(),
     ...generateAddition1to10(),
@@ -534,14 +545,32 @@ export function generateAllQuestions(): ActivityQuestion[] {
     ...generateShapes1to3(),
     ...generateFractions1to3(),
     ...generateTime1to3(),
-    // Geometry (new)
+    // Geometry (1-3)
     ...generateAllGeometryQuestions(),
-    // Algebra (new)
+    // Algebra (1-3)
     ...generateAllAlgebraQuestions(),
-    // Statistics (new)
+    // Statistics (1-3)
     ...generateAllStatisticsQuestions(),
-    // Problem-solving (new)
+    // Problem-solving (1-3)
     ...generateAllProblemQuestions(),
+
+    // === ÅRSKURS 4-6 ===
+    // Arithmetic (4-6)
+    ...generateAllArithmetic46Questions(),
+    // Decimals & Money (4-6)
+    ...generateAllDecimal46Questions(),
+    // Fractions (4-6)
+    ...generateAllFraction46Questions(),
+    // Units (4-6)
+    ...generateAllUnits46Questions(),
+    // Geometry (4-6)
+    ...generateAllGeometry46Questions(),
+    // Algebra (4-6)
+    ...generateAllAlgebra46Questions(),
+    // Statistics (4-6)
+    ...generateAllStatistics46Questions(),
+    // Problem-solving (4-6)
+    ...generateAllProblem46Questions(),
   ];
 }
 

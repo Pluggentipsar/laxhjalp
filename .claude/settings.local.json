@@ -19,7 +19,9 @@
       "Bash(npm run test:run:*)",
       "Bash(npx tsc:*)",
       "Bash(npm run lint)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(cd:*)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []
