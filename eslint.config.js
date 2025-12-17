@@ -19,5 +19,17 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      // Kod-kvalitetsregler
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      'max-lines': ['warn', { max: 500, skipBlankLines: true, skipComments: true }],
+      'complexity': ['warn', { max: 15 }],
+
+      // Varningsregler för teknisk skuld
+      'no-warning-comments': ['warn', {
+        terms: ['TODO', 'FIXME', 'XXX', 'HACK'],
+        location: 'start'
+      }],
+    },
   },
 ])

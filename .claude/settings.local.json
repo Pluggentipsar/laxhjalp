@@ -13,7 +13,13 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(git remote set-url:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(find:*)",
+      "Bash(sort:*)",
+      "Bash(npm run test:run:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run lint)",
+      "Bash(xargs:*)"
     ],
     "deny": [],
     "ask": []
