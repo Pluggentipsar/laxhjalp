@@ -13,8 +13,7 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(git remote set-url:*)",
-      "Bash(npm install:*)",
-      "Bash(wc:*)"
+      "Bash(npm install:*)"
     ],
     "deny": [],
     "ask": []

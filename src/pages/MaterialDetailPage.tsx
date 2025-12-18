@@ -19,30 +19,32 @@ import {
   ExternalLink,
   CheckCircle2,
   Heart,
-  Lightbulb,
   FileText,
   BookOpen,
   X,
-  StickyNote,
   Loader2,
+  Lightbulb,
+  StickyNote,
 } from 'lucide-react';
 import { MainLayout } from '../components/layout/MainLayout';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { PersonalizedExplanationModal } from '../components/common/PersonalizedExplanationModal';
 import { PersonalizedExamplesModal } from '../components/common/PersonalizedExamplesModal';
-import { ReadingModeToolbar } from '../components/reading/ReadingModeToolbar';
+import { ReadingModeToolbar, type ReadingModeSettings } from '../components/reading/ReadingModeToolbar';
 import { ReadingRuler } from '../components/reading/ReadingRuler';
 import { NotesSection } from '../components/material/NotesSection';
 import { useAppStore } from '../store/appStore';
+import { type ContentView } from '../hooks/useContentGeneration';
+import { type GenerationMode } from '../hooks/useMaterialGeneration';
 import {
+  explainSelection,
+  generatePersonalizedExplanation,
   generateFlashcards,
   generateQuestions,
   generateConcepts,
   simplifyText,
   deepenText,
-  explainSelection,
-  generatePersonalizedExplanation,
   generatePersonalizedExamples,
   generateSummary,
   generateNextSteps,
@@ -53,7 +55,14 @@ import {
   type SummaryResponse,
   type NextStepsResponse,
 } from '../services/aiService';
-import type { Difficulty, GenerationLogEntry, GlossaryEntry, Material, Note } from '../types';
+import type { Difficulty, GlossaryEntry, GenerationLogEntry, Material, Note } from '../types';
+
+// Local type for selection menu state
+type SelectionMenuState = {
+  text: string;
+  top: number;
+  left: number;
+};
 
 const subjectLabels: Record<string, string> = {
   svenska: 'Svenska',
@@ -63,27 +72,6 @@ const subjectLabels: Record<string, string> = {
   so: 'SO',
   idrott: 'Idrott',
   annat: 'Annat',
-};
-
-type GenerationMode = 'flashcards' | 'quiz' | 'concepts';
-type ContentView = 'original' | 'simplified' | 'advanced' | 'personalized-examples' | 'summary';
-
-type SelectionMenuState = {
-  text: string;
-  top: number;
-  left: number;
-};
-
-type ReadingModeSettings = {
-  active: boolean;
-  fontSize: number;
-  lineHeight: number;
-  fontFamily: 'default' | 'dyslexic';
-  rulerEnabled: boolean;
-  rulerColor: 'yellow' | 'blue' | 'pink';
-  contrast: 'white' | 'black' | 'sepia';
-  letterSpacing: number;
-  wordSpacing: number;
 };
 
 function MarkdownContent({

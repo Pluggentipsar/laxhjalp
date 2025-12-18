@@ -78,6 +78,17 @@ interface Ship {
     angle: number;
 }
 
+interface FloatingText {
+    id: string;
+    x: number;
+    y: number;
+    text: string;
+    color: string;
+    size: number;
+    life: number;
+    maxLife: number;
+}
+
 export function SpaceShooterGame({ questions, onGameOver, onScoreUpdate }: SpaceShooterGameProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [score, setScore] = useState(0);
@@ -94,6 +105,7 @@ export function SpaceShooterGame({ questions, onGameOver, onScoreUpdate }: Space
     const asteroidsRef = useRef<Asteroid[]>([]);
     const powerUpsRef = useRef<PowerUp[]>([]);
     const particlesRef = useRef<Particle[]>([]);
+    const floatingTextsRef = useRef<FloatingText[]>([]);
     const keysRef = useRef<Set<string>>(new Set());
     const lastShotRef = useRef<number>(0);
     const waveTimerRef = useRef<number>(0);
@@ -189,6 +201,9 @@ export function SpaceShooterGame({ questions, onGameOver, onScoreUpdate }: Space
 
         // Update particles
         updateParticles(dt);
+
+        // Update floating texts
+        updateFloatingTexts(dt);
 
         // Spawn logic
         spawnTimerRef.current += deltaTime;
@@ -464,9 +479,25 @@ export function SpaceShooterGame({ questions, onGameOver, onScoreUpdate }: Space
         }
     };
 
-    const addFloatingText = (_x: number, _y: number, text: string, _color: string, _size: number) => {
-        // This will be rendered in the UI overlay
-        console.log(`Floating text: ${text}`);
+    const addFloatingText = (x: number, y: number, text: string, color: string, size: number) => {
+        floatingTextsRef.current.push({
+            id: Math.random().toString(),
+            x,
+            y,
+            text,
+            color,
+            size,
+            life: 60,
+            maxLife: 60
+        });
+    };
+
+    const updateFloatingTexts = (dt: number) => {
+        floatingTextsRef.current = floatingTextsRef.current.filter(t => {
+            t.y -= 0.8 * dt; // Float upward
+            t.life -= dt;
+            return t.life > 0;
+        });
     };
 
     const renderGame = (ctx: CanvasRenderingContext2D) => {
@@ -586,6 +617,21 @@ export function SpaceShooterGame({ questions, onGameOver, onScoreUpdate }: Space
             ctx.shadowColor = '#00FFFF';
             ctx.fillRect(laser.x - LASER_SIZE / 2, laser.y - 20, LASER_SIZE, 20);
             ctx.shadowBlur = 0;
+        });
+
+        // Draw floating texts
+        floatingTextsRef.current.forEach(t => {
+            const alpha = t.life / t.maxLife;
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = t.color;
+            ctx.font = `bold ${t.size}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = t.color;
+            ctx.fillText(t.text, t.x, t.y);
+            ctx.shadowBlur = 0;
+            ctx.globalAlpha = 1.0;
         });
 
         // Draw ship
