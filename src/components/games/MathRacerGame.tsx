@@ -10,27 +10,52 @@ interface MathRacerGameProps {
 
 // --- CONFIG ---
 const CONFIG = {
-  TRACK_WIDTH: 220,           // Bredare bana (var 140) - lättare att styra
+  TRACK_WIDTH: 350,           // MUCH wider track for better playability
   FRICTION: 0.96,
   ACCEL: 0.25,
   MAX_SPEED: 12,
   BOOST_SPEED: 22,
   TURN_SPEED: 0.07,
   LAPS: 3,
-  OFF_ROAD_FRICTION: 0.85,
-  CRATE_SIZE: 55,             // Större lådor (var 40)
-  CRATE_SPACING: 90,          // Mer avstånd mellan lådor (var 40)
+  OFF_ROAD_FRICTION: 0.88,    // Slightly less punishing
+  CRATE_SIZE: 60,             // Larger crates for easier hitting
+  CRATE_SPACING: 110,         // More spacing between crate lanes
+  CRATE_DEPTH_VARIATION: 150, // Depth offset for staggered placement
 };
 
 // --- TYPES ---
 interface Point { x: number; y: number; }
 interface InputState { up: boolean; down: boolean; left: boolean; right: boolean; turbo: boolean; }
 
-// --- TRACK DATA ---
+// --- NEW TRACK DATA - Smoother, wider, more waypoints ---
+// Designed for better flow with longer straights and gentler curves
 const TRACK_PATH: Point[] = [
-  { x: 200, y: 300 }, { x: 600, y: 300 }, { x: 900, y: 150 }, { x: 1300, y: 300 },
-  { x: 1600, y: 600 }, { x: 1400, y: 1100 }, { x: 800, y: 1200 }, { x: 300, y: 1100 },
-  { x: 100, y: 700 }
+  // Start/Finish straight (bottom)
+  { x: 250, y: 1100 },
+  { x: 500, y: 1100 },
+  { x: 700, y: 1100 },
+  // Turn 1 - gentle right curve
+  { x: 900, y: 1050 },
+  { x: 1050, y: 950 },
+  { x: 1150, y: 800 },
+  // Back straight
+  { x: 1200, y: 650 },
+  { x: 1200, y: 500 },
+  { x: 1150, y: 350 },
+  // Hairpin turn (top)
+  { x: 1000, y: 220 },
+  { x: 800, y: 180 },
+  { x: 600, y: 200 },
+  // Long descent
+  { x: 450, y: 300 },
+  { x: 350, y: 450 },
+  { x: 300, y: 600 },
+  // Chicane
+  { x: 280, y: 750 },
+  { x: 200, y: 850 },
+  // Final curve back to start
+  { x: 150, y: 1000 },
+  { x: 180, y: 1080 },
 ];
 
 // --- CLASSES ---
@@ -273,9 +298,9 @@ class Car {
       }
     }
 
-    // Crate Collision - use crate size for hitbox
+    // Crate Collision - larger hitbox for easier picking
     game.crates.forEach(crate => {
-      if (crate.active && Math.hypot(crate.x - this.x, crate.y - this.y) < CONFIG.CRATE_SIZE * 0.8) {
+      if (crate.active && Math.hypot(crate.x - this.x, crate.y - this.y) < CONFIG.CRATE_SIZE * 0.95) {
         game.handleCrateCollision(crate);
       }
     });
@@ -411,7 +436,7 @@ class GameEngine {
     }
 
     // Find a spot ahead of the player on the track
-    const cpIdx = (this.player.checkpoint + 1) % TRACK_PATH.length;
+    const cpIdx = (this.player.checkpoint + 2) % TRACK_PATH.length;  // Spawn a bit further ahead
 
     // Spawn 3 crates across the track width at that segment
     const p1 = TRACK_PATH[cpIdx];
@@ -421,12 +446,18 @@ class GameEngine {
     const mx = (p1.x + p2.x) / 2;
     const my = (p1.y + p2.y) / 2;
 
-    // Perpendicular vector for lane placement
+    // Direction vector along track
     const dx = p2.x - p1.x;
     const dy = p2.y - p1.y;
-    const len = Math.hypot(dx, dy);
+    const len = Math.hypot(dx, dy) || 1;
+
+    // Perpendicular vector for lane placement
     const nx = -dy / len;
     const ny = dx / len;
+
+    // Track direction (normalized)
+    const tx = dx / len;
+    const ty = dy / len;
 
     // Use CONFIG spacing for wider lanes
     const spacing = CONFIG.CRATE_SPACING;
@@ -435,13 +466,31 @@ class GameEngine {
     const allAnswers = [correct, wrongs[0], wrongs[1]];
     const shuffledAnswers = allAnswers.sort(() => Math.random() - 0.5);
 
-    // 3 clear lanes: left, center, right
-    const laneOffsets = [-spacing, 0, spacing];
+    // STAGGERED PLACEMENT - Crates at different depths along track
+    // This makes it impossible to just drive straight through
+    const depthOffsets = [
+      Math.random() * CONFIG.CRATE_DEPTH_VARIATION - CONFIG.CRATE_DEPTH_VARIATION / 2,  // Random depth for first
+      0,  // Center crate at midpoint
+      Math.random() * CONFIG.CRATE_DEPTH_VARIATION - CONFIG.CRATE_DEPTH_VARIATION / 2   // Random depth for third
+    ].sort(() => Math.random() - 0.5);  // Randomize which lane gets which depth
 
-    laneOffsets.forEach((offset, i) => {
+    // Lane positions with some randomness
+    const laneOffsets = [
+      -spacing + (Math.random() - 0.5) * 30,  // Left lane with slight variation
+      (Math.random() - 0.5) * 40,              // Center lane with slight variation
+      spacing + (Math.random() - 0.5) * 30     // Right lane with slight variation
+    ];
+
+    laneOffsets.forEach((laneOffset, i) => {
+      const depthOffset = depthOffsets[i];
+
+      // Calculate final position: base + lane offset + depth offset
+      const crateX = mx + nx * laneOffset + tx * depthOffset;
+      const crateY = my + ny * laneOffset + ty * depthOffset;
+
       this.crates.push(new Crate(
-        mx + nx * offset,
-        my + ny * offset,
+        crateX,
+        crateY,
         shuffledAnswers[i],
         shuffledAnswers[i] === correct
       ));

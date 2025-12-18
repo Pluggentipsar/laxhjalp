@@ -19,8 +19,8 @@ interface SpaceShooterGameProps {
 
 // Game constants - responsive
 const SHIP_SIZE = 40;
-const ASTEROID_MIN_SIZE = 55;
-const ASTEROID_MAX_SIZE = 75;
+const ASTEROID_MIN_SIZE = 70;   // Bigger for better visibility
+const ASTEROID_MAX_SIZE = 90;   // Bigger for better visibility
 const LASER_SPEED = 10;
 const LASER_SIZE = 4;
 
@@ -110,6 +110,9 @@ export function SpaceShooterGame({ questions, onGameOver, onScoreUpdate }: Space
     const [correctAnswers, setCorrectAnswers] = useState(0);
     const [wrongAnswers, setWrongAnswers] = useState(0);
 
+    // Feedback message when wrong answer is shot
+    const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+
     // Game state refs
     const shipRef = useRef<Ship>({ x: 0, y: 0, vx: 0, vy: 0, angle: 0 });
     const lasersRef = useRef<Laser[]>([]);
@@ -170,6 +173,7 @@ export function SpaceShooterGame({ questions, onGameOver, onScoreUpdate }: Space
         setCorrectAnswers(0);
         setWrongAnswers(0);
         setActivePowerUps([]);
+        setFeedbackMessage(null);
         asteroidsRef.current = [];
         lasersRef.current = [];
         particlesRef.current = [];
@@ -225,20 +229,24 @@ export function SpaceShooterGame({ questions, onGameOver, onScoreUpdate }: Space
 
         shuffledAnswers.forEach((answer, i) => {
             const size = ASTEROID_MIN_SIZE + Math.random() * (ASTEROID_MAX_SIZE - ASTEROID_MIN_SIZE);
+            const isCorrect = answer === correctAnswer;
+            // Show hint immediately if hintDelay is 0 (easy mode)
+            const immediateHint = config.showHint && config.hintDelay === 0 && isCorrect;
+
             asteroidsRef.current.push({
                 id: Math.random().toString(),
                 x: spacing * (i + 1),
                 y: -size,
                 vx: (Math.random() - 0.5) * 0.3,
-                vy: speed + wave * 0.03,
+                vy: speed + wave * 0.02,  // Slightly slower wave scaling
                 size,
                 rotation: Math.random() * Math.PI * 2,
                 rotationSpeed: (Math.random() - 0.5) * 0.03,
                 answerValue: answer,
-                isCorrect: answer === correctAnswer,
+                isCorrect,
                 hp: 1,
                 maxHp: 1,
-                showHint: false,
+                showHint: immediateHint,
             });
         });
     }, [gameQuestions, canvasSize.width, wave]);
@@ -520,7 +528,21 @@ export function SpaceShooterGame({ questions, onGameOver, onScoreUpdate }: Space
                 createExplosion(asteroid.x, asteroid.y, '#EF4444', 20);
                 addFloatingText(asteroid.x, asteroid.y, 'FEL!', '#EF4444', 28);
 
-                // Remove the wrong asteroid
+                // Find the correct answer to show feedback
+                const correctAsteroid = asteroidsRef.current.find(a => a.isCorrect);
+                if (correctAsteroid && currentQuestion) {
+                    setFeedbackMessage(`Rätt svar: ${correctAsteroid.answerValue}`);
+                    // Clear feedback after 1.5 seconds and spawn new question
+                    setTimeout(() => {
+                        setFeedbackMessage(null);
+                        asteroidsRef.current = [];
+                        spawnNewQuestion();
+                    }, 1500);
+                    // Don't remove wrong asteroid yet - let feedback show
+                    return;
+                }
+
+                // Remove the wrong asteroid (fallback if no correct found)
                 asteroidsRef.current = asteroidsRef.current.filter(a => a.id !== asteroid.id);
             }
         } else {
@@ -631,17 +653,32 @@ export function SpaceShooterGame({ questions, onGameOver, onScoreUpdate }: Space
 
             ctx.restore();
 
-            // Draw answer on asteroid
-            ctx.fillStyle = '#FFFFFF';
-            ctx.font = `bold ${asteroid.size * 0.4}px Arial`;
+            // Draw answer on asteroid - MUCH LARGER AND MORE VISIBLE
+            const fontSize = Math.max(32, asteroid.size * 0.5);  // Minimum 32px, scale with asteroid
+            ctx.font = `bold ${fontSize}px Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
 
-            // Text outline for readability
+            // Strong text outline for readability
             ctx.strokeStyle = '#000000';
-            ctx.lineWidth = 4;
+            ctx.lineWidth = 6;
             ctx.strokeText(String(asteroid.answerValue), asteroid.x, asteroid.y);
+
+            // Fill with color based on hint state
+            if (asteroid.showHint && asteroid.isCorrect) {
+                ctx.fillStyle = '#4ADE80';  // Green for correct hint
+            } else {
+                ctx.fillStyle = '#FFFFFF';
+            }
             ctx.fillText(String(asteroid.answerValue), asteroid.x, asteroid.y);
+
+            // Add glow effect for hint asteroids
+            if (asteroid.showHint && asteroid.isCorrect) {
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = '#4ADE80';
+                ctx.fillText(String(asteroid.answerValue), asteroid.x, asteroid.y);
+                ctx.shadowBlur = 0;
+            }
         });
 
         // Draw lasers
@@ -848,17 +885,35 @@ export function SpaceShooterGame({ questions, onGameOver, onScoreUpdate }: Space
                                 exit={{ y: -50, opacity: 0 }}
                                 className="inline-block bg-gradient-to-r from-purple-600/80 to-pink-600/80 backdrop-blur-md border-2 border-purple-400/50 px-8 py-4 rounded-2xl shadow-2xl"
                             >
-                                <div className="text-white text-3xl font-black">
+                                <div className="text-white text-4xl font-black">
                                     {currentQuestion.question}
                                 </div>
-                                <div className="text-purple-200 text-sm mt-1">
-                                    Skjut rätt svar!
+                                <div className="text-purple-200 text-base mt-2">
+                                    Hitta och skjut rätt svar!
                                 </div>
                             </motion.div>
                         )}
                     </AnimatePresence>
                 </div>
             </div>
+
+            {/* Feedback message when wrong answer */}
+            <AnimatePresence>
+                {feedbackMessage && (
+                    <motion.div
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0, opacity: 0 }}
+                        className="absolute top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50"
+                    >
+                        <div className="bg-gradient-to-r from-red-600/90 to-orange-600/90 backdrop-blur-xl border-4 border-red-400 px-10 py-6 rounded-3xl shadow-2xl">
+                            <div className="text-white text-3xl font-black text-center">
+                                {feedbackMessage}
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* HUD */}
             <div className="absolute top-20 left-0 right-0 px-4 flex justify-between items-start z-20">

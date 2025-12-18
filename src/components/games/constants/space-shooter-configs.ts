@@ -18,36 +18,36 @@ export interface SpaceShooterConfig {
 export const SPACE_SHOOTER_CONFIGS: Record<Difficulty, SpaceShooterConfig> = {
   easy: {
     numAsteroids: 3,           // 1 correct + 2 wrong
-    speed: { min: 0.3, max: 0.5 },
-    timeLimit: 120,            // 2 minutes
+    speed: { min: 0.2, max: 0.35 },  // Slower for beginners
+    timeLimit: 180,            // 3 minutes
     lives: 5,
     maxLives: 7,
-    showHint: true,            // Highlight correct after delay
-    hintDelay: 4000,           // 4 seconds
-    spawnInterval: 3000,       // 3 seconds between spawns
+    showHint: true,            // Highlight correct IMMEDIATELY
+    hintDelay: 0,              // No delay - show hint right away!
+    spawnInterval: 3500,       // 3.5 seconds between spawns
     waveLength: 8,
   },
   medium: {
-    numAsteroids: 4,           // 1 correct + 3 wrong
+    numAsteroids: 3,           // 1 correct + 2 wrong (reduced from 4)
+    speed: { min: 0.3, max: 0.5 },
+    timeLimit: 120,            // 2 minutes
+    lives: 4,
+    maxLives: 5,
+    showHint: true,            // Show hint after delay
+    hintDelay: 2500,           // 2.5 seconds before hint
+    spawnInterval: 2800,       // 2.8 seconds between spawns
+    waveLength: 10,
+  },
+  hard: {
+    numAsteroids: 4,           // 1 correct + 3 wrong (reduced from 5)
     speed: { min: 0.4, max: 0.7 },
     timeLimit: 90,             // 1.5 minutes
     lives: 3,
-    maxLives: 5,
-    showHint: false,
+    maxLives: 4,
+    showHint: false,           // No hints
     hintDelay: 0,
-    spawnInterval: 2500,       // 2.5 seconds between spawns
+    spawnInterval: 2200,       // 2.2 seconds between spawns
     waveLength: 12,
-  },
-  hard: {
-    numAsteroids: 5,           // 1 correct + 4 wrong
-    speed: { min: 0.5, max: 0.9 },
-    timeLimit: 60,             // 1 minute
-    lives: 2,
-    maxLives: 3,
-    showHint: false,
-    hintDelay: 0,
-    spawnInterval: 2000,       // 2 seconds between spawns
-    waveLength: 15,
   },
 };
 
@@ -58,9 +58,9 @@ export const DIFFICULTY_LABELS: Record<Difficulty, string> = {
 };
 
 export const DIFFICULTY_DESCRIPTIONS: Record<Difficulty, string> = {
-  easy: 'Färre asteroider, ledtrådar efter 4 sek',
-  medium: 'Standard utmaning, ingen hjälp',
-  hard: 'Snabbare tempo, fler asteroider',
+  easy: 'Långsamt tempo, rätt svar lyser grönt',
+  medium: 'Ledtråd efter 2.5 sek',
+  hard: 'Snabbt tempo, ingen hjälp',
 };
 
 export const DIFFICULTY_EMOJIS: Record<Difficulty, string> = {

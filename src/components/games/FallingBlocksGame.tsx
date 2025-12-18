@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Star, Shield, Snowflake, Timer, Bomb, Skull, Trophy, Flame, Gamepad2, ChevronLeft } from 'lucide-react';
+import { Star, Shield, Snowflake, Timer, Bomb, Skull, Trophy, Flame, Gamepad2, ChevronLeft, Keyboard, Grid3x3 } from 'lucide-react';
 import type { ActivityQuestion } from '../../types';
 import {
     type Difficulty,
@@ -97,6 +97,10 @@ export function FallingBlocksGame({ questions, onGameOver, onScoreUpdate }: Fall
     const [wrongAnswersList, setWrongAnswersList] = useState<WrongAnswer[]>([]);
     const [totalQuestions, setTotalQuestions] = useState(0);
 
+    // Input mode - detect touch device
+    const [isTouchDevice, setIsTouchDevice] = useState(false);
+    const [showNumpad, setShowNumpad] = useState(false);  // Manual toggle for numpad on desktop
+
     // Config refs
     const configRef = useRef<FallingBlocksConfig>(FALLING_BLOCKS_CONFIGS.medium);
 
@@ -112,6 +116,13 @@ export function FallingBlocksGame({ questions, onGameOver, onScoreUpdate }: Fall
     const gameQuestions = useRef(
         questions.filter(q => q.question.length < 50 && !q.question.includes('AI-genererat'))
     ).current;
+
+    // Detect touch device on mount
+    useEffect(() => {
+        const checkTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        setIsTouchDevice(checkTouch);
+        setShowNumpad(checkTouch); // Show numpad by default on touch devices
+    }, []);
 
     // Start game
     const startGame = useCallback(() => {
@@ -436,12 +447,16 @@ export function FallingBlocksGame({ questions, onGameOver, onScoreUpdate }: Fall
         const isBoss = activeEvent === 'boss_battle' && Math.random() < 0.3;
         const isGold = activeEvent === 'gold_rush' || Math.random() < 0.05;
 
+        // Use more of the screen width - 5% to 95% on desktop, 8% to 92% on touch
+        const margin = isTouchDevice ? 8 : 5;
+        const spawnX = Math.random() * (100 - margin * 2) + margin;
+
         setBlocks(prev => [
             ...prev,
             {
                 id,
                 question: randomQuestion,
-                x: Math.random() * 80 + 10,
+                x: spawnX,
                 y: -10,
                 speed: (1 + (wave * 0.1)) * (isBoss ? 0.5 : isGold ? 1.5 : 1),
                 hp: isBoss ? 3 : 1,
@@ -751,11 +766,11 @@ export function FallingBlocksGame({ questions, onGameOver, onScoreUpdate }: Fall
                         style={{ top: `${block.y}%`, left: `${block.x}%` }}
                     >
                         <div className={`
-                            relative p-4 rounded-xl text-white shadow-xl
+                            relative p-3 md:p-4 rounded-xl text-white shadow-xl
                             backdrop-blur-md border-2
-                            min-w-[120px] text-center
+                            min-w-[90px] md:min-w-[110px] lg:min-w-[130px] text-center
                             ${block.isBoss
-                                ? 'bg-gradient-to-br from-red-600 to-red-900 border-red-400 scale-125 shadow-red-500/50'
+                                ? 'bg-gradient-to-br from-red-600 to-red-900 border-red-400 scale-110 md:scale-125 shadow-red-500/50'
                                 : block.isGold
                                     ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 border-yellow-300 shadow-yellow-500/50'
                                     : 'bg-gradient-to-br from-purple-600 to-purple-900 border-purple-400/50'}
@@ -772,7 +787,7 @@ export function FallingBlocksGame({ questions, onGameOver, onScoreUpdate }: Fall
                                 </div>
                             )}
 
-                            <div className={`font-bold ${block.isBoss ? 'text-2xl' : 'text-xl'}`}>
+                            <div className={`font-bold ${block.isBoss ? 'text-lg md:text-2xl' : 'text-base md:text-xl'}`}>
                                 {block.question.question}
                             </div>
 
@@ -832,46 +847,87 @@ export function FallingBlocksGame({ questions, onGameOver, onScoreUpdate }: Fall
                 </motion.div>
             ))}
 
-            {/* Numpad */}
-            <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/90 via-black/70 to-transparent backdrop-blur-xl z-40 border-t border-white/20">
-                <div className="max-w-md mx-auto">
-                    {/* Current Input Display */}
-                    <div className="text-center mb-2 h-12 flex items-center justify-center bg-gradient-to-br from-purple-600/30 to-blue-900/30 backdrop-blur-md border border-purple-400/40 rounded-xl">
-                        <span className="text-4xl font-mono font-black text-white tracking-widest">
-                            {currentInput || <span className="text-white/30">_</span>}
-                        </span>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-2">
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
+            {/* Input Area - Different for desktop vs touch */}
+            <div className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/70 to-transparent backdrop-blur-xl z-40 border-t border-white/20 ${showNumpad ? 'p-3' : 'p-4'}`}>
+                {/* Desktop Keyboard Mode */}
+                {!showNumpad && (
+                    <div className="max-w-2xl mx-auto">
+                        {/* Large Input Display */}
+                        <div className="text-center mb-3">
+                            <div className="inline-flex items-center gap-4 bg-gradient-to-br from-purple-600/40 to-blue-900/40 backdrop-blur-md border-2 border-purple-400/50 rounded-2xl px-8 py-4 shadow-2xl">
+                                <Keyboard className="w-8 h-8 text-purple-300" />
+                                <span className="text-5xl font-mono font-black text-white tracking-widest min-w-[120px]">
+                                    {currentInput || <span className="text-white/30 animate-pulse">_</span>}
+                                </span>
+                            </div>
+                        </div>
+                        <div className="flex justify-center items-center gap-4">
+                            <p className="text-gray-400 text-sm">
+                                <span className="text-white font-bold">0-9</span> skriv svar • <span className="text-white font-bold">Enter</span> skicka • <span className="text-white font-bold">Backspace</span> radera
+                            </p>
                             <button
-                                key={num}
-                                onClick={() => handleInput(String(num))}
-                                className="bg-gradient-to-br from-purple-600/40 to-purple-900/40 active:from-purple-500/60 active:to-purple-800/60 backdrop-blur-md border border-purple-400/40 text-white text-2xl font-black py-4 rounded-xl transition-all duration-150 shadow-lg hover:scale-105 active:scale-95"
+                                onClick={() => setShowNumpad(true)}
+                                className="flex items-center gap-2 px-4 py-2 bg-purple-600/30 hover:bg-purple-600/50 border border-purple-400/40 rounded-lg text-purple-200 text-sm transition-colors"
                             >
-                                {num}
+                                <Grid3x3 className="w-4 h-4" />
+                                Visa numpad
                             </button>
-                        ))}
-                        <button
-                            onClick={() => setCurrentInput('')}
-                            className="bg-gradient-to-br from-red-600/40 to-red-900/40 backdrop-blur-md border border-red-400/40 text-red-200 font-black py-4 rounded-xl transition-all active:scale-95"
-                        >
-                            CLR
-                        </button>
-                        <button
-                            onClick={() => handleInput('0')}
-                            className="bg-gradient-to-br from-purple-600/40 to-purple-900/40 backdrop-blur-md border border-purple-400/40 text-white text-2xl font-black py-4 rounded-xl transition-all hover:scale-105 active:scale-95"
-                        >
-                            0
-                        </button>
-                        <button
-                            onClick={() => setCurrentInput(prev => prev.slice(0, -1))}
-                            className="bg-gradient-to-br from-orange-600/40 to-orange-900/40 backdrop-blur-md border border-orange-400/40 text-orange-200 font-black py-4 rounded-xl transition-all active:scale-95 text-xl"
-                        >
-                            ⌫
-                        </button>
+                        </div>
                     </div>
-                </div>
+                )}
+
+                {/* Touch/Numpad Mode */}
+                {showNumpad && (
+                    <div className={`mx-auto ${isTouchDevice ? 'max-w-lg' : 'max-w-md'}`}>
+                        {/* Current Input Display */}
+                        <div className="flex items-center gap-2 mb-2">
+                            <div className="flex-1 text-center h-14 flex items-center justify-center bg-gradient-to-br from-purple-600/30 to-blue-900/30 backdrop-blur-md border border-purple-400/40 rounded-xl">
+                                <span className="text-4xl font-mono font-black text-white tracking-widest">
+                                    {currentInput || <span className="text-white/30">_</span>}
+                                </span>
+                            </div>
+                            {!isTouchDevice && (
+                                <button
+                                    onClick={() => setShowNumpad(false)}
+                                    className="p-3 bg-gray-600/40 hover:bg-gray-600/60 border border-gray-400/40 rounded-xl text-gray-200 transition-colors"
+                                    title="Dölj numpad"
+                                >
+                                    <Keyboard className="w-6 h-6" />
+                                </button>
+                            )}
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2">
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
+                                <button
+                                    key={num}
+                                    onClick={() => handleInput(String(num))}
+                                    className={`bg-gradient-to-br from-purple-600/40 to-purple-900/40 active:from-purple-500/60 active:to-purple-800/60 backdrop-blur-md border border-purple-400/40 text-white font-black rounded-xl transition-all duration-150 shadow-lg hover:scale-105 active:scale-95 ${isTouchDevice ? 'text-3xl py-5' : 'text-2xl py-4'}`}
+                                >
+                                    {num}
+                                </button>
+                            ))}
+                            <button
+                                onClick={() => setCurrentInput('')}
+                                className={`bg-gradient-to-br from-red-600/40 to-red-900/40 backdrop-blur-md border border-red-400/40 text-red-200 font-black rounded-xl transition-all active:scale-95 ${isTouchDevice ? 'py-5' : 'py-4'}`}
+                            >
+                                CLR
+                            </button>
+                            <button
+                                onClick={() => handleInput('0')}
+                                className={`bg-gradient-to-br from-purple-600/40 to-purple-900/40 backdrop-blur-md border border-purple-400/40 text-white font-black rounded-xl transition-all hover:scale-105 active:scale-95 ${isTouchDevice ? 'text-3xl py-5' : 'text-2xl py-4'}`}
+                            >
+                                0
+                            </button>
+                            <button
+                                onClick={() => setCurrentInput(prev => prev.slice(0, -1))}
+                                className={`bg-gradient-to-br from-orange-600/40 to-orange-900/40 backdrop-blur-md border border-orange-400/40 text-orange-200 font-black rounded-xl transition-all active:scale-95 text-xl ${isTouchDevice ? 'py-5' : 'py-4'}`}
+                            >
+                                ⌫
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
