@@ -1,7 +1,15 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, Zap, Shield, Clock, Star, Trophy, Flame } from 'lucide-react';
+import { Heart, Trophy, Flame, Rocket, ChevronLeft } from 'lucide-react';
 import type { ActivityQuestion } from '../../types';
+import {
+    type Difficulty,
+    type SpaceShooterConfig,
+    SPACE_SHOOTER_CONFIGS,
+    DIFFICULTY_LABELS,
+    DIFFICULTY_DESCRIPTIONS,
+    DIFFICULTY_EMOJIS,
+} from './constants/space-shooter-configs';
 
 interface SpaceShooterGameProps {
     questions: ActivityQuestion[];
@@ -9,15 +17,12 @@ interface SpaceShooterGameProps {
     onScoreUpdate: (score: number) => void;
 }
 
-// Game constants
-const CANVAS_WIDTH = 800;
-const CANVAS_HEIGHT = 600;
+// Game constants - responsive
 const SHIP_SIZE = 40;
-const ASTEROID_MIN_SIZE = 50;
-const ASTEROID_MAX_SIZE = 80;
-const LASER_SPEED = 8;
+const ASTEROID_MIN_SIZE = 55;
+const ASTEROID_MAX_SIZE = 75;
+const LASER_SPEED = 10;
 const LASER_SIZE = 4;
-const POWERUP_SIZE = 30;
 
 type PowerUpType = 'shield' | 'multishot' | 'rapidfire' | 'slowmo' | 'multiplier';
 
@@ -40,7 +45,7 @@ interface Laser {
     active: boolean;
 }
 
-interface Asteroid {
+interface AnswerAsteroid {
     id: string;
     x: number;
     y: number;
@@ -49,20 +54,11 @@ interface Asteroid {
     size: number;
     rotation: number;
     rotationSpeed: number;
-    question: ActivityQuestion;
-    answer: number;
+    answerValue: number;
+    isCorrect: boolean;
     hp: number;
     maxHp: number;
-    isBoss: boolean;
-}
-
-interface PowerUp {
-    id: string;
-    x: number;
-    y: number;
-    vy: number;
-    type: PowerUpType;
-    active: boolean;
+    showHint: boolean;
 }
 
 interface ActivePowerUp {
@@ -89,38 +85,167 @@ interface FloatingText {
     maxLife: number;
 }
 
+type GamePhase = 'settings' | 'playing' | 'gameover';
+
 export function SpaceShooterGame({ questions, onGameOver, onScoreUpdate }: SpaceShooterGameProps) {
+    // Game phase state
+    const [gamePhase, setGamePhase] = useState<GamePhase>('settings');
+    const [difficulty, setDifficulty] = useState<Difficulty>('medium');
+
+    // Canvas size - responsive
+    const [canvasSize, setCanvasSize] = useState({ width: 900, height: 650 });
+
+    // Game state
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [score, setScore] = useState(0);
-    const [lives, setLives] = useState(5);
+    const [lives, setLives] = useState(3);
     const [wave, setWave] = useState(1);
     const [combo, setCombo] = useState(0);
     const [activePowerUps, setActivePowerUps] = useState<ActivePowerUp[]>([]);
     const [shake, setShake] = useState(0);
-    const [gameOver, setGameOver] = useState(false);
+    const [currentQuestion, setCurrentQuestion] = useState<ActivityQuestion | null>(null);
+    const [questionsAnswered, setQuestionsAnswered] = useState(0);
+
+    // Statistics
+    const [correctAnswers, setCorrectAnswers] = useState(0);
+    const [wrongAnswers, setWrongAnswers] = useState(0);
 
     // Game state refs
-    const shipRef = useRef<Ship>({ x: CANVAS_WIDTH / 2, y: CANVAS_HEIGHT - 80, vx: 0, vy: 0, angle: 0 });
+    const shipRef = useRef<Ship>({ x: 0, y: 0, vx: 0, vy: 0, angle: 0 });
     const lasersRef = useRef<Laser[]>([]);
-    const asteroidsRef = useRef<Asteroid[]>([]);
-    const powerUpsRef = useRef<PowerUp[]>([]);
+    const asteroidsRef = useRef<AnswerAsteroid[]>([]);
     const particlesRef = useRef<Particle[]>([]);
     const floatingTextsRef = useRef<FloatingText[]>([]);
     const keysRef = useRef<Set<string>>(new Set());
     const lastShotRef = useRef<number>(0);
     const waveTimerRef = useRef<number>(0);
-    const spawnTimerRef = useRef<number>(0);
+    const questionTimerRef = useRef<number>(0);
     const animationFrameRef = useRef<number | null>(null);
     const lastTimeRef = useRef<number>(0);
+    const configRef = useRef<SpaceShooterConfig>(SPACE_SHOOTER_CONFIGS.medium);
 
     // Filter questions
     const gameQuestions = useRef(
         questions.filter(q => q.question.length < 50 && !q.question.includes('AI-genererat'))
     ).current;
 
+    // Responsive canvas sizing
+    useEffect(() => {
+        const updateSize = () => {
+            const maxWidth = Math.min(window.innerWidth * 0.95, 1100);
+            const maxHeight = Math.min(window.innerHeight * 0.65, 700);
+            const aspectRatio = 1.4;
+
+            let width = maxWidth;
+            let height = width / aspectRatio;
+
+            if (height > maxHeight) {
+                height = maxHeight;
+                width = height * aspectRatio;
+            }
+
+            setCanvasSize({ width: Math.floor(width), height: Math.floor(height) });
+        };
+
+        window.addEventListener('resize', updateSize);
+        updateSize();
+        return () => window.removeEventListener('resize', updateSize);
+    }, []);
+
+    // Initialize ship position when canvas size changes
+    useEffect(() => {
+        shipRef.current.x = canvasSize.width / 2;
+        shipRef.current.y = canvasSize.height - 80;
+    }, [canvasSize]);
+
+    // Start game
+    const startGame = useCallback(() => {
+        const config = SPACE_SHOOTER_CONFIGS[difficulty];
+        configRef.current = config;
+        setLives(config.lives);
+        setScore(0);
+        setWave(1);
+        setCombo(0);
+        setQuestionsAnswered(0);
+        setCorrectAnswers(0);
+        setWrongAnswers(0);
+        setActivePowerUps([]);
+        asteroidsRef.current = [];
+        lasersRef.current = [];
+        particlesRef.current = [];
+        floatingTextsRef.current = [];
+        waveTimerRef.current = 0;
+        questionTimerRef.current = 0;
+
+        // Pick first question
+        spawnNewQuestion();
+        setGamePhase('playing');
+    }, [difficulty, gameQuestions]);
+
+    // Spawn new question with answer asteroids
+    const spawnNewQuestion = useCallback(() => {
+        if (gameQuestions.length === 0) return;
+
+        const config = configRef.current;
+        const question = gameQuestions[Math.floor(Math.random() * gameQuestions.length)];
+        setCurrentQuestion(question);
+        questionTimerRef.current = 0;
+
+        // Clear old asteroids
+        asteroidsRef.current = [];
+
+        // Generate answer options
+        const correctAnswer = Number(question.correctAnswer);
+        const wrongAnswers: number[] = [];
+
+        // Generate plausible wrong answers
+        const offsets = [-3, -2, -1, 1, 2, 3, 4, 5].sort(() => Math.random() - 0.5);
+        for (let i = 0; i < config.numAsteroids - 1 && i < offsets.length; i++) {
+            const wrong = correctAnswer + offsets[i];
+            if (wrong !== correctAnswer && wrong >= 0 && !wrongAnswers.includes(wrong)) {
+                wrongAnswers.push(wrong);
+            }
+        }
+
+        // Ensure we have enough wrong answers
+        while (wrongAnswers.length < config.numAsteroids - 1) {
+            const wrong = correctAnswer + Math.floor(Math.random() * 10) + 5;
+            if (!wrongAnswers.includes(wrong)) {
+                wrongAnswers.push(wrong);
+            }
+        }
+
+        // Combine and shuffle answers
+        const allAnswers = [correctAnswer, ...wrongAnswers.slice(0, config.numAsteroids - 1)];
+        const shuffledAnswers = allAnswers.sort(() => Math.random() - 0.5);
+
+        // Spawn asteroids spread across top of screen
+        const spacing = canvasSize.width / (config.numAsteroids + 1);
+        const speed = config.speed.min + Math.random() * (config.speed.max - config.speed.min);
+
+        shuffledAnswers.forEach((answer, i) => {
+            const size = ASTEROID_MIN_SIZE + Math.random() * (ASTEROID_MAX_SIZE - ASTEROID_MIN_SIZE);
+            asteroidsRef.current.push({
+                id: Math.random().toString(),
+                x: spacing * (i + 1),
+                y: -size,
+                vx: (Math.random() - 0.5) * 0.3,
+                vy: speed + wave * 0.03,
+                size,
+                rotation: Math.random() * Math.PI * 2,
+                rotationSpeed: (Math.random() - 0.5) * 0.03,
+                answerValue: answer,
+                isCorrect: answer === correctAnswer,
+                hp: 1,
+                maxHp: 1,
+                showHint: false,
+            });
+        });
+    }, [gameQuestions, canvasSize.width, wave]);
+
     // Game loop
     const gameLoop = useCallback((timestamp: number) => {
-        if (gameOver) return;
+        if (gamePhase !== 'playing') return;
 
         const deltaTime = timestamp - lastTimeRef.current;
         lastTimeRef.current = timestamp;
@@ -129,17 +254,16 @@ export function SpaceShooterGame({ questions, onGameOver, onScoreUpdate }: Space
         const ctx = canvas?.getContext('2d');
         if (!ctx || !canvas) return;
 
-        // Update game state
         updateGame(deltaTime);
-
-        // Render
         renderGame(ctx);
 
         animationFrameRef.current = requestAnimationFrame(gameLoop);
-    }, [gameOver]);
+    }, [gamePhase]);
 
-    // Initialize game
+    // Initialize game loop
     useEffect(() => {
+        if (gamePhase !== 'playing') return;
+
         lastTimeRef.current = performance.now();
         animationFrameRef.current = requestAnimationFrame(gameLoop);
 
@@ -148,13 +272,13 @@ export function SpaceShooterGame({ questions, onGameOver, onScoreUpdate }: Space
                 cancelAnimationFrame(animationFrameRef.current);
             }
         };
-    }, [gameLoop]);
+    }, [gameLoop, gamePhase]);
 
     // Keyboard controls
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             keysRef.current.add(e.key.toLowerCase());
-            if (e.key === ' ') {
+            if (e.key === ' ' && gamePhase === 'playing') {
                 e.preventDefault();
                 shootLaser();
             }
@@ -171,18 +295,19 @@ export function SpaceShooterGame({ questions, onGameOver, onScoreUpdate }: Space
             window.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('keyup', handleKeyUp);
         };
-    }, []);
+    }, [gamePhase]);
 
     // Check game over
     useEffect(() => {
-        if (lives <= 0 && !gameOver) {
-            setGameOver(true);
+        if (lives <= 0 && gamePhase === 'playing') {
+            setGamePhase('gameover');
             onGameOver(score);
         }
-    }, [lives, gameOver, score, onGameOver]);
+    }, [lives, gamePhase, score, onGameOver]);
 
     const updateGame = (deltaTime: number) => {
-        const dt = deltaTime / 16; // Normalize to 60fps
+        const dt = deltaTime / 16;
+        const config = configRef.current;
 
         // Update shake
         if (shake > 0) setShake(prev => Math.max(0, prev - dt * 0.5));
@@ -196,35 +321,26 @@ export function SpaceShooterGame({ questions, onGameOver, onScoreUpdate }: Space
         // Update asteroids
         updateAsteroids(dt);
 
-        // Update power-ups
-        updatePowerUps(dt);
-
         // Update particles
         updateParticles(dt);
 
         // Update floating texts
         updateFloatingTexts(dt);
 
-        // Spawn logic
-        spawnTimerRef.current += deltaTime;
-        waveTimerRef.current += deltaTime;
-
-        const spawnRate = Math.max(800, 2000 - wave * 100);
-        if (spawnTimerRef.current > spawnRate) {
-            spawnAsteroid();
-            spawnTimerRef.current = 0;
+        // Question timer for hints
+        questionTimerRef.current += deltaTime;
+        if (config.showHint && questionTimerRef.current > config.hintDelay) {
+            asteroidsRef.current.forEach(a => {
+                if (a.isCorrect) a.showHint = true;
+            });
         }
 
         // Wave progression
+        waveTimerRef.current += deltaTime;
         if (waveTimerRef.current > 30000) {
             setWave(w => w + 1);
             waveTimerRef.current = 0;
-            addFloatingText(CANVAS_WIDTH / 2, 100, `WAVE ${wave + 1}`, '#FFD700', 40);
-        }
-
-        // Random power-up spawn
-        if (Math.random() < 0.0005 * dt) {
-            spawnPowerUp();
+            addFloatingText(canvasSize.width / 2, 100, `VÅNING ${wave + 1}`, '#FFD700', 40);
         }
 
         // Clean up expired power-ups
@@ -237,26 +353,19 @@ export function SpaceShooterGame({ questions, onGameOver, onScoreUpdate }: Space
         const speed = 5;
         const friction = 0.9;
 
-        // Movement
         if (keysRef.current.has('a') || keysRef.current.has('arrowleft')) ship.vx -= speed * dt * 0.1;
         if (keysRef.current.has('d') || keysRef.current.has('arrowright')) ship.vx += speed * dt * 0.1;
         if (keysRef.current.has('w') || keysRef.current.has('arrowup')) ship.vy -= speed * dt * 0.1;
         if (keysRef.current.has('s') || keysRef.current.has('arrowdown')) ship.vy += speed * dt * 0.1;
 
-        // Apply friction
         ship.vx *= friction;
         ship.vy *= friction;
 
-        // Update position
         ship.x += ship.vx * dt;
         ship.y += ship.vy * dt;
 
-        // Bounds
-        ship.x = Math.max(SHIP_SIZE, Math.min(CANVAS_WIDTH - SHIP_SIZE, ship.x));
-        ship.y = Math.max(SHIP_SIZE, Math.min(CANVAS_HEIGHT - SHIP_SIZE, ship.y));
-
-        // Angle towards mouse (for visual effect)
-        ship.angle = Math.atan2(ship.vy, ship.vx);
+        ship.x = Math.max(SHIP_SIZE, Math.min(canvasSize.width - SHIP_SIZE, ship.x));
+        ship.y = Math.max(SHIP_SIZE, Math.min(canvasSize.height - SHIP_SIZE, ship.y));
     };
 
     const updateLasers = (dt: number) => {
@@ -285,61 +394,51 @@ export function SpaceShooterGame({ questions, onGameOver, onScoreUpdate }: Space
         const slowMo = activePowerUps.some(p => p.type === 'slowmo');
         const speedMult = slowMo ? 0.5 : 1;
 
+        let correctMissed = false;
+
         asteroidsRef.current = asteroidsRef.current.filter(asteroid => {
             asteroid.y += asteroid.vy * dt * speedMult;
             asteroid.x += asteroid.vx * dt * speedMult;
             asteroid.rotation += asteroid.rotationSpeed * dt;
 
             // Check if missed (reached bottom)
-            if (asteroid.y > CANVAS_HEIGHT + asteroid.size) {
-                const hasShield = activePowerUps.some(p => p.type === 'shield');
-                if (!hasShield) {
-                    setLives(l => Math.max(0, l - 1));
-                    setCombo(0);
-                    setShake(10);
-                } else {
-                    // Remove one shield
-                    setActivePowerUps(prev => {
-                        const idx = prev.findIndex(p => p.type === 'shield');
-                        if (idx === -1) return prev;
-                        const newP = [...prev];
-                        newP.splice(idx, 1);
-                        return newP;
-                    });
+            if (asteroid.y > canvasSize.height + asteroid.size) {
+                if (asteroid.isCorrect) {
+                    correctMissed = true;
                 }
                 return false;
             }
 
             return true;
         });
-    };
 
-    const updatePowerUps = (dt: number) => {
-        powerUpsRef.current = powerUpsRef.current.filter(powerUp => {
-            if (!powerUp.active) return false;
-            powerUp.y += powerUp.vy * dt;
-
-            // Check collision with ship
-            const ship = shipRef.current;
-            const dx = ship.x - powerUp.x;
-            const dy = ship.y - powerUp.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-
-            if (dist < SHIP_SIZE / 2 + POWERUP_SIZE / 2) {
-                activatePowerUp(powerUp.type);
-                createExplosion(powerUp.x, powerUp.y, '#00FF00', 20);
-                return false;
+        // If correct answer fell off screen, lose a life and spawn new question
+        if (correctMissed) {
+            const hasShield = activePowerUps.some(p => p.type === 'shield');
+            if (!hasShield) {
+                setLives(l => Math.max(0, l - 1));
+                setCombo(0);
+                setShake(10);
+                setWrongAnswers(w => w + 1);
+                addFloatingText(canvasSize.width / 2, canvasSize.height / 2, 'MISSADE!', '#FF4444', 36);
+            } else {
+                setActivePowerUps(prev => {
+                    const idx = prev.findIndex(p => p.type === 'shield');
+                    if (idx === -1) return prev;
+                    const newP = [...prev];
+                    newP.splice(idx, 1);
+                    return newP;
+                });
             }
-
-            return powerUp.y < CANVAS_HEIGHT + POWERUP_SIZE;
-        });
+            spawnNewQuestion();
+        }
     };
 
     const updateParticles = (dt: number) => {
         particlesRef.current = particlesRef.current.filter(p => {
             p.x += p.vx * dt;
             p.y += p.vy * dt;
-            p.vy += 0.2 * dt; // Gravity
+            p.vy += 0.2 * dt;
             p.life -= dt;
             return p.life > 0;
         });
@@ -357,7 +456,6 @@ export function SpaceShooterGame({ questions, onGameOver, onScoreUpdate }: Space
         const multiShot = activePowerUps.some(p => p.type === 'multishot');
 
         if (multiShot) {
-            // Shoot 3 lasers
             [-15, 0, 15].forEach(offset => {
                 lasersRef.current.push({
                     id: Math.random().toString(),
@@ -375,76 +473,59 @@ export function SpaceShooterGame({ questions, onGameOver, onScoreUpdate }: Space
             });
         }
 
-        // Visual feedback
         createParticles(ship.x, ship.y - SHIP_SIZE / 2, '#00FFFF', 5);
     };
 
-    const hitAsteroid = (asteroid: Asteroid) => {
+    const hitAsteroid = (asteroid: AnswerAsteroid) => {
         asteroid.hp -= 1;
 
         if (asteroid.hp <= 0) {
-            // Destroyed
-            const multiplier = activePowerUps.some(p => p.type === 'multiplier') ? 2 : 1;
-            const points = (asteroid.isBoss ? 500 : 100) * multiplier * (1 + combo * 0.1);
-            setScore(s => {
-                const newScore = s + Math.round(points);
-                onScoreUpdate(newScore);
-                return newScore;
-            });
-            setCombo(c => c + 1);
+            if (asteroid.isCorrect) {
+                // Correct answer!
+                const multiplier = activePowerUps.some(p => p.type === 'multiplier') ? 2 : 1;
+                const points = 100 * multiplier * (1 + combo * 0.1);
+                setScore(s => {
+                    const newScore = s + Math.round(points);
+                    onScoreUpdate(newScore);
+                    return newScore;
+                });
+                setCombo(c => c + 1);
+                setCorrectAnswers(c => c + 1);
+                setQuestionsAnswered(q => q + 1);
 
-            createExplosion(asteroid.x, asteroid.y, asteroid.isBoss ? '#FF0000' : '#FFA500', 30);
-            addFloatingText(asteroid.x, asteroid.y, `+${Math.round(points)}`, '#FFD700', 24);
+                createExplosion(asteroid.x, asteroid.y, '#4ADE80', 30);
+                addFloatingText(asteroid.x, asteroid.y, `RÄTT! +${Math.round(points)}`, '#4ADE80', 28);
 
-            asteroidsRef.current = asteroidsRef.current.filter(a => a.id !== asteroid.id);
+                // Clear all asteroids and spawn new question
+                asteroidsRef.current = [];
+                setTimeout(() => spawnNewQuestion(), 500);
+            } else {
+                // Wrong answer!
+                const hasShield = activePowerUps.some(p => p.type === 'shield');
+                if (!hasShield) {
+                    setLives(l => Math.max(0, l - 1));
+                    setShake(10);
+                } else {
+                    setActivePowerUps(prev => {
+                        const idx = prev.findIndex(p => p.type === 'shield');
+                        if (idx === -1) return prev;
+                        const newP = [...prev];
+                        newP.splice(idx, 1);
+                        return newP;
+                    });
+                }
+                setCombo(0);
+                setWrongAnswers(w => w + 1);
+
+                createExplosion(asteroid.x, asteroid.y, '#EF4444', 20);
+                addFloatingText(asteroid.x, asteroid.y, 'FEL!', '#EF4444', 28);
+
+                // Remove the wrong asteroid
+                asteroidsRef.current = asteroidsRef.current.filter(a => a.id !== asteroid.id);
+            }
         } else {
-            // Just damaged
             createParticles(asteroid.x, asteroid.y, '#FF6600', 10);
         }
-    };
-
-    const spawnAsteroid = () => {
-        if (gameQuestions.length === 0) return;
-
-        const question = gameQuestions[Math.floor(Math.random() * gameQuestions.length)];
-        const isBoss = wave % 5 === 0 && Math.random() < 0.2;
-        const size = isBoss ? ASTEROID_MAX_SIZE * 1.5 : ASTEROID_MIN_SIZE + Math.random() * (ASTEROID_MAX_SIZE - ASTEROID_MIN_SIZE);
-
-        asteroidsRef.current.push({
-            id: Math.random().toString(),
-            x: Math.random() * (CANVAS_WIDTH - size * 2) + size,
-            y: -size,
-            vx: (Math.random() - 0.5) * 0.5,
-            vy: 0.5 + wave * 0.05 + Math.random() * 0.5,
-            size,
-            rotation: Math.random() * Math.PI * 2,
-            rotationSpeed: (Math.random() - 0.5) * 0.05,
-            question,
-            answer: Number(question.correctAnswer),
-            hp: isBoss ? 3 : 1,
-            maxHp: isBoss ? 3 : 1,
-            isBoss
-        });
-    };
-
-    const spawnPowerUp = () => {
-        const types: PowerUpType[] = ['shield', 'multishot', 'rapidfire', 'slowmo', 'multiplier'];
-        const type = types[Math.floor(Math.random() * types.length)];
-
-        powerUpsRef.current.push({
-            id: Math.random().toString(),
-            x: Math.random() * (CANVAS_WIDTH - POWERUP_SIZE * 2) + POWERUP_SIZE,
-            y: -POWERUP_SIZE,
-            vy: 2,
-            type,
-            active: true
-        });
-    };
-
-    const activatePowerUp = (type: PowerUpType) => {
-        const duration = type === 'shield' ? 999999 : 10000;
-        setActivePowerUps(prev => [...prev, { type, expiresAt: Date.now() + duration }]);
-        addFloatingText(shipRef.current.x, shipRef.current.y, type.toUpperCase(), '#00FF00', 20);
     };
 
     const createExplosion = (x: number, y: number, color: string, count: number) => {
@@ -482,11 +563,7 @@ export function SpaceShooterGame({ questions, onGameOver, onScoreUpdate }: Space
     const addFloatingText = (x: number, y: number, text: string, color: string, size: number) => {
         floatingTextsRef.current.push({
             id: Math.random().toString(),
-            x,
-            y,
-            text,
-            color,
-            size,
+            x, y, text, color, size,
             life: 60,
             maxLife: 60
         });
@@ -494,7 +571,7 @@ export function SpaceShooterGame({ questions, onGameOver, onScoreUpdate }: Space
 
     const updateFloatingTexts = (dt: number) => {
         floatingTextsRef.current = floatingTextsRef.current.filter(t => {
-            t.y -= 0.8 * dt; // Float upward
+            t.y -= 0.8 * dt;
             t.life -= dt;
             return t.life > 0;
         });
@@ -503,7 +580,7 @@ export function SpaceShooterGame({ questions, onGameOver, onScoreUpdate }: Space
     const renderGame = (ctx: CanvasRenderingContext2D) => {
         // Clear canvas
         ctx.fillStyle = '#0a0a1a';
-        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        ctx.fillRect(0, 0, canvasSize.width, canvasSize.height);
 
         // Draw stars background
         drawStars(ctx);
@@ -517,29 +594,7 @@ export function SpaceShooterGame({ questions, onGameOver, onScoreUpdate }: Space
             ctx.fill();
         });
 
-        // Draw power-ups
-        powerUpsRef.current.forEach(powerUp => {
-            ctx.save();
-            ctx.translate(powerUp.x, powerUp.y);
-            ctx.rotate(Date.now() * 0.003);
-
-            const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, POWERUP_SIZE / 2);
-            gradient.addColorStop(0, '#00FF00');
-            gradient.addColorStop(1, '#00AA00');
-            ctx.fillStyle = gradient;
-
-            ctx.beginPath();
-            ctx.arc(0, 0, POWERUP_SIZE / 2, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.strokeStyle = '#00FFFF';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-
-            ctx.restore();
-        });
-
-        // Draw asteroids
+        // Draw asteroids with answers
         asteroidsRef.current.forEach(asteroid => {
             ctx.save();
             ctx.translate(asteroid.x, asteroid.y);
@@ -547,9 +602,11 @@ export function SpaceShooterGame({ questions, onGameOver, onScoreUpdate }: Space
 
             // Asteroid body
             const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, asteroid.size / 2);
-            if (asteroid.isBoss) {
-                gradient.addColorStop(0, '#FF4444');
-                gradient.addColorStop(1, '#AA0000');
+
+            if (asteroid.showHint && asteroid.isCorrect) {
+                // Hint mode - glow green
+                gradient.addColorStop(0, '#4ADE80');
+                gradient.addColorStop(1, '#166534');
             } else {
                 gradient.addColorStop(0, '#888888');
                 gradient.addColorStop(1, '#444444');
@@ -559,7 +616,7 @@ export function SpaceShooterGame({ questions, onGameOver, onScoreUpdate }: Space
             ctx.beginPath();
             for (let i = 0; i < 8; i++) {
                 const angle = (Math.PI * 2 * i) / 8;
-                const radius = asteroid.size / 2 * (0.8 + Math.random() * 0.4);
+                const radius = asteroid.size / 2 * (0.8 + Math.sin(i * 1234.5) * 0.2);
                 const x = Math.cos(angle) * radius;
                 const y = Math.sin(angle) * radius;
                 if (i === 0) ctx.moveTo(x, y);
@@ -568,36 +625,23 @@ export function SpaceShooterGame({ questions, onGameOver, onScoreUpdate }: Space
             ctx.closePath();
             ctx.fill();
 
-            ctx.strokeStyle = asteroid.isBoss ? '#FF0000' : '#666666';
+            ctx.strokeStyle = asteroid.showHint && asteroid.isCorrect ? '#4ADE80' : '#666666';
             ctx.lineWidth = 2;
             ctx.stroke();
 
             ctx.restore();
 
-            // Draw question
+            // Draw answer on asteroid
             ctx.fillStyle = '#FFFFFF';
-            ctx.font = `bold ${asteroid.isBoss ? 20 : 16}px Arial`;
+            ctx.font = `bold ${asteroid.size * 0.4}px Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(asteroid.question.question, asteroid.x, asteroid.y);
 
-            // HP bar for boss
-            if (asteroid.isBoss) {
-                const barWidth = asteroid.size;
-                const barHeight = 6;
-                const barX = asteroid.x - barWidth / 2;
-                const barY = asteroid.y + asteroid.size / 2 + 10;
-
-                ctx.fillStyle = '#333333';
-                ctx.fillRect(barX, barY, barWidth, barHeight);
-
-                ctx.fillStyle = '#FF0000';
-                ctx.fillRect(barX, barY, barWidth * (asteroid.hp / asteroid.maxHp), barHeight);
-
-                ctx.strokeStyle = '#FFFFFF';
-                ctx.lineWidth = 1;
-                ctx.strokeRect(barX, barY, barWidth, barHeight);
-            }
+            // Text outline for readability
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 4;
+            ctx.strokeText(String(asteroid.answerValue), asteroid.x, asteroid.y);
+            ctx.fillText(String(asteroid.answerValue), asteroid.x, asteroid.y);
         });
 
         // Draw lasers
@@ -612,7 +656,6 @@ export function SpaceShooterGame({ questions, onGameOver, onScoreUpdate }: Space
 
             ctx.fillRect(laser.x - LASER_SIZE / 2, laser.y - 20, LASER_SIZE, 20);
 
-            // Glow
             ctx.shadowBlur = 10;
             ctx.shadowColor = '#00FFFF';
             ctx.fillRect(laser.x - LASER_SIZE / 2, laser.y - 20, LASER_SIZE, 20);
@@ -643,7 +686,6 @@ export function SpaceShooterGame({ questions, onGameOver, onScoreUpdate }: Space
         ctx.save();
         ctx.translate(ship.x, ship.y);
 
-        // Ship body
         const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, SHIP_SIZE / 2);
         gradient.addColorStop(0, '#00FFFF');
         gradient.addColorStop(0.5, '#0088FF');
@@ -662,7 +704,6 @@ export function SpaceShooterGame({ questions, onGameOver, onScoreUpdate }: Space
         ctx.lineWidth = 2;
         ctx.stroke();
 
-        // Glow effect
         ctx.shadowBlur = 20;
         ctx.shadowColor = '#00FFFF';
         ctx.stroke();
@@ -684,55 +725,174 @@ export function SpaceShooterGame({ questions, onGameOver, onScoreUpdate }: Space
     const drawStars = (ctx: CanvasRenderingContext2D) => {
         ctx.fillStyle = '#FFFFFF';
         for (let i = 0; i < 100; i++) {
-            const x = (i * 123.456) % CANVAS_WIDTH;
-            const y = (i * 789.012 + Date.now() * 0.01) % CANVAS_HEIGHT;
+            const x = (i * 123.456) % canvasSize.width;
+            const y = (i * 789.012 + Date.now() * 0.01) % canvasSize.height;
             const size = (i % 3) * 0.5 + 0.5;
             ctx.fillRect(x, y, size, size);
         }
     };
 
+    // Settings screen
+    if (gamePhase === 'settings') {
+        return (
+            <div className="w-full h-full bg-gradient-to-b from-gray-900 via-purple-900 to-black flex flex-col items-center justify-center p-4">
+                <div className="max-w-lg w-full space-y-6">
+                    <div className="text-center mb-8">
+                        <Rocket className="w-16 h-16 text-cyan-400 mx-auto mb-4" />
+                        <h1 className="text-4xl font-black text-white mb-2">Rymdmatte</h1>
+                        <p className="text-gray-400">Skjut asteroiden med rätt svar!</p>
+                    </div>
+
+                    <div className="space-y-3">
+                        <p className="text-white font-bold text-lg">Välj svårighetsgrad:</p>
+                        {(['easy', 'medium', 'hard'] as Difficulty[]).map((d) => (
+                            <button
+                                key={d}
+                                onClick={() => setDifficulty(d)}
+                                className={`w-full p-4 rounded-xl border-2 transition-all ${
+                                    difficulty === d
+                                        ? 'bg-purple-600/50 border-purple-400'
+                                        : 'bg-gray-800/50 border-gray-700 hover:border-gray-500'
+                                }`}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <span className="text-2xl">{DIFFICULTY_EMOJIS[d]}</span>
+                                    <div className="text-left">
+                                        <div className="text-white font-bold">{DIFFICULTY_LABELS[d]}</div>
+                                        <div className="text-gray-400 text-sm">{DIFFICULTY_DESCRIPTIONS[d]}</div>
+                                    </div>
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+
+                    <button
+                        onClick={startGame}
+                        className="w-full py-4 bg-gradient-to-r from-cyan-500 to-purple-500 text-white text-xl font-black rounded-xl hover:scale-105 transition-transform shadow-lg shadow-purple-500/30"
+                    >
+                        STARTA SPEL
+                    </button>
+
+                    <div className="text-center text-gray-500 text-sm">
+                        <p>WASD/Pilar: Flytta | SPACE/Klick: Skjut</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Game over screen
+    if (gamePhase === 'gameover') {
+        const accuracy = questionsAnswered > 0
+            ? Math.round((correctAnswers / questionsAnswered) * 100)
+            : 0;
+
+        return (
+            <div className="w-full h-full bg-gradient-to-b from-gray-900 via-purple-900 to-black flex items-center justify-center">
+                <div className="bg-gradient-to-br from-purple-600/40 to-pink-600/40 backdrop-blur-xl border-2 border-purple-400/50 rounded-3xl p-12 text-center shadow-2xl max-w-md">
+                    <Trophy className="w-24 h-24 text-yellow-400 mx-auto mb-6 drop-shadow-[0_0_20px_rgba(250,204,21,0.8)]" />
+                    <h2 className="text-5xl font-black text-white mb-4">GAME OVER</h2>
+                    <p className="text-4xl text-yellow-400 font-bold mb-6">{score} poäng</p>
+
+                    <div className="grid grid-cols-2 gap-4 mb-8 text-left">
+                        <div className="bg-black/30 rounded-xl p-3">
+                            <div className="text-gray-400 text-sm">Rätt svar</div>
+                            <div className="text-green-400 text-2xl font-bold">{correctAnswers}</div>
+                        </div>
+                        <div className="bg-black/30 rounded-xl p-3">
+                            <div className="text-gray-400 text-sm">Fel svar</div>
+                            <div className="text-red-400 text-2xl font-bold">{wrongAnswers}</div>
+                        </div>
+                        <div className="bg-black/30 rounded-xl p-3">
+                            <div className="text-gray-400 text-sm">Precision</div>
+                            <div className="text-cyan-400 text-2xl font-bold">{accuracy}%</div>
+                        </div>
+                        <div className="bg-black/30 rounded-xl p-3">
+                            <div className="text-gray-400 text-sm">Våning</div>
+                            <div className="text-purple-400 text-2xl font-bold">{wave}</div>
+                        </div>
+                    </div>
+
+                    <div className="flex gap-3">
+                        <button
+                            onClick={() => setGamePhase('settings')}
+                            className="flex-1 py-3 bg-gray-700 text-white font-bold rounded-xl hover:bg-gray-600 transition-colors"
+                        >
+                            <ChevronLeft className="w-5 h-5 inline mr-1" />
+                            Tillbaka
+                        </button>
+                        <button
+                            onClick={startGame}
+                            className="flex-1 py-3 bg-gradient-to-r from-cyan-500 to-purple-500 text-white font-bold rounded-xl hover:scale-105 transition-transform"
+                        >
+                            Spela igen
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Playing
     return (
         <div className="w-full h-full bg-gradient-to-b from-gray-900 via-purple-900 to-black relative overflow-hidden">
+            {/* Question display */}
+            <div className="absolute top-0 left-0 right-0 z-30 bg-gradient-to-b from-black/90 to-transparent pt-4 pb-8">
+                <div className="text-center">
+                    <AnimatePresence mode="wait">
+                        {currentQuestion && (
+                            <motion.div
+                                key={currentQuestion.id}
+                                initial={{ y: -50, opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                exit={{ y: -50, opacity: 0 }}
+                                className="inline-block bg-gradient-to-r from-purple-600/80 to-pink-600/80 backdrop-blur-md border-2 border-purple-400/50 px-8 py-4 rounded-2xl shadow-2xl"
+                            >
+                                <div className="text-white text-3xl font-black">
+                                    {currentQuestion.question}
+                                </div>
+                                <div className="text-purple-200 text-sm mt-1">
+                                    Skjut rätt svar!
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+            </div>
+
             {/* HUD */}
-            <div className="absolute top-0 left-0 right-0 p-6 flex justify-between items-start z-20 bg-gradient-to-b from-black/80 via-black/40 to-transparent">
-                <div className="flex gap-6">
-                    <div className="bg-gradient-to-br from-purple-600/30 to-purple-900/30 backdrop-blur-md border border-purple-400/30 rounded-2xl px-6 py-3 shadow-2xl">
-                        <div className="text-xs uppercase tracking-widest text-purple-300 font-bold mb-1">Wave</div>
-                        <div className="text-4xl font-black bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">{wave}</div>
+            <div className="absolute top-20 left-0 right-0 px-4 flex justify-between items-start z-20">
+                <div className="flex gap-4">
+                    <div className="bg-gradient-to-br from-purple-600/30 to-purple-900/30 backdrop-blur-md border border-purple-400/30 rounded-xl px-4 py-2 shadow-xl">
+                        <div className="text-xs uppercase tracking-widest text-purple-300 font-bold">Våning</div>
+                        <div className="text-2xl font-black bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">{wave}</div>
                     </div>
-                    <div className="bg-gradient-to-br from-yellow-600/30 to-orange-900/30 backdrop-blur-md border border-yellow-400/30 rounded-2xl px-6 py-3 shadow-2xl">
-                        <div className="text-xs uppercase tracking-widest text-yellow-300 font-bold mb-1">Score</div>
-                        <div className="text-4xl font-black bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">{score}</div>
+                    <div className="bg-gradient-to-br from-yellow-600/30 to-orange-900/30 backdrop-blur-md border border-yellow-400/30 rounded-xl px-4 py-2 shadow-xl">
+                        <div className="text-xs uppercase tracking-widest text-yellow-300 font-bold">Poäng</div>
+                        <div className="text-2xl font-black bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">{score}</div>
                     </div>
                 </div>
 
                 {/* Combo */}
-                <div className="bg-gradient-to-br from-red-600/30 to-orange-900/30 backdrop-blur-md border border-red-400/30 rounded-2xl px-8 py-3 shadow-2xl">
-                    <div className={`text-3xl font-black italic tracking-wider ${combo > 5 ? 'text-red-400 animate-pulse drop-shadow-[0_0_10px_rgba(239,68,68,0.8)]' : 'text-white'}`}>
-                        {combo}x COMBO
-                    </div>
-                    {combo > 5 && <Flame className="w-8 h-8 text-orange-400 animate-bounce drop-shadow-[0_0_10px_rgba(251,146,60,0.8)] mx-auto" />}
-                </div>
-
-                {/* Power-ups */}
-                <div className="flex gap-3">
-                    {activePowerUps.map((p, i) => (
-                        <div key={i} className="bg-gradient-to-br from-cyan-600/40 to-blue-900/40 backdrop-blur-md border border-cyan-400/50 p-3 rounded-2xl shadow-2xl animate-pulse">
-                            {p.type === 'shield' && <Shield className="w-8 h-8 text-green-300 drop-shadow-[0_0_8px_rgba(134,239,172,0.8)]" />}
-                            {p.type === 'multishot' && <Zap className="w-8 h-8 text-yellow-300 drop-shadow-[0_0_8px_rgba(253,224,71,0.8)]" />}
-                            {p.type === 'rapidfire' && <Flame className="w-8 h-8 text-orange-300 drop-shadow-[0_0_8px_rgba(251,146,60,0.8)]" />}
-                            {p.type === 'slowmo' && <Clock className="w-8 h-8 text-blue-300 drop-shadow-[0_0_8px_rgba(147,197,253,0.8)]" />}
-                            {p.type === 'multiplier' && <Star className="w-8 h-8 text-yellow-300 drop-shadow-[0_0_8px_rgba(253,224,71,0.8)]" />}
+                {combo > 1 && (
+                    <div className="bg-gradient-to-br from-red-600/30 to-orange-900/30 backdrop-blur-md border border-red-400/30 rounded-xl px-6 py-2 shadow-xl">
+                        <div className={`text-xl font-black italic ${combo > 5 ? 'text-red-400 animate-pulse' : 'text-white'}`}>
+                            {combo}x COMBO
                         </div>
-                    ))}
-                </div>
+                        {combo > 5 && <Flame className="w-6 h-6 text-orange-400 animate-bounce mx-auto" />}
+                    </div>
+                )}
 
                 {/* Lives */}
-                <div className="flex gap-2 bg-gradient-to-br from-red-600/30 to-pink-900/30 backdrop-blur-md border border-red-400/30 rounded-2xl px-4 py-3 shadow-2xl">
-                    {Array.from({ length: 5 }).map((_, i) => (
+                <div className="flex gap-1 bg-gradient-to-br from-red-600/30 to-pink-900/30 backdrop-blur-md border border-red-400/30 rounded-xl px-3 py-2 shadow-xl">
+                    {Array.from({ length: configRef.current.maxLives }).map((_, i) => (
                         <Heart
                             key={i}
-                            className={`w-8 h-8 transition-all duration-300 ${i < lives ? 'text-red-400 fill-red-400 drop-shadow-[0_0_10px_rgba(248,113,113,0.8)] scale-110' : 'text-gray-700 scale-90'}`}
+                            className={`w-6 h-6 transition-all duration-300 ${
+                                i < lives
+                                    ? 'text-red-400 fill-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.8)]'
+                                    : 'text-gray-700'
+                            }`}
                         />
                     ))}
                 </div>
@@ -740,44 +900,26 @@ export function SpaceShooterGame({ questions, onGameOver, onScoreUpdate }: Space
 
             {/* Game Canvas */}
             <div
-                className="flex items-center justify-center h-full"
+                className="flex items-center justify-center h-full pt-24"
                 style={{
-                    transform: `translate(${(Math.random() - 0.5) * shake}px, ${(Math.random() - 0.5) * shake}px)`
+                    transform: shake > 0 ? `translate(${(Math.random() - 0.5) * shake}px, ${(Math.random() - 0.5) * shake}px)` : undefined
                 }}
             >
                 <canvas
                     ref={canvasRef}
-                    width={CANVAS_WIDTH}
-                    height={CANVAS_HEIGHT}
+                    width={canvasSize.width}
+                    height={canvasSize.height}
                     className="border-4 border-cyan-500/30 rounded-lg shadow-2xl shadow-cyan-500/20"
                     onClick={shootLaser}
                 />
             </div>
 
             {/* Controls hint */}
-            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/60 backdrop-blur-md px-6 py-3 rounded-full border border-white/20">
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/60 backdrop-blur-md px-6 py-2 rounded-full border border-white/20 z-20">
                 <p className="text-white text-sm font-bold">
-                    WASD/Arrows: Move | SPACE/Click: Shoot
+                    WASD/Pilar: Flytta | SPACE/Klick: Skjut
                 </p>
             </div>
-
-            {/* Game Over */}
-            <AnimatePresence>
-                {gameOver && (
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="absolute inset-0 flex items-center justify-center bg-black/80 backdrop-blur-md z-50"
-                    >
-                        <div className="bg-gradient-to-br from-purple-600/40 to-pink-600/40 backdrop-blur-xl border-2 border-purple-400/50 rounded-3xl p-12 text-center shadow-2xl">
-                            <Trophy className="w-24 h-24 text-yellow-400 mx-auto mb-6 drop-shadow-[0_0_20px_rgba(250,204,21,0.8)]" />
-                            <h2 className="text-6xl font-black text-white mb-4">GAME OVER</h2>
-                            <p className="text-3xl text-yellow-400 font-bold mb-2">Final Score: {score}</p>
-                            <p className="text-xl text-purple-300">Wave: {wave} | Max Combo: {combo}</p>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
         </div>
     );
 }

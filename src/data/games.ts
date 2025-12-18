@@ -125,12 +125,65 @@ export const GAME_DEFINITIONS: GameDefinition[] = [
     icon: 'Shield',
     tags: ['Djup', 'Utmaning'],
   },
+  {
+    id: 'space-shooter',
+    name: 'Rymdmatte',
+    tagline: 'Skjut rätt svar',
+    description:
+      'Hitta och skjut asteroiden med rätt svar. Var noga - fel kostar liv! Välj svårighet och träna matematik i rymden.',
+    status: 'available',
+    focus: ['matematik', 'reaktion'],
+    supports: {
+      scope: ['single-material', 'multi-material', 'generated'],
+      multiplayer: false,
+    },
+    averageDuration: '5 min',
+    difficulty: 'medium',
+    icon: 'Rocket',
+    tags: ['Arcade', 'Matematik'],
+  },
+  {
+    id: 'falling-blocks',
+    name: 'Matteskur',
+    tagline: 'Skriv svaret snabbt',
+    description:
+      'Block faller med mattetal. Skriv rätt svar innan de når botten. Progressiv svårighet med olika spellägen.',
+    status: 'available',
+    focus: ['matematik', 'snabbhet'],
+    supports: {
+      scope: ['single-material', 'multi-material', 'generated'],
+      multiplayer: false,
+    },
+    averageDuration: '4 min',
+    difficulty: 'easy',
+    icon: 'Gamepad2',
+    tags: ['Arcade', 'Matematik'],
+  },
+  {
+    id: 'math-racer',
+    name: 'Matteracer',
+    tagline: 'Kör mot rätt svar',
+    description:
+      'Racing med matte! Kör in i lådan med rätt svar för turbo. Undvik fel svar och ta dig först i mål.',
+    status: 'available',
+    focus: ['matematik', 'reaktion'],
+    supports: {
+      scope: ['single-material', 'multi-material', 'generated'],
+      multiplayer: false,
+    },
+    averageDuration: '6 min',
+    difficulty: 'medium',
+    icon: 'Car',
+    tags: ['Racing', 'Matematik'],
+  },
 ];
 
 export const GAME_FOCUS_FILTERS: GameFilterOption[] = [
   { id: 'begrepp', label: 'Begrepp' },
+  { id: 'matematik', label: 'Matematik' },
   { id: 'minne', label: 'Minne' },
   { id: 'reaktion', label: 'Tempo' },
+  { id: 'snabbhet', label: 'Snabbhet' },
   { id: 'återkallning', label: 'Återkallning' },
   { id: 'relationer', label: 'Relationer' },
   { id: 'skriva', label: 'Skapa & skriva' },

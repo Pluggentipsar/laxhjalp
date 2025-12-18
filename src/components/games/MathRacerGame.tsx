@@ -10,14 +10,16 @@ interface MathRacerGameProps {
 
 // --- CONFIG ---
 const CONFIG = {
-  TRACK_WIDTH: 140,
+  TRACK_WIDTH: 220,           // Bredare bana (var 140) - lättare att styra
   FRICTION: 0.96,
   ACCEL: 0.25,
   MAX_SPEED: 12,
   BOOST_SPEED: 22,
   TURN_SPEED: 0.07,
   LAPS: 3,
-  OFF_ROAD_FRICTION: 0.85
+  OFF_ROAD_FRICTION: 0.85,
+  CRATE_SIZE: 55,             // Större lådor (var 40)
+  CRATE_SPACING: 90,          // Mer avstånd mellan lådor (var 40)
 };
 
 // --- TYPES ---
@@ -108,8 +110,8 @@ class Crate {
   value: number;
   isCorrect: boolean;
   active: boolean = true;
-  width: number = 40;
-  height: number = 40;
+  width: number = CONFIG.CRATE_SIZE;
+  height: number = CONFIG.CRATE_SIZE;
 
   constructor(x: number, y: number, value: number, isCorrect: boolean) {
     this.x = x; this.y = y;
@@ -120,30 +122,50 @@ class Crate {
   draw(ctx: CanvasRenderingContext2D) {
     if (!this.active) return;
 
-    // Shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.4)';
-    ctx.fillRect(this.x - this.width / 2 + 5, this.y - this.height / 2 + 5, this.width, this.height);
+    const { x, y, width, height, value } = this;
+    const halfW = width / 2;
+    const halfH = height / 2;
 
-    // Box
-    ctx.fillStyle = this.isCorrect ? '#4ADE80' : '#EF4444'; // Green or Red hint (debug) - actually let's make them uniform
-    ctx.fillStyle = '#F59E0B'; // Amber/Gold generic crate color
+    // Larger shadow for depth
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(x - halfW + 6, y - halfH + 6, width, height);
 
-    // 3D effect
-    ctx.fillRect(this.x - this.width / 2, this.y - this.height / 2 - 10, this.width, this.height);
-    ctx.fillStyle = '#D97706'; // Darker side
-    ctx.fillRect(this.x - this.width / 2, this.y + this.height / 2 - 10, this.width, 10);
+    // Main crate body - bright amber
+    ctx.fillStyle = '#FCD34D'; // Amber-300 (brighter)
+    ctx.fillRect(x - halfW, y - halfH - 14, width, height);
 
-    // Text
-    ctx.fillStyle = 'white';
-    ctx.font = "bold 24px monospace";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(String(this.value), this.x, this.y - 10);
+    // 3D top face
+    ctx.fillStyle = '#FBBF24'; // Amber-400
+    ctx.beginPath();
+    ctx.moveTo(x - halfW, y - halfH - 14);
+    ctx.lineTo(x - halfW + 10, y - halfH - 24);
+    ctx.lineTo(x + halfW + 10, y - halfH - 24);
+    ctx.lineTo(x + halfW, y - halfH - 14);
+    ctx.closePath();
+    ctx.fill();
 
-    // Border
+    // Side face (darker)
+    ctx.fillStyle = '#D97706'; // Amber-600
+    ctx.fillRect(x - halfW, y + halfH - 14, width, 14);
+
+    // Text with outline for better readability
+    ctx.font = 'bold 32px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Text outline (black)
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 5;
+    ctx.strokeText(String(value), x, y - 12);
+
+    // Text fill (white)
+    ctx.fillStyle = '#FFF';
+    ctx.fillText(String(value), x, y - 12);
+
+    // Border highlight
     ctx.strokeStyle = '#FFF';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(this.x - this.width / 2, this.y - this.height / 2 - 10, this.width, this.height);
+    ctx.lineWidth = 3;
+    ctx.strokeRect(x - halfW, y - halfH - 14, width, height);
   }
 }
 
@@ -251,9 +273,9 @@ class Car {
       }
     }
 
-    // Crate Collision
+    // Crate Collision - use crate size for hitbox
     game.crates.forEach(crate => {
-      if (crate.active && Math.hypot(crate.x - this.x, crate.y - this.y) < 40) {
+      if (crate.active && Math.hypot(crate.x - this.x, crate.y - this.y) < CONFIG.CRATE_SIZE * 0.8) {
         game.handleCrateCollision(crate);
       }
     });
@@ -379,10 +401,17 @@ class GameEngine {
   spawnCrates(question: ActivityQuestion) {
     this.crates = [];
     const correct = Number(question.correctAnswer);
-    const wrongs = [correct - 1, correct + 1, correct + Math.floor(Math.random() * 5) + 2].filter(n => n !== correct);
+
+    // Generate plausible wrong answers
+    const wrongOffsets = [-2, -1, 1, 2, 3].sort(() => Math.random() - 0.5);
+    const wrongs = [correct + wrongOffsets[0], correct + wrongOffsets[1]].filter(n => n !== correct && n >= 0);
+    // Ensure we have 2 wrong answers
+    while (wrongs.length < 2) {
+      wrongs.push(correct + Math.floor(Math.random() * 5) + 3);
+    }
 
     // Find a spot ahead of the player on the track
-    let cpIdx = (this.player.checkpoint + 1) % TRACK_PATH.length;
+    const cpIdx = (this.player.checkpoint + 1) % TRACK_PATH.length;
 
     // Spawn 3 crates across the track width at that segment
     const p1 = TRACK_PATH[cpIdx];
@@ -392,28 +421,31 @@ class GameEngine {
     const mx = (p1.x + p2.x) / 2;
     const my = (p1.y + p2.y) / 2;
 
-    // Perpendicular vector
+    // Perpendicular vector for lane placement
     const dx = p2.x - p1.x;
     const dy = p2.y - p1.y;
     const len = Math.hypot(dx, dy);
     const nx = -dy / len;
     const ny = dx / len;
 
-    const spread = 40;
+    // Use CONFIG spacing for wider lanes
+    const spacing = CONFIG.CRATE_SPACING;
 
-    // Correct crate
-    const correctIdx = Math.floor(Math.random() * 3);
+    // Shuffle answers and assign to lanes
+    const allAnswers = [correct, wrongs[0], wrongs[1]];
+    const shuffledAnswers = allAnswers.sort(() => Math.random() - 0.5);
 
-    for (let i = 0; i < 3; i++) {
-      const offset = (i - 1) * spread;
-      const val = i === correctIdx ? correct : wrongs[i % wrongs.length];
+    // 3 clear lanes: left, center, right
+    const laneOffsets = [-spacing, 0, spacing];
+
+    laneOffsets.forEach((offset, i) => {
       this.crates.push(new Crate(
         mx + nx * offset,
         my + ny * offset,
-        val,
-        i === correctIdx
+        shuffledAnswers[i],
+        shuffledAnswers[i] === correct
       ));
-    }
+    });
   }
 
   handleCrateCollision(crate: Crate) {
