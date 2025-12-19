@@ -213,6 +213,17 @@ function AppContent() {
       {/* Fractions (1-3) */}
       <Route path="/subjects/matematik/brak-1-3" element={<ArithmeticActivity />} />
 
+      {/* Årskurs 4-6 activities */}
+      <Route path="/subjects/matematik/addition-subtraktion-4-6" element={<ArithmeticActivity />} />
+      <Route path="/subjects/matematik/decimaltal-4-6" element={<ArithmeticActivity />} />
+      <Route path="/subjects/matematik/brak-4-6" element={<ArithmeticActivity />} />
+      <Route path="/subjects/matematik/enheter-4-6" element={<ArithmeticActivity />} />
+      <Route path="/subjects/matematik/area-omkrets-4-6" element={<ArithmeticActivity />} />
+      <Route path="/subjects/matematik/vinklar-4-6" element={<ArithmeticActivity />} />
+      <Route path="/subjects/matematik/monster-4-6" element={<ArithmeticActivity />} />
+      <Route path="/subjects/matematik/textuppgifter-4-6" element={<ArithmeticActivity />} />
+      <Route path="/subjects/matematik/diagram-4-6" element={<ArithmeticActivity />} />
+
       {/* Catch-all for future activities */}
       <Route path="/subjects/:subjectHub/:activityId" element={<ActivityPlaceholderPage />} />
       <Route path="/material" element={<Navigate to="/study" replace />} />

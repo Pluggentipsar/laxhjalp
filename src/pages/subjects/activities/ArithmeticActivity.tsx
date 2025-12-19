@@ -18,7 +18,7 @@ import { Card } from '../../../components/common/Card';
 import { useAppStore } from '../../../store/appStore';
 import { pedagogicalEngine } from '../../../services/pedagogicalEngine';
 import { dbHelpers } from '../../../lib/db';
-import { getQuestionsByFilters } from '../../../data/activities/additionSubtraction';
+import { generateAllQuestions } from '../../../data/activities/questionGenerator';
 import { generateMathQuestions } from '../../../services/aiService';
 import { MathGameWrapper } from '../../../components/subjects/MathGameWrapper';
 import type {
@@ -62,6 +62,16 @@ const ACTIVITY_CONCEPT_MAP: { [key: string]: string } = {
   // Statistics (1-3)
   'sortering-1-3': 'sortering-1-3',
   'tabeller-1-3': 'tabeller-1-3',
+  // Årskurs 4-6
+  'addition-subtraktion-4-6': 'addition-subtraktion-4-6',
+  'decimaltal-4-6': 'decimaltal-4-6',
+  'brak-4-6': 'brak-4-6',
+  'enheter-4-6': 'enheter-4-6',
+  'area-omkrets-4-6': 'area-omkrets-4-6',
+  'vinklar-4-6': 'vinklar-4-6',
+  'monster-4-6': 'monster-4-6',
+  'textuppgifter-4-6': 'textuppgifter-4-6',
+  'diagram-4-6': 'diagram-4-6',
 };
 
 export function ArithmeticActivity() {
@@ -138,8 +148,9 @@ export function ArithmeticActivity() {
         (q) => !attempts.find((a) => a.questionId === q.id)
       );
     } else {
-      // Filter questions by concept area
-      const conceptQuestions = getQuestionsByFilters({ conceptArea });
+      // Filter questions by concept area from all available questions
+      const allQuestions = generateAllQuestions();
+      const conceptQuestions = allQuestions.filter((q) => q.conceptArea === conceptArea);
       availableQuestions = conceptQuestions.filter(
         (q) => !attempts.find((a) => a.questionId === q.id)
       );
@@ -304,9 +315,10 @@ export function ArithmeticActivity() {
   // Game Mode Rendering
   if (mode === 'game') {
     // Get questions for the game
+    const allQuestions = generateAllQuestions();
     const gameQuestions = isAIChallenge
       ? aiQuestions
-      : getQuestionsByFilters({ conceptArea });
+      : allQuestions.filter((q) => q.conceptArea === conceptArea);
 
     return (
       <MathGameWrapper
