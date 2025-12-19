@@ -14,7 +14,8 @@
       "Bash(git push:*)",
       "Bash(git remote set-url:*)",
       "Bash(npm install:*)",
-      "Bash(dir \"c:\\Codex\\laxhjalp\\src\" /B /S)"
+      "Bash(dir \"c:\\Codex\\laxhjalp\\src\" /B /S)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []

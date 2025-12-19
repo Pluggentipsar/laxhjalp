@@ -8,7 +8,26 @@ import { Card } from '../../../components/common/Card';
 import { Balloon } from './components/Balloon';
 import { playGameSound } from './utils/sound';
 import { getAllPackages } from '../../../services/wordPackageService';
-import type { WordPackage } from '../../../types/motion-learn';
+import type { WordPackage, WordPair } from '../../../types/motion-learn';
+import type { GameContentItem, UnifiedGameResult } from '../../../types/game-content';
+
+/**
+ * Props for dual-mode operation
+ */
+interface HeaderMatchGameProps {
+  content?: GameContentItem[];
+  contentPackageName?: string;
+  onComplete?: (result: UnifiedGameResult) => void;
+  onBack?: () => void;
+}
+
+function contentToWordPairs(content: GameContentItem[]): WordPair[] {
+  return content.map(item => ({
+    id: item.id,
+    term: item.prompt,
+    definition: item.correctAnswer,
+  }));
+}
 
 // Types specific to this game
 interface GameBalloon {
@@ -31,8 +50,11 @@ interface FeedbackItem {
     color: string;
 }
 
-export function HeaderMatchGame() {
+export function HeaderMatchGame({ content, contentPackageName, onComplete, onBack }: HeaderMatchGameProps) {
     const navigate = useNavigate();
+
+    // Dual-mode check
+    const isIntegratedMode = !!content && content.length > 0;
 
     // Game State
     const [gameState, setGameState] = useState<'idle' | 'playing' | 'paused' | 'gameover'>('idle');
@@ -41,6 +63,9 @@ export function HeaderMatchGame() {
     const [level, setLevel] = useState(1);
     const [balloons, setBalloons] = useState<GameBalloon[]>([]);
     const [targetConcept, setTargetConcept] = useState<string>("");
+    const [correctAnswers, setCorrectAnswers] = useState(0);
+    const [totalQuestions, setTotalQuestions] = useState(0);
+    const gameStartTimeRef = useRef<number>(0);
 
     // Word Packages
     const [packages, setPackages] = useState<WordPackage[]>([]);
@@ -77,14 +102,26 @@ export function HeaderMatchGame() {
         }
     });
 
-    // Load word packages on mount
+    // Load word packages on mount (or use external content in integrated mode)
     useEffect(() => {
-        const pkgs = getAllPackages();
-        setPackages(pkgs);
-        if (pkgs.length > 0) {
-            setSelectedPackage(pkgs[0]);
+        if (isIntegratedMode && content) {
+            const virtualPackage: WordPackage = {
+                id: 'external-content',
+                name: contentPackageName || 'Externt innehåll',
+                words: contentToWordPairs(content),
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+            };
+            setPackages([virtualPackage]);
+            setSelectedPackage(virtualPackage);
+        } else {
+            const pkgs = getAllPackages();
+            setPackages(pkgs);
+            if (pkgs.length > 0) {
+                setSelectedPackage(pkgs[0]);
+            }
         }
-    }, []);
+    }, [isIntegratedMode, content, contentPackageName]);
 
     // Show floating feedback text
     const showFeedback = useCallback((text: string, x: number, y: number, color: string) => {
@@ -96,8 +133,7 @@ export function HeaderMatchGame() {
     }, []);
 
     // Game Loop Refs
-    // Game Loop Refs
-    const requestRef = useRef<number>();
+    const requestRef = useRef<number | undefined>(undefined);
     const stateRef = useRef({
         gameState: 'idle',
         balloons: [] as GameBalloon[],
@@ -196,15 +232,27 @@ export function HeaderMatchGame() {
         setBalloons([correctBalloon, ...distractors]);
     }, [getWordPairs]);
 
+    // Handle back navigation based on mode
+    const handleBack = useCallback(() => {
+        if (onBack) {
+            onBack();
+        } else {
+            navigate('/motion-learn');
+        }
+    }, [onBack, navigate]);
+
     // Start/Stop Game
     const startGame = useCallback(() => {
         setScore(0);
         setLives(3);
         setLevel(1);
         setCombo(0);
+        setCorrectAnswers(0);
+        setTotalQuestions(0);
         setBalloons([]);
         setFeedback([]);
         setGameState('playing');
+        gameStartTimeRef.current = Date.now();
         startCamera();
         // Small delay to let camera initialize
         setTimeout(() => spawnNewRound(), 500);
@@ -216,6 +264,24 @@ export function HeaderMatchGame() {
         setFeedback([]);
         if (requestRef.current) cancelAnimationFrame(requestRef.current);
     }, [stopCamera]);
+
+    // Handle game over with onComplete callback
+    const handleGameOver = useCallback(() => {
+        if (isIntegratedMode && onComplete && content) {
+            const result: UnifiedGameResult = {
+                gameId: 'headermatch',
+                score,
+                maxScore: totalQuestions * 10,
+                correctAnswers,
+                totalQuestions,
+                duration: Date.now() - gameStartTimeRef.current,
+                contentSource: content[0]?.source || 'material',
+                itemsPlayed: content.slice(0, totalQuestions).map(item => item.id),
+                mistakeIds: [],
+            };
+            onComplete(result);
+        }
+    }, [isIntegratedMode, onComplete, content, score, correctAnswers, totalQuestions]);
 
     // Game Loop
     const animate = useCallback((time: number) => {
@@ -318,9 +384,16 @@ export function HeaderMatchGame() {
             spawnNewRound();
         }
 
-        if (scoreChanged) setScore(stateRef.current.score);
+        if (scoreChanged) {
+            setScore(stateRef.current.score);
+            setCorrectAnswers(prev => prev + 1);
+        }
         if (levelChanged) setLevel(stateRef.current.level);
         if (comboChanged) setCombo(stateRef.current.combo);
+        // Track total questions on each round
+        if (scoreChanged || livesChanged) {
+            setTotalQuestions(prev => prev + 1);
+        }
         if (livesChanged) {
             setLives(stateRef.current.lives);
             if (stateRef.current.lives <= 0) {
@@ -513,7 +586,7 @@ export function HeaderMatchGame() {
                             Starta Spel
                         </Button>
                         <div className="mt-4 flex justify-center">
-                            <Button variant="ghost" onClick={() => navigate('/motion-learn')}>
+                            <Button variant="ghost" onClick={handleBack}>
                                 <ArrowLeft className="mr-2 h-4 w-4" />
                                 Tillbaka
                             </Button>
@@ -536,8 +609,8 @@ export function HeaderMatchGame() {
                                 <RefreshCw className="mr-2 h-5 w-5" />
                                 Spela Igen
                             </Button>
-                            <Button variant="outline" onClick={() => { quitGame(); navigate('/motion-learn'); }}>
-                                Tillbaka till Motion Learn
+                            <Button variant="outline" onClick={() => { quitGame(); handleGameOver(); handleBack(); }}>
+                                {isIntegratedMode ? 'Tillbaka' : 'Tillbaka till Motion Learn'}
                             </Button>
                         </div>
                     </Card>

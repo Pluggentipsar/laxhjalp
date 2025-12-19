@@ -1,12 +1,29 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, RotateCcw, Trophy, Heart } from 'lucide-react';
+import { Play, RotateCcw, Trophy, Heart, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '../../../components/common/Button';
 import { Card } from '../../../components/common/Card';
 import { useCombinedTracking } from '../../../hooks/useCombinedTracking';
 import { getAllPackages } from '../../../services/wordPackageService';
-import type { WordPackage } from '../../../types/motion-learn';
+import type { WordPackage, WordPair } from '../../../types/motion-learn';
+import type { GameContentItem, UnifiedGameResult } from '../../../types/game-content';
 import { Ball } from './components/Ball';
+
+interface GoalKeeperGameProps {
+    content?: GameContentItem[];
+    contentPackageName?: string;
+    onComplete?: (result: UnifiedGameResult) => void;
+    onBack?: () => void;
+}
+
+function contentToWordPairs(content: GameContentItem[]): WordPair[] {
+    return content.map(item => ({
+        id: item.id,
+        term: item.prompt,
+        definition: item.correctAnswer,
+    }));
+}
 
 // Types
 interface Ball {
@@ -27,12 +44,19 @@ interface GameState {
     status: 'setup' | 'playing' | 'paused' | 'finished';
 }
 
-export function GoalKeeperGame() {
+export function GoalKeeperGame({ content, contentPackageName, onComplete, onBack }: GoalKeeperGameProps) {
+    const navigate = useNavigate();
+    const isIntegratedMode = !!content && content.length > 0;
+
     const [gameState, setGameState] = useState<GameState>({
         score: 0,
         lives: 3,
         status: 'setup'
     });
+
+    const [correctAnswers, setCorrectAnswers] = useState(0);
+    const [totalQuestions, setTotalQuestions] = useState(0);
+    const gameStartTimeRef = useRef<number>(0);
 
     const [packages, setPackages] = useState<WordPackage[]>([]);
     const [selectedPackage, setSelectedPackage] = useState<WordPackage | null>(null);
@@ -104,12 +128,33 @@ export function GoalKeeperGame() {
         }
     });
 
-    // Load Packages
+    // Handle back navigation
+    const handleBack = useCallback(() => {
+        if (onBack) {
+            onBack();
+        } else {
+            navigate('/motion-learn');
+        }
+    }, [onBack, navigate]);
+
+    // Load Packages (or use external content in integrated mode)
     useEffect(() => {
-        const pkgs = getAllPackages();
-        setPackages(pkgs);
-        if (pkgs.length > 0) setSelectedPackage(pkgs[0]);
-    }, []);
+        if (isIntegratedMode && content) {
+            const virtualPackage: WordPackage = {
+                id: 'external-content',
+                name: contentPackageName || 'Externt innehåll',
+                words: contentToWordPairs(content),
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+            };
+            setPackages([virtualPackage]);
+            setSelectedPackage(virtualPackage);
+        } else {
+            const pkgs = getAllPackages();
+            setPackages(pkgs);
+            if (pkgs.length > 0) setSelectedPackage(pkgs[0]);
+        }
+    }, [isIntegratedMode, content, contentPackageName]);
 
     const showFeedback = (text: string, x: number, y: number, color: string) => {
         const id = Date.now().toString();
@@ -123,6 +168,9 @@ export function GoalKeeperGame() {
         if (!selectedPackage) return;
         await startCamera();
         setGameState(prev => ({ ...prev, status: 'playing', score: 0, lives: 3 }));
+        setCorrectAnswers(0);
+        setTotalQuestions(0);
+        gameStartTimeRef.current = Date.now();
 
         // Set initial target
         const newTarget = pickNewTarget(selectedPackage);
@@ -134,6 +182,22 @@ export function GoalKeeperGame() {
     const stopGame = () => {
         stopCamera();
         setGameState(prev => ({ ...prev, status: 'finished' }));
+
+        // Call onComplete for integrated mode
+        if (isIntegratedMode && onComplete && content) {
+            const result: UnifiedGameResult = {
+                gameId: 'goalkeeper',
+                score: gameState.score,
+                maxScore: totalQuestions * 10,
+                correctAnswers,
+                totalQuestions,
+                duration: Date.now() - gameStartTimeRef.current,
+                contentSource: content[0]?.source || 'material',
+                itemsPlayed: content.slice(0, totalQuestions).map(item => item.id),
+                mistakeIds: [],
+            };
+            onComplete(result);
+        }
     };
 
     // Game Loop
@@ -226,9 +290,11 @@ export function GoalKeeperGame() {
 
                         if (hitHand || hitNose) {
                             // SAVE!
+                            setTotalQuestions(prev => prev + 1);
                             if (isCorrectForCurrentTarget) {
                                 // Saved correct ball -> +1 Point
                                 setGameState(s => ({ ...s, score: s.score + 1 }));
+                                setCorrectAnswers(prev => prev + 1);
                                 showFeedback("+1", ball.x, ball.y, "text-green-400");
 
                                 // ROTATE TARGET!
@@ -306,10 +372,16 @@ export function GoalKeeperGame() {
                         </Card>
                     </div>
 
-                    <Button size="lg" onClick={startGame} className="bg-green-500 hover:bg-green-600 text-black font-bold text-xl px-12 py-6">
-                        <Play className="mr-3 w-8 h-8" />
-                        Starta Match
-                    </Button>
+                    <div className="flex flex-col items-center gap-4">
+                        <Button size="lg" onClick={startGame} className="bg-green-500 hover:bg-green-600 text-black font-bold text-xl px-12 py-6">
+                            <Play className="mr-3 w-8 h-8" />
+                            Starta Match
+                        </Button>
+                        <Button variant="ghost" onClick={handleBack} className="text-gray-400 hover:text-white">
+                            <ArrowLeft className="mr-2 h-4 w-4" />
+                            Tillbaka
+                        </Button>
+                    </div>
                 </div>
             )}
 
@@ -378,10 +450,15 @@ export function GoalKeeperGame() {
                 <div className="relative z-10 container mx-auto px-4 py-12 flex flex-col items-center justify-center min-h-screen">
                     <h1 className="text-6xl font-bold mb-6 text-red-500">Game Over</h1>
                     <p className="text-2xl text-white mb-8">Poäng: {gameState.score}</p>
-                    <Button size="lg" onClick={() => setGameState(prev => ({ ...prev, status: 'setup' }))} className="bg-white text-black font-bold text-xl px-12 py-6">
-                        <RotateCcw className="mr-3 w-8 h-8" />
-                        Spela Igen
-                    </Button>
+                    <div className="flex gap-4">
+                        <Button size="lg" onClick={() => setGameState(prev => ({ ...prev, status: 'setup' }))} className="bg-white text-black font-bold text-xl px-12 py-6">
+                            <RotateCcw className="mr-3 w-8 h-8" />
+                            Spela Igen
+                        </Button>
+                        <Button size="lg" variant="outline" onClick={handleBack} className="font-bold text-xl px-12 py-6">
+                            {isIntegratedMode ? 'Tillbaka' : 'Avsluta'}
+                        </Button>
+                    </div>
                 </div>
             )}
         </div>

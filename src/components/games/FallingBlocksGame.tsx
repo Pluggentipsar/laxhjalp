@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Star, Shield, Snowflake, Timer, Bomb, Skull, Trophy, Flame, Gamepad2, ChevronLeft, Keyboard, Grid3x3 } from 'lucide-react';
 import type { ActivityQuestion } from '../../types';
+import type { GameContentItem, UnifiedGameResult } from '../../types/game-content';
 import {
     type Difficulty,
     type GameMode,
@@ -18,9 +19,33 @@ import {
 } from './constants/falling-blocks-configs';
 
 interface FallingBlocksGameProps {
-    questions: ActivityQuestion[];
+    /** Legacy prop - ActivityQuestion array */
+    questions?: ActivityQuestion[];
+    /** New unified content prop */
+    content?: GameContentItem[];
     onGameOver: (score: number) => void;
     onScoreUpdate: (score: number) => void;
+    /** Unified game result callback */
+    onComplete?: (result: UnifiedGameResult) => void;
+}
+
+/** Convert GameContentItem to ActivityQuestion-like format */
+function contentToQuestions(content: GameContentItem[]): ActivityQuestion[] {
+    return content.map(item => ({
+        id: item.id,
+        activityId: 'game-content',
+        question: item.prompt,
+        questionType: 'number-input' as const,
+        correctAnswer: Number(item.correctAnswer) || item.correctAnswer,
+        options: item.distractors.length > 0
+            ? [item.correctAnswer, ...item.distractors].map(d => Number(d)) as number[]
+            : undefined,
+        conceptArea: item.metadata?.conceptArea || 'math',
+        difficulty: item.metadata?.difficulty || 'medium',
+        ageGroup: item.metadata?.ageGroup || '4-6',
+        soloLevel: 'multistructural' as const,
+        bloomLevel: 'apply' as const,
+    }));
 }
 
 interface FallingBlock {
@@ -71,11 +96,18 @@ interface WrongAnswer {
     userAnswer: string;
 }
 
-export function FallingBlocksGame({ questions, onGameOver, onScoreUpdate }: FallingBlocksGameProps) {
+export function FallingBlocksGame({ questions, content, onGameOver, onScoreUpdate, onComplete }: FallingBlocksGameProps) {
+    // Resolve questions from either prop
+    const resolvedQuestions = content && content.length > 0
+        ? contentToQuestions(content)
+        : (questions || []);
+    const isIntegratedMode = !!content && content.length > 0;
+
     // Game phase
     const [gamePhase, setGamePhase] = useState<GamePhase>('settings');
     const [difficulty, setDifficulty] = useState<Difficulty>('medium');
     const [gameMode, setGameMode] = useState<GameMode>('classic');
+    const gameStartTimeRef = useRef<number>(0);
 
     // Game state
     const [blocks, setBlocks] = useState<FallingBlock[]>([]);
@@ -114,7 +146,7 @@ export function FallingBlocksGame({ questions, onGameOver, onScoreUpdate }: Fall
 
     // Filter questions
     const gameQuestions = useRef(
-        questions.filter(q => q.question.length < 50 && !q.question.includes('AI-genererat'))
+        resolvedQuestions.filter(q => q.question.length < 50 && !q.question.includes('AI-genererat'))
     ).current;
 
     // Detect touch device on mount
@@ -153,6 +185,7 @@ export function FallingBlocksGame({ questions, onGameOver, onScoreUpdate }: Fall
         waveTimerRef.current = 0;
         eventTimerRef.current = 0;
         gameTimeRef.current = 0;
+        gameStartTimeRef.current = Date.now();
 
         setGamePhase('playing');
     }, [difficulty, gameMode]);
@@ -304,12 +337,40 @@ export function FallingBlocksGame({ questions, onGameOver, onScoreUpdate }: Fall
         if (modeConfig.hasLives && lives <= 0) {
             setGamePhase('gameover');
             onGameOver(score);
+            // Call onComplete for integrated mode
+            if (isIntegratedMode && onComplete && content) {
+                onComplete({
+                    gameId: 'falling-blocks',
+                    score,
+                    maxScore: totalQuestions * 10,
+                    correctAnswers,
+                    totalQuestions,
+                    duration: Date.now() - gameStartTimeRef.current,
+                    contentSource: content[0]?.source || 'math',
+                    itemsPlayed: content.slice(0, totalQuestions).map(item => item.id),
+                    mistakeIds: wrongAnswersList.map(wa => wa.question),
+                });
+            }
             return;
         }
 
         if (modeConfig.hasTimer && timeLeft !== null && timeLeft <= 0) {
             setGamePhase('gameover');
             onGameOver(score);
+            // Call onComplete for integrated mode
+            if (isIntegratedMode && onComplete && content) {
+                onComplete({
+                    gameId: 'falling-blocks',
+                    score,
+                    maxScore: totalQuestions * 10,
+                    correctAnswers,
+                    totalQuestions,
+                    duration: Date.now() - gameStartTimeRef.current,
+                    contentSource: content[0]?.source || 'math',
+                    itemsPlayed: content.slice(0, totalQuestions).map(item => item.id),
+                    mistakeIds: wrongAnswersList.map(wa => wa.question),
+                });
+            }
             return;
         }
 
@@ -438,7 +499,7 @@ export function FallingBlocksGame({ questions, onGameOver, onScoreUpdate }: Fall
     };
 
     const spawnBlock = () => {
-        const pool = gameQuestions.length > 0 ? gameQuestions : questions;
+        const pool = gameQuestions.length > 0 ? gameQuestions : resolvedQuestions;
         const randomQuestion = pool[Math.floor(Math.random() * pool.length)];
         const id = Math.random().toString(36).substr(2, 9);
         const correct = Number(randomQuestion.correctAnswer);

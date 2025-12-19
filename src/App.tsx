@@ -32,6 +32,8 @@ import { OrdregnGame } from './pages/motion-learn/games/OrdregnGame';
 import { WhackAWordGame } from './pages/motion-learn/games/WhackAWordGame';
 import { GoalKeeperGame } from './pages/motion-learn/games/GoalKeeperGame';
 import { HeaderMatchGame } from './pages/motion-learn/games/HeaderMatchGame';
+// Unified Game System
+import { UnifiedGamePage } from './pages/games/UnifiedGamePage';
 
 function AppContent() {
   const { userProfile } = useAuth();
@@ -167,6 +169,9 @@ function AppContent() {
         element={<WhackATermPage />}
       />
       <Route path="/games" element={<GamesHubPage />} />
+
+      {/* Unified game system - all games with universal content */}
+      <Route path="/games/play/:gameId" element={<UnifiedGamePage />} />
       <Route path="/subjects" element={<SubjectsOverviewPage />} />
       <Route path="/subjects/:subjectHub" element={<SubjectHubPage />} />
 

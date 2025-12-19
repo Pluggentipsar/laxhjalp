@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, Trophy, Flame, Rocket, ChevronLeft } from 'lucide-react';
 import type { ActivityQuestion } from '../../types';
+import type { GameContentItem, UnifiedGameResult } from '../../types/game-content';
 import {
     type Difficulty,
     type SpaceShooterConfig,
@@ -12,9 +13,33 @@ import {
 } from './constants/space-shooter-configs';
 
 interface SpaceShooterGameProps {
-    questions: ActivityQuestion[];
+    /** Legacy prop - ActivityQuestion array */
+    questions?: ActivityQuestion[];
+    /** New unified content prop */
+    content?: GameContentItem[];
     onGameOver: (score: number) => void;
     onScoreUpdate: (score: number) => void;
+    /** Unified game result callback */
+    onComplete?: (result: UnifiedGameResult) => void;
+}
+
+/** Convert GameContentItem to ActivityQuestion-like format */
+function contentToQuestions(content: GameContentItem[]): ActivityQuestion[] {
+    return content.map(item => ({
+        id: item.id,
+        activityId: 'game-content',
+        question: item.prompt,
+        questionType: 'number-input' as const,
+        correctAnswer: Number(item.correctAnswer) || item.correctAnswer,
+        options: item.distractors.length > 0
+            ? [item.correctAnswer, ...item.distractors].map(d => Number(d)) as number[]
+            : undefined,
+        conceptArea: item.metadata?.conceptArea || 'math',
+        difficulty: item.metadata?.difficulty || 'medium',
+        ageGroup: item.metadata?.ageGroup || '4-6',
+        soloLevel: 'multistructural' as const,
+        bloomLevel: 'apply' as const,
+    }));
 }
 
 // Game constants - responsive
@@ -87,7 +112,13 @@ interface FloatingText {
 
 type GamePhase = 'settings' | 'playing' | 'gameover';
 
-export function SpaceShooterGame({ questions, onGameOver, onScoreUpdate }: SpaceShooterGameProps) {
+export function SpaceShooterGame({ questions, content, onGameOver, onScoreUpdate, onComplete }: SpaceShooterGameProps) {
+    // Resolve questions from either prop
+    const resolvedQuestions = content && content.length > 0
+        ? contentToQuestions(content)
+        : (questions || []);
+    const isIntegratedMode = !!content && content.length > 0;
+
     // Game phase state
     const [gamePhase, setGamePhase] = useState<GamePhase>('settings');
     const [difficulty, setDifficulty] = useState<Difficulty>('medium');
@@ -98,6 +129,7 @@ export function SpaceShooterGame({ questions, onGameOver, onScoreUpdate }: Space
     // Game state
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [score, setScore] = useState(0);
+    const gameStartTimeRef = useRef<number>(0);
     const [lives, setLives] = useState(3);
     const [wave, setWave] = useState(1);
     const [combo, setCombo] = useState(0);
@@ -129,7 +161,7 @@ export function SpaceShooterGame({ questions, onGameOver, onScoreUpdate }: Space
 
     // Filter questions
     const gameQuestions = useRef(
-        questions.filter(q => q.question.length < 50 && !q.question.includes('AI-genererat'))
+        resolvedQuestions.filter(q => q.question.length < 50 && !q.question.includes('AI-genererat'))
     ).current;
 
     // Responsive canvas sizing
@@ -180,6 +212,7 @@ export function SpaceShooterGame({ questions, onGameOver, onScoreUpdate }: Space
         floatingTextsRef.current = [];
         waveTimerRef.current = 0;
         questionTimerRef.current = 0;
+        gameStartTimeRef.current = Date.now();
 
         // Pick first question
         spawnNewQuestion();
@@ -310,8 +343,22 @@ export function SpaceShooterGame({ questions, onGameOver, onScoreUpdate }: Space
         if (lives <= 0 && gamePhase === 'playing') {
             setGamePhase('gameover');
             onGameOver(score);
+            // Call onComplete for integrated mode
+            if (isIntegratedMode && onComplete && content) {
+                onComplete({
+                    gameId: 'space-shooter',
+                    score,
+                    maxScore: questionsAnswered * 10,
+                    correctAnswers,
+                    totalQuestions: questionsAnswered,
+                    duration: Date.now() - gameStartTimeRef.current,
+                    contentSource: content[0]?.source || 'math',
+                    itemsPlayed: content.slice(0, questionsAnswered).map(item => item.id),
+                    mistakeIds: [],
+                });
+            }
         }
-    }, [lives, gamePhase, score, onGameOver]);
+    }, [lives, gamePhase, score, onGameOver, isIntegratedMode, onComplete, content, questionsAnswered, correctAnswers]);
 
     const updateGame = (deltaTime: number) => {
         const dt = deltaTime / 16;

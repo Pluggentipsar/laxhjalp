@@ -1,11 +1,36 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { ActivityQuestion } from '../../types';
+import type { GameContentItem, UnifiedGameResult } from '../../types/game-content';
 
 interface MathRacerGameProps {
-  questions: ActivityQuestion[];
+  /** Legacy prop - ActivityQuestion array */
+  questions?: ActivityQuestion[];
+  /** New unified content prop */
+  content?: GameContentItem[];
   onGameOver: (score: number) => void;
   onScoreUpdate: (score: number) => void;
+  /** Unified game result callback */
+  onComplete?: (result: UnifiedGameResult) => void;
+}
+
+/** Convert GameContentItem to ActivityQuestion-like format */
+function contentToQuestions(content: GameContentItem[]): ActivityQuestion[] {
+  return content.map(item => ({
+    id: item.id,
+    activityId: 'game-content',
+    question: item.prompt,
+    questionType: 'number-input' as const,
+    correctAnswer: Number(item.correctAnswer) || item.correctAnswer,
+    options: item.distractors.length > 0
+      ? [item.correctAnswer, ...item.distractors].map(d => Number(d)) as number[]
+      : undefined,
+    conceptArea: item.metadata?.conceptArea || 'math',
+    difficulty: item.metadata?.difficulty || 'medium',
+    ageGroup: item.metadata?.ageGroup || '4-6',
+    soloLevel: 'multistructural' as const,
+    bloomLevel: 'apply' as const,
+  }));
 }
 
 // --- CONFIG ---
@@ -660,21 +685,30 @@ function getDistToSegment(px: number, py: number, x1: number, y1: number, x2: nu
 
 // --- COMPONENT ---
 
-export function MathRacerGame({ questions, onGameOver, onScoreUpdate }: MathRacerGameProps) {
+export function MathRacerGame({ questions, content, onGameOver, onScoreUpdate, onComplete }: MathRacerGameProps) {
+  // Resolve questions from either prop
+  const resolvedQuestions = content && content.length > 0
+    ? contentToQuestions(content)
+    : (questions || []);
+  const isIntegratedMode = !!content && content.length > 0;
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<GameEngine | null>(null);
   const requestRef = useRef<number | null>(null);
+  const gameStartTimeRef = useRef<number>(0);
 
   const [score, setScore] = useState(0);
   const [lap, setLap] = useState(1);
   const [currentQuestion, setCurrentQuestion] = useState<ActivityQuestion | null>(null);
   const [gameState, setGameState] = useState<'start' | 'playing' | 'gameover'>('start');
+  const [correctAnswers, setCorrectAnswers] = useState(0);
+  const [totalQuestions, setTotalQuestions] = useState(0);
 
   const inputRef = useRef<InputState>({ up: false, down: false, left: false, right: false, turbo: false });
 
   // Filter questions
   const raceQuestions = useRef(
-    questions.filter(q => q.question.length < 20 && !q.question.includes('AI-genererat'))
+    resolvedQuestions.filter(q => q.question.length < 20 && !q.question.includes('AI-genererat'))
   ).current;
 
   useEffect(() => {
@@ -732,10 +766,26 @@ export function MathRacerGame({ questions, onGameOver, onScoreUpdate }: MathRace
         if (l > CONFIG.LAPS) {
           setGameState('gameover');
           onGameOver(score);
+          // Call onComplete for integrated mode
+          if (isIntegratedMode && onComplete && content) {
+            onComplete({
+              gameId: 'math-racer',
+              score,
+              maxScore: totalQuestions * 100,
+              correctAnswers,
+              totalQuestions,
+              duration: Date.now() - gameStartTimeRef.current,
+              contentSource: content[0]?.source || 'math',
+              itemsPlayed: content.slice(0, totalQuestions).map(item => item.id),
+              mistakeIds: [],
+            });
+          }
         }
       },
       (correct: boolean) => {
+        setTotalQuestions(t => t + 1);
         if (correct) {
+          setCorrectAnswers(c => c + 1);
           setScore(s => s + 100);
           spawnNextQuestion();
         } else {
@@ -826,7 +876,12 @@ export function MathRacerGame({ questions, onGameOver, onScoreUpdate }: MathRace
           <div className="text-2xl text-slate-400 tracking-[0.5em] mb-12">ULTIMATE EDITION</div>
 
           <button
-            onClick={() => setGameState('playing')}
+            onClick={() => {
+              gameStartTimeRef.current = Date.now();
+              setCorrectAnswers(0);
+              setTotalQuestions(0);
+              setGameState('playing');
+            }}
             className="px-12 py-6 bg-red-600 text-white text-3xl font-black transform -skew-x-12 hover:bg-red-500 hover:scale-110 transition-all shadow-[5px_5px_0_white]"
           >
             START ENGINE

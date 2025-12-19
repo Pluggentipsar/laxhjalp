@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Play, RotateCcw, Trophy, Clock, Music, BookOpen, Heart } from 'lucide-react';
 import { Button } from '../../../components/common/Button';
@@ -11,7 +11,8 @@ import {
     getAllPackages,
     saveGameSession,
 } from '../../../services/wordPackageService';
-import type { WordPackage } from '../../../types/motion-learn';
+import type { WordPackage, WordPair } from '../../../types/motion-learn';
+import type { GameContentItem, UnifiedGameResult } from '../../../types/game-content';
 import { playGameSound } from './utils/sound';
 import {
     type Difficulty,
@@ -19,6 +20,21 @@ import {
     DIFFICULTY_LABELS,
     DIFFICULTY_EMOJIS,
 } from './constants/game-configs';
+
+interface WhackAWordGameProps {
+    content?: GameContentItem[];
+    contentPackageName?: string;
+    onComplete?: (result: UnifiedGameResult) => void;
+    onBack?: () => void;
+}
+
+function contentToWordPairs(content: GameContentItem[]): WordPair[] {
+    return content.map(item => ({
+        id: item.id,
+        term: item.prompt,
+        definition: item.correctAnswer,
+    }));
+}
 
 // Grid positions (3x3 grid)
 const GRID_POSITIONS = [
@@ -46,11 +62,16 @@ interface Feedback {
 
 type GameMode = 'classic' | 'practice' | 'survival';
 
-export function WhackAWordGame() {
+export function WhackAWordGame({ content, contentPackageName, onComplete, onBack }: WhackAWordGameProps) {
+    const navigate = useNavigate();
+    const isIntegratedMode = !!content && content.length > 0;
+
     const [gameState, setGameState] = useState<'setup' | 'playing' | 'paused' | 'finished'>('setup');
     const [score, setScore] = useState(0);
     const [timeLeft, setTimeLeft] = useState(60);
     const [lives, setLives] = useState(3);
+    const [correctAnswers, setCorrectAnswers] = useState(0);
+    const [totalQuestions, setTotalQuestions] = useState(0);
     const [packages, setPackages] = useState<WordPackage[]>([]);
     const [selectedPackage, setSelectedPackage] = useState<WordPackage | null>(null);
     const [activeMoles, setActiveMoles] = useState<ActiveMole[]>([]);
@@ -89,12 +110,33 @@ export function WhackAWordGame() {
 
     const gameConfig = DIFFICULTY_CONFIGS[difficulty];
 
-    // Load packages
+    // Handle back navigation
+    const handleBack = useCallback(() => {
+        if (onBack) {
+            onBack();
+        } else {
+            navigate('/motion-learn');
+        }
+    }, [onBack, navigate]);
+
+    // Load packages (or use external content in integrated mode)
     useEffect(() => {
-        const pkgs = getAllPackages();
-        setPackages(pkgs);
-        if (pkgs.length > 0) setSelectedPackage(pkgs[0]);
-    }, []);
+        if (isIntegratedMode && content) {
+            const virtualPackage: WordPackage = {
+                id: 'external-content',
+                name: contentPackageName || 'Externt innehåll',
+                words: contentToWordPairs(content),
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+            };
+            setPackages([virtualPackage]);
+            setSelectedPackage(virtualPackage);
+        } else {
+            const pkgs = getAllPackages();
+            setPackages(pkgs);
+            if (pkgs.length > 0) setSelectedPackage(pkgs[0]);
+        }
+    }, [isIntegratedMode, content, contentPackageName]);
 
     // Music Logic
     useEffect(() => {
@@ -230,8 +272,11 @@ export function WhackAWordGame() {
         const feedbackX = x || 50;
         const feedbackY = y || 50;
 
+        setTotalQuestions(prev => prev + 1);
+
         if (isCorrect) {
             setScore(s => s + 10);
+            setCorrectAnswers(prev => prev + 1);
             playGameSound('correct');
 
             // Visual Feedback
@@ -317,15 +362,34 @@ export function WhackAWordGame() {
     const endGame = () => {
         setGameState('finished');
         stopCamera();
-        if (selectedPackage) {
+
+        const gameDuration = Date.now() - gameStartTimeRef.current;
+
+        if (isIntegratedMode && onComplete && content) {
+            const result: UnifiedGameResult = {
+                gameId: 'whack-a-word',
+                score,
+                maxScore: totalQuestions * 10,
+                correctAnswers,
+                totalQuestions,
+                duration: gameDuration,
+                contentSource: content[0]?.source || 'material',
+                itemsPlayed: content.slice(0, totalQuestions).map(item => item.id),
+                mistakeIds: wrongAnswers.map(wa => {
+                    const item = content.find(c => c.prompt === wa.term);
+                    return item?.id || wa.term;
+                }),
+            };
+            onComplete(result);
+        } else if (selectedPackage) {
             saveGameSession({
                 packageId: selectedPackage.id,
                 gameType: 'whack',
                 score,
-                totalQuestions: 0,
+                totalQuestions,
                 packageName: selectedPackage.name,
-                duration: (Date.now() - gameStartTimeRef.current) / 1000,
-                correctAnswers: 0,
+                duration: gameDuration / 1000,
+                correctAnswers,
             });
         }
     };
@@ -599,11 +663,9 @@ export function WhackAWordGame() {
                     {/* HUD */}
                     <div className="absolute top-0 left-0 right-0 p-6 flex justify-between items-start bg-gradient-to-b from-black/80 to-transparent">
                         <div className="flex items-center gap-6">
-                            <Link to="/motion-learn">
-                                <Button variant="ghost" className="p-2" onClick={stopCamera}>
-                                    <ArrowLeft className="w-6 h-6" />
-                                </Button>
-                            </Link>
+                            <Button variant="ghost" className="p-2" onClick={() => { stopCamera(); handleBack(); }}>
+                                <ArrowLeft className="w-6 h-6" />
+                            </Button>
                             <div className="bg-gray-800/80 px-6 py-3 rounded-2xl border border-gray-700 backdrop-blur">
                                 <div className="text-sm text-gray-400 mb-1">MÅLBEGREPP</div>
                                 <div className="text-3xl font-bold text-yellow-400">{targetConcept.term}</div>
@@ -684,11 +746,9 @@ export function WhackAWordGame() {
                                         <RotateCcw className="mr-2 w-5 h-5" />
                                         Spela Igen
                                     </Button>
-                                    <Link to="/motion-learn">
-                                        <Button variant="secondary">
-                                            Avsluta
-                                        </Button>
-                                    </Link>
+                                    <Button variant="secondary" onClick={handleBack}>
+                                        {isIntegratedMode ? 'Tillbaka' : 'Avsluta'}
+                                    </Button>
                                 </div>
 
                                 {wrongAnswers.length > 0 && (

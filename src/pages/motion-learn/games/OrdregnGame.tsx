@@ -11,6 +11,7 @@ import {
   saveGameSession,
 } from '../../../services/wordPackageService';
 import type { WordPackage, WordPair } from '../../../types/motion-learn';
+import type { GameContentItem, UnifiedGameResult } from '../../../types/game-content';
 import {
   type Difficulty,
   DIFFICULTY_CONFIGS,
@@ -20,6 +21,31 @@ import {
 } from './constants/game-configs';
 import { playGameSound } from './utils/sound';
 import { QuizOverlay } from './components/QuizOverlay';
+
+/**
+ * Props for dual-mode operation:
+ * - Standalone mode (Motion Learn Hub): Uses localStorage packages
+ * - Integrated mode (GamesHub): Uses content prop
+ */
+interface OrdregnGameProps {
+  /** External content for integrated mode */
+  content?: GameContentItem[];
+  /** Name to display for the content package */
+  contentPackageName?: string;
+  /** Callback when game completes (integrated mode) */
+  onComplete?: (result: UnifiedGameResult) => void;
+  /** Callback to go back (integrated mode) */
+  onBack?: () => void;
+}
+
+/** Convert GameContentItem[] to WordPair[] for internal game logic */
+function contentToWordPairs(content: GameContentItem[]): WordPair[] {
+  return content.map(item => ({
+    id: item.id,
+    term: item.prompt,
+    definition: item.correctAnswer,
+  }));
+}
 
 interface FallingWord {
   id: string;
@@ -41,11 +67,14 @@ interface Feedback {
 type GameState = 'setup' | 'playing' | 'paused' | 'finished';
 type GameMode = 'classic' | 'practice' | 'survival';
 
-export function OrdregnGame() {
+export function OrdregnGame({ content, contentPackageName, onComplete, onBack }: OrdregnGameProps) {
   const navigate = useNavigate();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameLoopRef = useRef<number | undefined>(undefined);
   const gameStartTimeRef = useRef<number>(0);
+
+  // Dual-mode: Check if we're in integrated mode
+  const isIntegratedMode = !!content && content.length > 0;
 
   // Package selection
   const [packages, setPackages] = useState<WordPackage[]>([]);
@@ -168,14 +197,28 @@ export function OrdregnGame() {
     maxNumHands: 2,
   });
 
-  // Load packages on mount
+  // Load packages on mount (or use external content in integrated mode)
   useEffect(() => {
-    const pkgs = getAllPackages();
-    setPackages(pkgs);
-    if (pkgs.length > 0) {
-      setSelectedPackage(pkgs[0]);
+    if (isIntegratedMode && content) {
+      // Integrated mode: Convert external content to package format
+      const virtualPackage: WordPackage = {
+        id: 'external-content',
+        name: contentPackageName || 'Externt innehåll',
+        words: contentToWordPairs(content),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      setPackages([virtualPackage]);
+      setSelectedPackage(virtualPackage);
+    } else {
+      // Standalone mode: Load from localStorage
+      const pkgs = getAllPackages();
+      setPackages(pkgs);
+      if (pkgs.length > 0) {
+        setSelectedPackage(pkgs[0]);
+      }
     }
-  }, []);
+  }, [isIntegratedMode, content, contentPackageName]);
 
   // Game timer
   useEffect(() => {
@@ -556,14 +599,34 @@ export function OrdregnGame() {
       cancelAnimationFrame(gameLoopRef.current);
     }
 
-    // Save session
-    if (selectedPackage) {
+    const gameDuration = Date.now() - gameStartTimeRef.current;
+
+    // Call onComplete callback for integrated mode
+    if (isIntegratedMode && onComplete && content) {
+      const result: UnifiedGameResult = {
+        gameId: 'ordregn',
+        score,
+        maxScore: totalQuestions * 10, // 10 points per correct answer
+        correctAnswers,
+        totalQuestions,
+        duration: gameDuration,
+        contentSource: content[0]?.source || 'material',
+        itemsPlayed: content.slice(0, totalQuestions).map(item => item.id),
+        mistakeIds: wrongAnswers.map(wa => {
+          // Find the item that was answered incorrectly
+          const item = content.find(c => c.prompt === wa.term);
+          return item?.id || wa.term;
+        }),
+      };
+      onComplete(result);
+    } else if (selectedPackage) {
+      // Save session for standalone mode
       saveGameSession({
         gameType: 'ordregn',
         packageId: selectedPackage.id,
         packageName: selectedPackage.name,
         score,
-        duration: 60 - timeLeft,
+        duration: gameDuration / 1000,
         correctAnswers,
         totalQuestions,
       });
@@ -587,7 +650,7 @@ export function OrdregnGame() {
     setShowQuiz(false);
   };
 
-  if (packages.length === 0) {
+  if (packages.length === 0 && !isIntegratedMode) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-pink-900 to-blue-900 flex items-center justify-center p-4">
         <Card className="p-8 max-w-md text-center">
@@ -605,6 +668,15 @@ export function OrdregnGame() {
     );
   }
 
+  // Handle back navigation based on mode
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+    } else {
+      navigate('/motion-learn');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-pink-900 to-blue-900">
       {/* Hidden video element for hand tracking - always rendered */}
@@ -618,12 +690,10 @@ export function OrdregnGame() {
       <div className="max-w-7xl mx-auto px-4 py-4">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
-          <Link to="/motion-learn">
-            <Button variant="ghost" size="sm" className="text-white hover:bg-white/10">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Tillbaka
-            </Button>
-          </Link>
+          <Button variant="ghost" size="sm" className="text-white hover:bg-white/10" onClick={handleBack}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Tillbaka
+          </Button>
 
           <h1 className="text-3xl font-bold text-white">
             Ordregn 🌧️
@@ -1096,8 +1166,8 @@ export function OrdregnGame() {
                   <RotateCcw className="mr-2 h-5 w-5" />
                   Spela Igen
                 </Button>
-                <Button onClick={() => navigate('/motion-learn')} size="lg">
-                  Tillbaka till Hub
+                <Button onClick={handleBack} size="lg">
+                  {isIntegratedMode ? 'Tillbaka' : 'Tillbaka till Hub'}
                 </Button>
 
                 {selectedPackage && selectedPackage.words.length >= 4 && (
